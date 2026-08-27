@@ -100,9 +100,19 @@ function buildContext(ds, profile) {
     if (pedal && pedal[i] > (stats.pedal ? stats.pedal.p05 + 6 : 20)) return false;
     return true;
   });
-  // Nur zusammenhängende Leerlauffenster ab 5 s zählen – kurze Blips beim Anhalten verfälschen sonst die Streuung
-  { let i = 0; while (i < N) { if (idle[i]) { let j = i; while (j + 1 < N && idle[j + 1]) j++;
-      if ((j - i + 1) * step < 5) for (let k = i; k <= j; k++) idle[k] = 0; i = j + 1; } else i++; } }
+  /* Leerlauffenster bereinigen. Zwei Schritte, beide notwendig:
+     1. Fenster unter 12 s ganz verwerfen – zu kurz für eine Aussage über die Laufruhe.
+     2. Die ersten 5 s jedes Fensters verwerfen. Nach dem Anhalten fängt der Leerlaufregler die
+        Drehzahl erst ein (Überschwinger bis 950 min⁻¹, Zündwinkel bis −17° Momenteneingriff).
+        Wer diese Phase mitmisst, misst das Abbremsen, nicht die Laufruhe. */
+  const idleSettle = Math.round(5 / step);
+  { let i = 0; while (i < N) {
+      if (idle[i]) { let j = i; while (j + 1 < N && idle[j + 1]) j++;
+        const len = j - i + 1;
+        if (len * step < 12) { for (let k = i; k <= j; k++) idle[k] = 0; }
+        else { for (let k = i; k < Math.min(i + idleSettle, j + 1); k++) idle[k] = 0; }
+        i = j + 1;
+      } else i++; } }
 
   const partLoad = mask(i => load && sp && load[i] > 25 && load[i] < (loadIsAbs ? 90 : 70) && sp[i] > 30 && warm[i] && !coast[i]);
   const moving = mask(i => sp && sp[i] > 5);
@@ -339,7 +349,10 @@ const DIAG_RULES = [
     return { status: st, value: diff, unit: '%-Punkte', dec: 2, ref: '≤ 4 pp Unterschied', refLo: -4, refHi: 4,
       extra: [['Niedriglast (< ' + lowT + ' %)', fmt(lo, 2) + ' %'], ['Hochlast (> ' + highT + ' %)', fmt(hi, 2) + ' %']],
       text: st === S.OK
-        ? 'Die Gemischkorrektur ist über den Lastbereich hinweg konstant (' + fmt(lo, 2) + ' % bei niedriger, ' + fmt(hi, 2) + ' % bei hoher Last). Falschluft würde bei niedriger Last deutlich stärker korrigiert werden – dieses Muster liegt hier nicht vor.'
+        ? 'Die Gemischkorrektur beträgt ' + fmt(lo, 2) + ' % bei niedriger und ' + fmt(hi, 2) + ' % bei hoher Last' +
+          (diff < -0.5
+            ? ' – sie steigt also mit der Last, statt zu fallen. Genau umgekehrt verhält sich Falschluft: eine konstante Leckluftmenge fällt bei kleiner Füllung relativ stark ins Gewicht und verschwindet unter Last. Ein mit der Last zunehmender Korrekturbedarf zeigt stattdessen auf etwas, das proportional zur eingespritzten Menge wirkt – Kraftstoffsorte (E10 braucht rund 3 % mehr Masse), Einspritzmenge oder Luftmassenmesser.'
+            : '. Falschluft würde bei niedriger Last deutlich stärker korrigiert werden – dieses Muster liegt hier nicht vor.')
         : 'Bei niedriger Last wird um ' + fmt(diff, 2) + ' %-Punkte stärker korrigiert als bei hoher Last. Genau so verhält sich Falschluft: die Leckluftmenge ist absolut konstant und fällt bei kleiner Füllung relativ stark ins Gewicht.',
       action: st === S.OK ? null : ['Rauchtest inklusive Kurbelgehäuseentlüftung', 'Saugrohr- und Ladeluftschlauch-Dichtungen prüfen'] };
   }
@@ -468,16 +481,27 @@ const DIAG_RULES = [
   run(c) {
     const m = c.masks.idle;
     const d = c.dur(m);
-    if (d < 8) return { status: S.UNCLEAR, note: 'Zu wenig warmer Leerlauf in dieser Fahrt (' + fmtDur(d) + ').' };
+    if (d < 8) return { status: S.UNCLEAR,
+      note: 'Diese Fahrt enthält keinen ausreichend langen, eingeschwungenen Leerlauf (' + fmtDur(d) +
+            '). Bewertet werden nur Standphasen ab 12 s, und davon erst die Zeit nach den ersten fünf Sekunden – vorher fängt der Leerlaufregler die Drehzahl noch ein.' };
     const med = c.agg('rpm', m, 'median'), sd = c.agg('rpm', m, 'std');
+    const mn = c.agg('rpm', m, 'min'), mx = c.agg('rpm', m, 'max');
     const R = c.P.idleWarm || [600, 800];
     let st = inRange(med, R[0], R[1], 50, 100);
     if (sd > 50) st = S.CRIT; else if (sd > 25 && st === S.OK) st = S.WARN;
+    const startedWarm = c.ds.trip.startedWarm;
     return { status: st, value: med, unit: 'min⁻¹', dec: 0, ref: R[0] + '–' + R[1] + ' min⁻¹', refLo: R[0], refHi: R[1],
-      extra: [['Standardabweichung', fmt(sd, 1) + ' min⁻¹'], ['Leerlaufzeit', fmtDur(d)]],
-      text: st === S.OK
-        ? 'Der warme Leerlauf liegt bei ' + fmt(med, 0) + ' min⁻¹ und läuft mit ' + fmt(sd, 1) + ' min⁻¹ Streuung ruhig.'
-        : 'Leerlauf ' + fmt(med, 0) + ' min⁻¹ bei ' + fmt(sd, 1) + ' min⁻¹ Streuung. Eine hohe Streuung spricht für Zündaussetzer, verkokte Einlassventile oder Falschluft.' };
+      extra: [['Standardabweichung', fmt(sd, 1) + ' min⁻¹'],
+              ['Spanne', fmt(mn, 0) + '–' + fmt(mx, 0) + ' min⁻¹'],
+              ['Bewertete Leerlaufzeit', fmtDur(d)]],
+      text: (st === S.OK
+        ? 'Der eingeschwungene warme Leerlauf liegt bei ' + fmt(med, 0) + ' min⁻¹ und schwankt dabei um ' + fmt(sd, 1) +
+          ' min⁻¹ (Spanne ' + fmt(mn, 0) + '–' + fmt(mx, 0) + '). Das ist ein ruhiger Leerlauf: der Regler hält die Drehzahl eng, ohne dass die Zündung dauernd gegensteuern muss.'
+        : 'Leerlauf ' + fmt(med, 0) + ' min⁻¹ bei ' + fmt(sd, 1) + ' min⁻¹ Streuung. Eine hohe Streuung im eingeschwungenen Zustand spricht für Zündaussetzer, stark verkokte Einlassventile oder Falschluft.') +
+        (startedWarm
+          ? ' Wichtige Einschränkung: der Motor war beim Aufzeichnungsstart bereits warm. Verkokte Einlassventile fallen aber gerade im kalten Leerlauf der ersten ein bis zwei Minuten auf – dieser Datensatz kann eine Verkokung deshalb nicht ausschließen, nur zeigen, dass sie sich warm nicht bemerkbar macht.'
+          : ''),
+      action: st === S.OK ? null : ['Zündkerzen-Wechselintervall prüfen', 'Rauchtest auf Falschluft', 'Endoskopie der Einlassventile'] };
   }
 },
 {

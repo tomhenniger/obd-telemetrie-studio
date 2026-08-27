@@ -406,8 +406,15 @@ class Chart {
   /* ---------- Balken (kategorial) ---------- */
   drawBars() {
     const ctx = this.ctx, D = this.barData || [];
-    const P = this._plotRect(this.opts.labelWidth || 116, 46, 6, 6);
-    if (!D.length) return;
+    if (!D.length) { this._plotRect(this.opts.labelWidth || 116, 46, 6, 6); return; }
+    // Rechten Rand aus der breitesten Beschriftung ableiten, sonst wird sie abgeschnitten
+    ctx.font = '12px ' + FONT_MONO;
+    let rightPad = 20;
+    for (const d of D) {
+      const t = d.text !== undefined ? d.text : fmt(d.value, 1);
+      rightPad = Math.max(rightPad, ctx.measureText(t).width + 16);
+    }
+    const P = this._plotRect(this.opts.labelWidth || 116, Math.min(rightPad, this.w * 0.45), 6, 6);
     let max = 0; for (const d of D) if (d.value > max) max = d.value;
     const bh = P.h / D.length;
     ctx.save(); ctx.font = '12px ' + FONT_UI; ctx.textBaseline = 'middle';

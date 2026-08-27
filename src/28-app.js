@@ -866,6 +866,7 @@ BUILDERS.diag = function (page) {
   Object.keys(groups).forEach(g => {
     page.appendChild(sectionHead(g));
     page.appendChild(el('div', { class: 'grid', style: { gap: '9px' } }, groups[g].map(findingCard)));
+    if (g === 'Gemisch') { const t = ltftByLoadCard(); if (t) page.appendChild(t); }
   });
 
   /* Fahrzeug-Steckbrief */
@@ -913,6 +914,53 @@ BUILDERS.diag = function (page) {
   page.appendChild(noteBox('info', 'Wie diese Befunde zu lesen sind',
     'Jede Regel wertet nur ein klar umrissenes Fenster aus – etwa Volllast über 3000 min⁻¹ oder warmen Leerlauf ab fünf Sekunden. Fehlt dieses Fenster in der Fahrt, steht „nicht bewertbar" statt einer Ampel; das ist ehrlicher als ein Urteil auf dünner Datenbasis. Größen, die die App selbst rechnet statt misst (Ladedruck, Momentanleistung), bekommen bewusst keine Ampel: sie können ein Problem weder belegen noch ausschließen. Und der wichtigste Punkt: eine einzelne Fahrt ist eine Momentaufnahme. Aussagekraft entsteht erst im Vergleich mehrerer Aufzeichnungen desselben Fahrzeugs unter ähnlichen Bedingungen.'));
 };
+
+/* Gemischkorrektur nach Lastklassen – die entscheidende Ansicht für Falschluft vs. Kraftstoff */
+function ltftByLoadCard() {
+  const ds = App.ds, G = ds.G, c = App.diag.ctx;
+  const lt = G.ltft_mean || G.ltft_b1;
+  const load = G.load_abs || G.load_calc;
+  if (!lt || !load) return null;
+  const warm = c.masks.warm, coast = c.masks.coast;
+  const abs = !!G.load_abs;
+  const bins = abs ? [[0, 30], [30, 45], [45, 60], [60, 80], [80, 100], [100, 140], [140, 260]]
+                   : [[0, 20], [20, 35], [35, 50], [50, 65], [65, 80], [80, 100]];
+  const rows = [];
+  bins.forEach(([lo, hi]) => {
+    const v = [];
+    let rsum = 0;
+    for (let i = 0; i < ds.N; i++) {
+      if (!warm[i] || coast[i]) continue;
+      const L = load[i]; if (!(L >= lo && L < hi)) continue;
+      if (lt[i] === lt[i]) { v.push(lt[i]); rsum += G.rpm ? G.rpm[i] : 0; }
+    }
+    if (v.length < 20) return;
+    v.sort((a, b) => a - b);
+    rows.push({ lo, hi, med: quantileSorted(v, 0.5), n: v.length,
+                time: v.length * ds.step, rpm: rsum / v.length });
+  });
+  if (rows.length < 3) return null;
+  const first = rows[0].med, last = rows[rows.length - 1].med;
+  const rising = last - first;
+  const host = el('div');
+  const c2 = card('Gemischkorrektur über den Lastbereich', {
+    hint: 'Median je Lastklasse, nur warm und ohne Schub',
+    foot: (rising > 0.5
+      ? 'Der Korrekturbedarf steigt mit der Last um ' + fmt(rising, 2) + ' %-Punkte an. Falschluft verhält sich genau umgekehrt: eine konstante Leckluftmenge wiegt bei kleiner Füllung schwer und verschwindet unter Last. Ein mit der Last zunehmender Bedarf zeigt auf etwas, das proportional zur eingespritzten Menge wirkt – Kraftstoffsorte, Einspritzmenge oder Luftmassenmesser. Verkokte Einlassventile erzeugen ebenfalls das umgekehrte Muster und sind damit hier nicht die naheliegende Erklärung.'
+      : rising < -0.5
+        ? 'Der Korrekturbedarf fällt mit steigender Last um ' + fmt(-rising, 2) + ' %-Punkte. Das ist die klassische Falschluft-Signatur: eine konstante Leckluftmenge fällt bei kleiner Füllung stark ins Gewicht und verschwindet unter Last. Rauchtest des Ansaugtrakts inklusive Kurbelgehäuseentlüftung.'
+        : 'Der Korrekturbedarf ist über den Lastbereich hinweg praktisch konstant – weder Falschluft- noch Mengensignatur.')
+  }, host);
+  const ch = new Chart(host, { type: 'bars', height: Math.max(140, rows.length * 34 + 20), labelWidth: 132 });
+  const p = palette();
+  ch.setData({ barData: rows.map((r, i) => ({
+    label: r.lo + '–' + r.hi + ' %',
+    value: Math.max(0.01, r.med),
+    text: fmt(r.med, 2) + ' %   ·   ' + fmtDur(r.time),
+    color: p[i % p.length]
+  })) });
+  return c2;
+}
 
 /* --- Datenqualität --- */
 BUILDERS.data = function (page) {

@@ -42,3 +42,22 @@
 - Flächenfüllung in Zeitreihen bricht an Datenlücken ab, statt Dreiecke zu zeichnen.
 - Leerlauf-Erkennung verlangt bekannte Geschwindigkeit und ein zusammenhängendes Fenster ab 5 s.
 - Rückkühlung nach Volllast wird nur an Zügen gemessen, die die Ladeluft überhaupt erwärmt haben.
+
+## Bugfixes (Nachtrag)
+
+- **Leerlauf-Regel maß das Einschwingen mit.** Nach dem Anhalten fängt der Leerlaufregler die
+  Drehzahl erst ein (Überschwinger bis 955 min⁻¹, Zündwinkel bis −17 ° Momenteneingriff). Diese
+  vier bis fünf Sekunden gingen in die Streuung ein und erzeugten einen Fehlalarm: σ 29,2 min⁻¹
+  statt der tatsächlichen 8,2 min⁻¹ im eingeschwungenen Zustand. Bewertet werden jetzt nur
+  Standphasen ab 12 s, und davon erst die Zeit nach den ersten fünf Sekunden.
+- Leerlauf-Befund weist jetzt aus, dass ein warm gestarteter Motor keine Aussage über Verkokung
+  zulässt — die zeigt sich im kalten Leerlauf der ersten ein bis zwei Minuten.
+- Balkenbeschriftungen wurden am rechten Rand abgeschnitten; der Rand wird jetzt aus der
+  breitesten Beschriftung berechnet.
+
+## Neue Features (Nachtrag)
+
+- **Gemischkorrektur über den Lastbereich** als eigene Auswertung im Diagnose-Bereich: Median der
+  Langzeitkorrektur je Lastklasse. Steigt der Korrekturbedarf mit der Last, scheiden Falschluft und
+  verkokte Einlassventile als Ursache aus; fällt er, ist es die klassische Falschluft-Signatur.
+  Der Befundtext benennt die Richtung und ihre Bedeutung.
