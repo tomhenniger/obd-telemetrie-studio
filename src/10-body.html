@@ -18,6 +18,9 @@
 <g id="i-info"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.8v.1"/></g>
 <g id="i-check"><path d="M4 12.5l5.5 5.5L20 7"/></g>
 <g id="i-x"><path d="M6 6l12 12M18 6L6 18"/></g>
+<g id="i-clip"><rect x="7.5" y="3.5" width="9" height="4" rx="1.4"/><path d="M7.5 5.5H6a2 2 0 00-2 2v11a2 2 0 002 2h12a2 2 0 002-2v-11a2 2 0 00-2-2h-1.5"/><path d="M8.5 12h7M8.5 15.5h4.5"/></g>
+<g id="i-share"><path d="M12 15V3.5M8.5 7L12 3.5 15.5 7"/><path d="M5 13v6a2 2 0 002 2h10a2 2 0 002-2v-6"/></g>
+<g id="i-phone"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 5.5h3"/><path d="M11 18.6h2"/></g>
 <g id="i-car"><path d="M4 16v3h3v-3M17 16v3h3v-3"/><path d="M3.5 16h17v-4l-2-5h-11l-2 5z"/><path d="M6.5 13h2M15.5 13h2"/></g>
 </defs></svg>
 
@@ -30,14 +33,28 @@
       <p>CSV&#8209;Export deines OBD&#8209;Adapters hier ablegen. Die Datei wird ausschließlich im Browser verarbeitet – nichts wird hochgeladen, nichts verlässt dein Gerät.</p>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
         <button class="btn primary" id="pick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><use href="#i-upload"/></svg>CSV auswählen</button>
+        <button class="btn" id="paste"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-clip"/></svg>Aus Zwischenablage</button>
         <button class="btn" id="demo" hidden>Beispielfahrt laden</button>
       </div>
-      <input type="file" id="file" accept=".csv,.txt,text/csv,text/plain" hidden>
+      <input type="file" id="file" accept=".csv,.txt,.gz,.zip,text/csv,text/plain,application/gzip,application/zip" hidden>
+      <textarea id="pastebox" class="pastebox" rows="1" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"
+        placeholder="… oder hier hineintippen und einsetzen (langes Tippen → Einsetzen)"></textarea>
       <div class="drop-feat">
         <div><b>Formatunabhängig</b>Long- und Wide-Format, Semikolon, Komma oder Tab, Punkt oder Komma als Dezimaltrenner</div>
         <div><b>Umfangreiche Statistik</b>Kennzahlen, Verteilungen, Motorkennfelder, Gangerkennung, Beschleunigungswerte</div>
         <div><b>Diagnose gegen Werksangaben</b>Regelwerk mit Sollbereichen, Ursachen und konkreten Prüfschritten</div>
         <div><b>GPS-Karte</b>Route auf OpenStreetMap, eingefärbt nach jeder Messgröße</div>
+      </div>
+    </div>
+    <div class="note info" id="hand" hidden style="margin:20px auto 0;max-width:660px;text-align:left">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="n-i"><use href="#i-clip"/></svg>
+      <div style="flex:1">
+        <b>Übergabe aus der Kurzbefehle-App</b>
+        Die Daten liegen in der Zwischenablage. Safari fragt beim Einsetzen einmal um Erlaubnis – das ist die Stelle, an der iOS sicherstellt, dass keine Seite unbemerkt mitliest.
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" id="hand-go">Daten übernehmen</button>
+          <button class="btn" id="hand-alt">Stattdessen selbst einsetzen</button>
+        </div>
       </div>
     </div>
     <div class="prog" id="prog" hidden style="margin:22px auto 0">

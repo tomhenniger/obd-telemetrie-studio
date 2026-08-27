@@ -61,3 +61,26 @@
   Langzeitkorrektur je Lastklasse. Steigt der Korrekturbedarf mit der Last, scheiden Falschluft und
   verkokte Einlassventile als Ursache aus; fällt er, ist es die klassische Falschluft-Signatur.
   Der Befundtext benennt die Richtung und ihre Bedeutung.
+
+## Neue Features (Übergabewege)
+
+- **Zwischenablage als Übergabeweg.** Knopf „Aus Zwischenablage" plus ein Einfügefeld auf dem
+  Startbildschirm; ⌘V/Strg+V funktioniert überall auf der Seite. Erkennt rohen CSV-Text ebenso wie
+  Base64 eines ZIP- oder gzip-Archivs und entpackt im Browser.
+- **Übergabe per Adresse**: `?src=<URL>` lädt die Datei selbst (CORS vorausgesetzt),
+  `#gz=<base64>` übergibt kleine Dateien direkt in der Adresse, `#clipboard` öffnet die Seite mit
+  Übernahme-Knopf. Ein Anker-Wechsel bei bereits geöffneter Seite löst die Übergabe ebenfalls aus.
+- **Gepackte Dateien im Datei-Dialog**: `.zip` und `.gz` werden angenommen und im Browser entpackt.
+  Eigener minimaler ZIP-Leser über das zentrale Verzeichnis, Entpacken über `DecompressionStream`.
+- **Siri-Kurzbefehl**: Anleitung in den Einstellungen und im README. Datei → Archiv → Base64 →
+  Zwischenablage → `#clipboard` öffnen. 28 MB werden zu rund 3 Mio. Zeichen, Übernahme unter 2 s.
+- **Bericht teilen** über das native Teilen-Menü (`navigator.share`), wo der Browser es unterstützt.
+
+## Bugfixes (Übergabewege)
+
+- Ein Kurzbefehl, der die bereits geöffnete Seite mit einem anderen Anker aufruft, löste keine
+  Verarbeitung aus — ein reiner Hash-Wechsel lädt die Seite nicht neu. Jetzt wird auf `hashchange`
+  gehört und die Auswertung zurückgesetzt.
+- Der Zugriff auf die Zwischenablage kann in manchen Browsern unbegrenzt offen bleiben, solange eine
+  Erlaubnisabfrage aussteht. Nach 25 s bricht die Übernahme jetzt mit einem Hinweis auf das
+  Einfügefeld ab, statt stumm zu hängen.

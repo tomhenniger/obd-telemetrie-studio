@@ -20,7 +20,8 @@ OUT=index.html
   cat src/25-map.js
   cat src/26-diag.js
   cat src/27-ui.js
-  cat src/28-app.js
+  cat src/28-ingest.js
+  cat src/29-app.js
   echo '</script>'
   cat src/99-tail.html
 } > "$OUT"

@@ -31,25 +31,64 @@ function applyTheme(t) {
   requestAnimationFrame(() => { Chart.redrawAll(); if (App.map) App.map.draw(); });
 }
 
-/* ---------- Datei laden ---------- */
-async function loadFile(file) {
-  App.fileName = file.name || 'Messfahrt';
+/* ---------- Daten übernehmen ---------- */
+function progressUI() {
   $('#prog').hidden = false;
   $('#drop').style.opacity = '.45';
-  const setP = (p, label) => {
-    $('#prog-i').style.width = (p * 100).toFixed(1) + '%';
-    $('#prog-p').textContent = Math.round(p * 100) + ' %';
+  const old = $('#load-err'); if (old) old.remove();
+  return (p, label) => {
+    $('#prog-i').style.width = (clamp(p, 0, 1) * 100).toFixed(1) + '%';
+    $('#prog-p').textContent = Math.round(clamp(p, 0, 1) * 100) + ' %';
     if (label) $('#prog-l').textContent = label;
   };
+}
+function loadFailed(e) {
+  $('#prog').hidden = true;
+  $('#drop').style.opacity = '';
+  const old = $('#load-err'); if (old) old.remove();
+  $('#drop').appendChild(el('div', { class: 'note crit', id: 'load-err', style: { marginTop: '18px', textAlign: 'left' } },
+    icon('alert', 'n-i'), el('div', {}, el('b', {}, 'Das hat nicht geklappt'), e.message || String(e))));
+  console.error(e);
+}
+
+/* Einziger Weg in die Auswertung. `src` ist eine Datei, Text, Bytes oder eine Adresse. */
+async function ingest(src) {
+  const setP = progressUI();
   try {
-    setP(0.02, 'Datei wird gelesen …');
-    await new Promise(r => setTimeout(r, 16));
-    const text = await file.text();
-    setP(0.12, 'Zeilen werden ausgewertet …');
+    let text, name = src.name || 'Messfahrt';
+
+    if (src.kind === 'file') {
+      name = src.file.name || name;
+      setP(0.02, 'Datei wird gelesen …');
+      await new Promise(r => setTimeout(r, 16));
+      const head = new Uint8Array(await src.file.slice(0, 8).arrayBuffer());
+      if (MAGIC.gzip(head) || MAGIC.zip(head) || MAGIC.zstd(head)) {
+        setP(0.06, 'Archiv wird entpackt …');
+        const r = await toCsvText(new Uint8Array(await src.file.arrayBuffer()), name);
+        text = r.text; name = r.name || name;
+      } else {
+        text = await src.file.text();
+      }
+    } else if (src.kind === 'url') {
+      setP(0.02, 'Datei wird geladen …');
+      const bytes = await fetchCsv(src.url, p => setP(0.02 + p * 0.1, 'Datei wird geladen … ' + fmt(p * 100, 0) + ' %'));
+      setP(0.12, 'Inhalt wird geprüft …');
+      const r = await toCsvText(bytes, name);
+      text = r.text; name = r.name || decodeURIComponent((src.url.split('/').pop() || name).split('?')[0]);
+    } else {
+      setP(0.04, 'Übergabe wird geprüft …');
+      await new Promise(r => setTimeout(r, 16));
+      const r = await toCsvText(src.kind === 'bytes' ? src.bytes : src.text, name);
+      text = r.text; name = r.name || name;
+    }
+
+    App.fileName = name;
+    setP(0.14, 'Zeilen werden ausgewertet …');
     await new Promise(r => setTimeout(r, 16));
     const parsed = await parseCSV(text, (p, rows) =>
-      setP(0.12 + p * 0.66, 'Zeilen werden ausgewertet … ' + fmt(rows, 0)));
-    if (!parsed.series.size) throw new Error('In dieser Datei wurde keine einzige auswertbare Messreihe gefunden. Ist es wirklich ein OBD-CSV-Export?');
+      setP(0.14 + p * 0.64, 'Zeilen werden ausgewertet … ' + fmt(rows, 0)));
+    if (!parsed.series.size)
+      throw new Error('In dieser Datei wurde keine einzige auswertbare Messreihe gefunden. Ist es wirklich ein OBD-CSV-Export?');
     setP(0.82, 'Kennzahlen werden berechnet …');
     await new Promise(r => setTimeout(r, 16));
     const ds = buildDataset(parsed, { fuel: store.get('fuel', 'petrol') });
@@ -60,14 +99,25 @@ async function loadFile(file) {
     $('#hero').hidden = true;
     $('#app').hidden = false;
     document.body.classList.remove('no-data');
-  } catch (e) {
-    $('#prog').hidden = true;
-    $('#drop').style.opacity = '';
-    const old = $('#load-err'); if (old) old.remove();
-    $('#drop').appendChild(el('div', { class: 'note crit', id: 'load-err', style: { marginTop: '18px', textAlign: 'left' } },
-      icon('alert', 'n-i'), el('div', {}, el('b', {}, 'Datei konnte nicht gelesen werden'), e.message)));
-    console.error(e);
-  }
+    if (location.hash || location.search) history.replaceState(null, '', location.pathname);
+  } catch (e) { loadFailed(e); }
+}
+const loadFile = file => ingest({ kind: 'file', file });
+
+/* Zurück zum Startbildschirm — nötig, wenn während einer offenen Auswertung
+   eine neue Übergabe hereinkommt. */
+function resetToHero() {
+  Chart.all.slice().forEach(c => c.destroy());
+  Chart.hoverListeners = [];
+  App.map = null; App.ds = null; App.diag = null; App.gears = null;
+  $('#pages').innerHTML = '';
+  $('#app').hidden = true;
+  $('#hero').hidden = false;
+  document.body.classList.add('no-data');
+  $('#hand').hidden = true;
+  $('#prog').hidden = true;
+  $('#drop').style.opacity = '';
+  const err = $('#load-err'); if (err) err.remove();
 }
 
 function initDataset(ds) {
@@ -1031,7 +1081,8 @@ BUILDERS.data = function (page) {
       el('button', { class: 'btn', onclick: exportStatsCsv }, icon('dl'), 'Statistik als CSV'),
       el('button', { class: 'btn', onclick: exportReport }, icon('dl'), 'Diagnosebericht als Text'),
       el('button', { class: 'btn', onclick: exportJson }, icon('dl'), 'Kennzahlen als JSON'),
-      ds.track ? el('button', { class: 'btn', onclick: exportGpx }, icon('dl'), 'Route als GPX') : null)));
+      ds.track ? el('button', { class: 'btn', onclick: exportGpx }, icon('dl'), 'Route als GPX') : null,
+      canShareFiles() ? el('button', { class: 'btn primary', onclick: shareReport }, icon('share'), 'Bericht teilen') : null)));
 };
 
 /* --- Einstellungen --- */
@@ -1070,6 +1121,45 @@ BUILDERS.settings = function (page) {
   }, el('div', { class: 'chiprow', style: { alignItems: 'center' } },
       el('span', { class: 'dim', style: { fontSize: '12.5px' } }, 'Kraftstoffart'), fuelSel,
       el('span', { class: 'dim', style: { fontSize: '12.5px', marginLeft: '10px' } }, 'Abrollumfang (m)'), circ)));
+
+  const base = location.origin + location.pathname;
+  page.appendChild(card('Vom iPhone hierher — Kurzbefehl einrichten', {
+    hint: 'ohne Umweg über Dateien speichern',
+    foot: 'Warum der Umweg über die Zwischenablage: diese Seite liegt auf statischem Hosting und kann gar nichts entgegennehmen – es gibt keinen Server, der etwas empfangen könnte. Genau das ist der Grund, warum deine Aufzeichnung nirgendwo landet. Die Daten gehen vom Kurzbefehl direkt in den Browser und werden dort ausgewertet.'
+  },
+    el('p', { style: { color: 'var(--text-2)', fontSize: '13px', lineHeight: '1.65', margin: '0 0 14px' } },
+      'In der Kurzbefehle-App einen neuen Kurzbefehl anlegen und diese fünf Aktionen in dieser Reihenfolge hinzufügen. ' +
+      'In den Kurzbefehl-Einstellungen „Bei Teilen anzeigen" aktivieren und als Eingabe „Dateien" wählen – dann taucht er im Teilen-Menü der Dateien-App auf.'),
+    el('ol', { class: 'recipe' },
+      el('li', {}, el('div', {}, el('b', {}, 'Datei auswählen'),
+        el('span', {}, 'Oder bei einem Teilen-Kurzbefehl: „Kurzbefehl-Eingabe erhalten". Damit landet die CSV im Ablauf.'))),
+      el('li', {}, el('div', {}, el('b', {}, 'Archiv erstellen'),
+        el('span', {}, 'Packt die CSV als ZIP. Aus 28 MB werden rund 2 MB – ohne diesen Schritt liegen 28 MB Text in der Zwischenablage, was funktioniert, aber spürbar zäh ist.'))),
+      el('li', {}, el('div', {}, el('b', {}, 'Base64 codieren'),
+        el('span', {}, 'Macht aus dem Archiv reinen Text, denn die Zwischenablage kann nur Text an eine Webseite weitergeben.'))),
+      el('li', {}, el('div', {}, el('b', {}, 'In die Zwischenablage kopieren'),
+        el('span', {}, 'Die Daten bleiben auf dem Gerät.'))),
+      el('li', {}, el('div', {}, el('b', {}, 'URL öffnen'),
+        el('span', {}, 'Adresse: ', el('code', {}, base + '#clipboard'),
+          ' Safari öffnet die Seite, fragt einmal nach der Erlaubnis zum Einsetzen – und die Auswertung steht.')))),
+    el('div', { class: 'chiprow', style: { marginTop: '14px' } },
+      el('button', { class: 'btn', onclick: e => {
+        navigator.clipboard.writeText(base + '#clipboard')
+          .then(() => { e.target.textContent = 'Adresse kopiert'; setTimeout(() => { e.target.textContent = 'Adresse für Schritt 5 kopieren'; }, 2200); })
+          .catch(() => {});
+      } }, 'Adresse für Schritt 5 kopieren'))));
+
+  page.appendChild(card('Weitere Übergabewege', {
+    hint: 'falls der Kurzbefehl nicht passt'
+  }, el('div', { style: { fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.7', display: 'grid', gap: '10px' } },
+    el('p', {}, el('b', { style: { color: 'var(--text-1)' } }, 'Von einer Adresse laden: '),
+      'Hängt man ', el('code', {}, '?src=https://…/fahrt.csv'), ' an die Adresse an, holt die Seite die Datei selbst. ' +
+      'Der Server, auf dem die Datei liegt, muss dafür ', el('code', {}, 'Access-Control-Allow-Origin'), ' senden – ein iCloud-Freigabelink reicht nicht, der liefert eine Vorschauseite statt der Datei.'),
+    el('p', {}, el('b', { style: { color: 'var(--text-1)' } }, 'Direkt einfügen: '),
+      'Auf dem Startbildschirm gibt es ein Einfügefeld. Langes Tippen, „Einsetzen" – fertig. Am Rechner reicht ⌘V beziehungsweise Strg+V irgendwo auf der Seite.'),
+    el('p', {}, el('b', { style: { color: 'var(--text-1)' } }, 'Gepackte Dateien: '),
+      'Der Datei-Dialog nimmt auch ', el('code', {}, '.zip'), ' und ', el('code', {}, '.gz'),
+      ' entgegen und entpackt sie im Browser. Braucht iOS 16.4 oder neuer.'))));
 
   page.appendChild(card('Über dieses Werkzeug', {},
     el('div', { style: { fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.7', display: 'grid', gap: '10px' } },
@@ -1123,6 +1213,9 @@ function exportGpx() {
   download(baseName() + '.gpx', 'application/gpx+xml', gpx);
 }
 function exportReport() {
+  download(baseName() + '_diagnose.txt', 'text/plain;charset=utf-8', reportText());
+}
+function reportText() {
   const ds = App.ds, T = ds.trip, P = App.profile;
   const L = [];
   L.push('DIAGNOSEBERICHT — ' + P.name);
@@ -1135,6 +1228,10 @@ function exportReport() {
   L.push('  Ø / max. Tempo       ' + fmt(T.speedAvgMoving, 1) + ' / ' + fmt(T.speedMax, 0) + ' km/h');
   if (isFinite(T.consAvg)) L.push('  Verbrauch            ' + fmt(T.consAvg, 1) + ' L/100 km  (' + fmt(T.fuelUsed, 2) + ' L)');
   if (isFinite(T.rpmMax))  L.push('  Ø / max. Drehzahl    ' + fmt(T.rpmAvg, 0) + ' / ' + fmt(T.rpmMax, 0) + ' min⁻¹');
+  L.push('');
+  const t = App.diag.tally;
+  L.push('ERGEBNIS: ' + t.ok + ' unauffaellig, ' + t.warn + ' grenzwertig, ' + t.crit + ' auffaellig, ' +
+         (t.unklar + t.missing) + ' nicht bewertbar');
   L.push('');
   L.push('BEFUNDE');
   const label = { ok: 'UNAUFFAELLIG ', warn: 'GRENZWERTIG  ', crit: 'AUFFAELLIG   ', unklar: 'NICHT BEWERTB', missing: 'PID FEHLT    ' };
@@ -1149,8 +1246,21 @@ function exportReport() {
   });
   L.push('');
   L.push('Erzeugt mit OBD Telemetrie Studio. Ersetzt keine Werkstattdiagnose.');
-  download(baseName() + '_diagnose.txt', 'text/plain;charset=utf-8', L.join('\n'));
+  return L.join('\n');
 }
+function canShareFiles() {
+  try { return !!(navigator.canShare && navigator.share &&
+    navigator.canShare({ files: [new File(['x'], 'x.txt', { type: 'text/plain' })] })); }
+  catch (e) { return false; }
+}
+async function shareReport() {
+  const files = [
+    new File([reportText()], baseName() + '_diagnose.txt', { type: 'text/plain' })
+  ];
+  try { await navigator.share({ title: 'Fahrtauswertung ' + baseName(), files }); }
+  catch (e) { if (e && e.name !== 'AbortError') download(files[0].name, 'text/plain;charset=utf-8', files[0]); }
+}
+
 function baseName() {
   return (App.fileName || 'fahrt').replace(/\.[^.]+$/, '').replace(/[^\wäöüÄÖÜß.\- ]+/g, '_');
 }
@@ -1177,6 +1287,52 @@ function baseName() {
     const f = e.dataTransfer && e.dataTransfer.files[0];
     if (f && $('#hero').hidden === false) loadFile(f);
   });
+
+  /* Zwischenablage */
+  $('#paste').addEventListener('click', async () => {
+    try { await ingest({ kind: 'text', text: await readClipboard(), name: 'Aus Zwischenablage' }); }
+    catch (e) { loadFailed(e); }
+  });
+  /* Einfügefeld: funktioniert auch dort, wo der direkte Zugriff verweigert wird */
+  const pasteBox = $('#pastebox');
+  pasteBox.addEventListener('paste', e => {
+    const t = (e.clipboardData || window.clipboardData).getData('text');
+    if (t && t.trim()) { e.preventDefault(); pasteBox.value = ''; ingest({ kind: 'text', text: t, name: 'Eingefügte Daten' }); }
+  });
+  pasteBox.addEventListener('input', () => {
+    const t = pasteBox.value;
+    if (t.length > 200) { pasteBox.value = ''; ingest({ kind: 'text', text: t, name: 'Eingefügte Daten' }); }
+  });
+  document.addEventListener('paste', e => {
+    if (!$('#hero').hidden && document.activeElement !== pasteBox) {
+      const t = (e.clipboardData || window.clipboardData).getData('text');
+      if (t && t.trim().length > 200) { e.preventDefault(); ingest({ kind: 'text', text: t, name: 'Eingefügte Daten' }); }
+    }
+  });
+
+  /* Übergabe per Adresse: ?src=…  ·  #gz=…  ·  #clipboard
+     Auch bei bereits geöffneter Seite: ein Kurzbefehl ändert dann nur den Anker,
+     die Seite lädt nicht neu — deshalb zusätzlich auf hashchange hören. */
+  $('#hand-go').addEventListener('click', async () => {
+    try { await ingest({ kind: 'text', text: await readClipboard(), name: 'Aus Zwischenablage' }); }
+    catch (e) { loadFailed(e); }
+  });
+  $('#hand-alt').addEventListener('click', () => {
+    $('#hand').hidden = true;
+    pasteBox.focus();
+    pasteBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
+  function applyHandoff() {
+    const ho = handoffFromUrl();
+    if (!ho.src && !ho.gz && !ho.clip) return false;
+    resetToHero();
+    if (ho.src)      ingest({ kind: 'url', url: ho.src, name: ho.name });
+    else if (ho.gz)  ingest({ kind: 'text', text: ho.gz, name: ho.name || 'Übergebene Daten' });
+    else             $('#hand').hidden = false;
+    return true;
+  }
+  applyHandoff();
+  window.addEventListener('hashchange', applyHandoff);
 
   /* Beispieldatei neben der HTML-Datei? */
   fetch('data/demo.csv', { method: 'HEAD' }).then(r => {

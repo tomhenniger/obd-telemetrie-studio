@@ -38,6 +38,39 @@ als lesbarer Diagnosebericht.
 
 ## Eigene CSV laden
 
+Vier Wege, alle rein im Browser:
+
+| Weg | Wann |
+|---|---|
+| **Datei** | Drag-and-drop oder „CSV auswählen". Nimmt auch `.zip` und `.gz` und entpackt im Browser. |
+| **Zwischenablage** | Knopf „Aus Zwischenablage" oder das Einfügefeld auf dem Startbildschirm (⌘V / Strg+V geht überall auf der Seite). Versteht rohen CSV-Text ebenso wie Base64 einer ZIP- oder gzip-Datei. |
+| **Adresse** | `?src=https://…/fahrt.csv` an die URL anhängen. Der fremde Server muss `Access-Control-Allow-Origin` senden. |
+| **Anker** | `#clipboard` öffnet die Seite mit Übernahme-Knopf, `#gz=<base64>` übergibt kleine Dateien direkt in der Adresse. |
+
+### Vom iPhone: Siri-Kurzbefehl
+
+Fünf Aktionen in der Kurzbefehle-App, danach taucht der Kurzbefehl im Teilen-Menü der Dateien-App auf
+(in den Kurzbefehl-Einstellungen „Bei Teilen anzeigen" mit Eingabetyp „Dateien"):
+
+1. **Datei auswählen** — oder „Kurzbefehl-Eingabe erhalten" für den Teilen-Weg
+2. **Archiv erstellen** — packt als ZIP, aus 28 MB werden rund 2 MB
+3. **Base64 codieren** — die Zwischenablage gibt nur Text an eine Webseite weiter
+4. **In die Zwischenablage kopieren**
+5. **URL öffnen** — `https://tomhenniger.github.io/obd-telemetrie-studio/#clipboard`
+
+Safari fragt einmal nach der Erlaubnis zum Einsetzen, dann steht die Auswertung. Die Datei wird
+nirgendwo gespeichert und nirgendwo hochgeladen — es gibt keinen Server, der sie annehmen könnte.
+
+Schritt 2 und 3 sind optional: ohne sie liegen 28 MB Rohtext in der Zwischenablage, was funktioniert,
+aber spürbar zäh ist. Gepackt sind es rund 3 Mio. Zeichen und die Übernahme dauert unter zwei Sekunden.
+
+**Was nicht geht:** die CSV per POST an die Seite schicken und dafür einen teilbaren Ergebnis-Link
+bekommen. GitHub Pages ist statisches Hosting — es gibt keinen Prozess, der eine Anfrage
+entgegennehmen könnte, und ein teilbarer Link setzt voraus, dass die Daten irgendwo liegen. Genau
+dieses Fehlen ist der Grund, warum die Aufzeichnung das Gerät nicht verlässt.
+
+### Erkannte Formate
+
 Die Datei per Drag-and-drop ablegen oder über „CSV auswählen" öffnen. Erkannt werden automatisch:
 
 - **Long-Format** (`SECONDS;PID;VALUE;UNITS;LATITUDE;LONGITUDE`) – Car Scanner ELM OBD2, OBD Auto Doctor
@@ -93,7 +126,9 @@ statt eines Urteils auf dünner Datenbasis.
 | `src/24-chart.js` | Canvas-Diagramme (Linien, Histogramm, Streubild, Dichte) |
 | `src/25-map.js` | Slippy-Map mit OSM-Kacheln |
 | `src/26-diag.js` | Fahrzeugprofile und Diagnose-Regelwerk |
-| `src/27-ui.js`, `src/28-app.js` | UI-Bausteine und Sektionen |
+| `src/27-ui.js` | UI-Bausteine |
+| `src/28-ingest.js` | Übergabewege: Zwischenablage, Adresse, ZIP- und gzip-Entpacken |
+| `src/29-app.js` | Zustand, Navigation und Sektionen |
 
 ## Hinweis
 

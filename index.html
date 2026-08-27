@@ -462,6 +462,27 @@ table.tbl tbody tr:hover td:first-child { background: var(--surface-2); }
                  border-radius: var(--r-sm); padding: 10px 12px; font-size: 12px; color: var(--text-2); }
 .drop-feat b { display: block; color: var(--text-1); font-size: 12.5px; margin-bottom: 2px; }
 
+.pastebox {
+  display: block; width: 100%; margin: 14px auto 0; max-width: 460px;
+  padding: 10px 13px; min-height: 44px; resize: none; overflow: hidden;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm);
+  color: var(--text-1); font-size: 12.5px; text-align: center; line-height: 1.5;
+}
+.pastebox::placeholder { color: var(--text-3); }
+.pastebox:focus { border-color: var(--accent-line); background: var(--surface-3); text-align: left; }
+
+.recipe { counter-reset: step; display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.recipe li { counter-increment: step; display: grid; grid-template-columns: 24px 1fr; gap: 11px; align-items: start; }
+.recipe li::before {
+  content: counter(step); width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); font-size: 11.5px; font-weight: 700;
+  font-family: var(--mono); margin-top: 1px;
+}
+.recipe b { display: block; font-size: 13px; }
+.recipe span { font-size: 12.5px; color: var(--text-2); line-height: 1.55; }
+.recipe code { font-family: var(--mono); font-size: 11.5px; background: var(--surface-3);
+  border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; word-break: break-all; }
+
 .prog { width: min(460px, 100%); }
 .prog-bar { height: 5px; border-radius: 3px; background: var(--surface-3); overflow: hidden; margin-top: 12px; }
 .prog-bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px;
@@ -539,6 +560,9 @@ details.acc > summary::-webkit-details-marker { display: none; }
 <g id="i-info"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.8v.1"/></g>
 <g id="i-check"><path d="M4 12.5l5.5 5.5L20 7"/></g>
 <g id="i-x"><path d="M6 6l12 12M18 6L6 18"/></g>
+<g id="i-clip"><rect x="7.5" y="3.5" width="9" height="4" rx="1.4"/><path d="M7.5 5.5H6a2 2 0 00-2 2v11a2 2 0 002 2h12a2 2 0 002-2v-11a2 2 0 00-2-2h-1.5"/><path d="M8.5 12h7M8.5 15.5h4.5"/></g>
+<g id="i-share"><path d="M12 15V3.5M8.5 7L12 3.5 15.5 7"/><path d="M5 13v6a2 2 0 002 2h10a2 2 0 002-2v-6"/></g>
+<g id="i-phone"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 5.5h3"/><path d="M11 18.6h2"/></g>
 <g id="i-car"><path d="M4 16v3h3v-3M17 16v3h3v-3"/><path d="M3.5 16h17v-4l-2-5h-11l-2 5z"/><path d="M6.5 13h2M15.5 13h2"/></g>
 </defs></svg>
 
@@ -551,14 +575,28 @@ details.acc > summary::-webkit-details-marker { display: none; }
       <p>CSV&#8209;Export deines OBD&#8209;Adapters hier ablegen. Die Datei wird ausschließlich im Browser verarbeitet – nichts wird hochgeladen, nichts verlässt dein Gerät.</p>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
         <button class="btn primary" id="pick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><use href="#i-upload"/></svg>CSV auswählen</button>
+        <button class="btn" id="paste"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-clip"/></svg>Aus Zwischenablage</button>
         <button class="btn" id="demo" hidden>Beispielfahrt laden</button>
       </div>
-      <input type="file" id="file" accept=".csv,.txt,text/csv,text/plain" hidden>
+      <input type="file" id="file" accept=".csv,.txt,.gz,.zip,text/csv,text/plain,application/gzip,application/zip" hidden>
+      <textarea id="pastebox" class="pastebox" rows="1" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"
+        placeholder="… oder hier hineintippen und einsetzen (langes Tippen → Einsetzen)"></textarea>
       <div class="drop-feat">
         <div><b>Formatunabhängig</b>Long- und Wide-Format, Semikolon, Komma oder Tab, Punkt oder Komma als Dezimaltrenner</div>
         <div><b>Umfangreiche Statistik</b>Kennzahlen, Verteilungen, Motorkennfelder, Gangerkennung, Beschleunigungswerte</div>
         <div><b>Diagnose gegen Werksangaben</b>Regelwerk mit Sollbereichen, Ursachen und konkreten Prüfschritten</div>
         <div><b>GPS-Karte</b>Route auf OpenStreetMap, eingefärbt nach jeder Messgröße</div>
+      </div>
+    </div>
+    <div class="note info" id="hand" hidden style="margin:20px auto 0;max-width:660px;text-align:left">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="n-i"><use href="#i-clip"/></svg>
+      <div style="flex:1">
+        <b>Übergabe aus der Kurzbefehle-App</b>
+        Die Daten liegen in der Zwischenablage. Safari fragt beim Einsetzen einmal um Erlaubnis – das ist die Stelle, an der iOS sicherstellt, dass keine Seite unbemerkt mitliest.
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" id="hand-go">Daten übernehmen</button>
+          <button class="btn" id="hand-alt">Stattdessen selbst einsetzen</button>
+        </div>
       </div>
     </div>
     <div class="prog" id="prog" hidden style="margin:22px auto 0">
@@ -3825,6 +3863,175 @@ function download(name, mime, content) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 /* ============================================================
+   Übergabewege für die CSV — Datei, Zwischenablage, URL, Fragment.
+   Alles läuft im Browser; nichts wird hochgeladen.
+   ============================================================ */
+
+const MAGIC = {
+  gzip: u => u.length > 2 && u[0] === 0x1f && u[1] === 0x8b,
+  zip:  u => u.length > 4 && u[0] === 0x50 && u[1] === 0x4b && (u[2] === 3 || u[2] === 5 || u[2] === 7),
+  zstd: u => u.length > 4 && u[0] === 0x28 && u[1] === 0xb5 && u[2] === 0x2f && u[3] === 0xfd
+};
+
+function hasDecompression() { return typeof DecompressionStream === 'function'; }
+
+async function decompress(bytes, format) {
+  if (!hasDecompression())
+    throw new Error('Dieser Browser kann gepackte Daten nicht entpacken (DecompressionStream fehlt). ' +
+                    'Auf dem iPhone braucht es dafür iOS 16.4 oder neuer.');
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/* Minimaler ZIP-Leser: liest das zentrale Verzeichnis und liefert den
+   größten enthaltenen Eintrag (Shortcuts „Archiv erstellen" packt genau eine Datei). */
+function zipEntries(u8) {
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  let eocd = -1;
+  const from = Math.max(0, u8.length - 65557);
+  for (let i = u8.length - 22; i >= from; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('Das sieht nach einem ZIP aus, aber das Archiv-Ende fehlt – die Datei ist wohl unvollständig übertragen worden.');
+  const count = dv.getUint16(eocd + 10, true);
+  let off = dv.getUint32(eocd + 16, true);
+  const out = [];
+  for (let k = 0; k < count && off + 46 <= u8.length; k++) {
+    if (dv.getUint32(off, true) !== 0x02014b50) break;
+    const method   = dv.getUint16(off + 10, true);
+    const compSize = dv.getUint32(off + 20, true);
+    const rawSize  = dv.getUint32(off + 24, true);
+    const nameLen  = dv.getUint16(off + 28, true);
+    const extraLen = dv.getUint16(off + 30, true);
+    const cmtLen   = dv.getUint16(off + 32, true);
+    const localOff = dv.getUint32(off + 42, true);
+    const name = new TextDecoder().decode(u8.subarray(off + 46, off + 46 + nameLen));
+    const lnLen = dv.getUint16(localOff + 26, true);
+    const leLen = dv.getUint16(localOff + 28, true);
+    const dataOff = localOff + 30 + lnLen + leLen;
+    out.push({ name, method, rawSize, data: u8.subarray(dataOff, dataOff + compSize) });
+    off += 46 + nameLen + extraLen + cmtLen;
+  }
+  return out;
+}
+
+async function unzipBest(u8) {
+  const entries = zipEntries(u8).filter(e => !/^__MACOSX\//.test(e.name) && !/\/$/.test(e.name));
+  if (!entries.length) throw new Error('Das ZIP-Archiv enthält keine lesbare Datei.');
+  const pref = entries.filter(e => /\.(csv|txt|log)$/i.test(e.name));
+  const pick = (pref.length ? pref : entries).sort((a, b) => b.rawSize - a.rawSize)[0];
+  if (pick.method === 0) return { bytes: pick.data, name: pick.name };
+  if (pick.method === 8) return { bytes: await decompress(pick.data, 'deflate-raw'), name: pick.name };
+  throw new Error('Die Datei im Archiv ist mit einem unbekannten Verfahren gepackt (Methode ' + pick.method + ').');
+}
+
+/* Base64 -> Bytes, blockweise damit auch mehrere Megabyte nicht hängen */
+function base64ToBytes(str) {
+  const clean = str.replace(/-/g, '+').replace(/_/g, '/').replace(/[^A-Za-z0-9+/=]/g, '');
+  const bin = atob(clean);
+  const n = bin.length, out = new Uint8Array(n);
+  for (let i = 0; i < n; i++) out[i] = bin.charCodeAt(i) & 255;
+  return out;
+}
+function looksBase64(s) {
+  if (s.length < 64) return false;
+  const head = s.slice(0, 4096).replace(/\s+/g, '');
+  return /^[A-Za-z0-9+/_-]+={0,2}$/.test(head);
+}
+
+/* Der gemeinsame Eingang: nimmt Bytes oder Text und liefert CSV-Text zurück. */
+async function toCsvText(input, hint) {
+  let bytes = null, text = null;
+  if (typeof input === 'string') {
+    const t = input.trim();
+    if (!t) throw new Error('Es wurde nichts übergeben – die Zwischenablage war leer.');
+    if (looksBase64(t)) { try { bytes = base64ToBytes(t); } catch (e) { text = input; } }
+    else text = input;
+  } else {
+    bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+  }
+
+  if (bytes) {
+    let guard = 0;
+    while (guard++ < 3) {
+      if (MAGIC.gzip(bytes))      { bytes = await decompress(bytes, 'gzip'); continue; }
+      if (MAGIC.zip(bytes))       { const r = await unzipBest(bytes); bytes = r.bytes; hint = hint || r.name; continue; }
+      if (MAGIC.zstd(bytes))      throw new Error('Zstandard-Archive kann der Browser nicht entpacken. Bitte als ZIP oder gzip packen.');
+      break;
+    }
+    text = new TextDecoder('utf-8').decode(bytes);
+  }
+
+  const probe = text.slice(0, 2000);
+  if (/^\s*[{[]/.test(probe) || /<html/i.test(probe))
+    throw new Error('Der übergebene Inhalt ist keine CSV-Datei, sondern ' +
+                    (/<html/i.test(probe) ? 'eine HTML-Seite' : 'JSON') +
+                    '. Bei einem Link muss dieser direkt auf die CSV zeigen, nicht auf eine Vorschauseite.');
+  if (!/[;,\t|]/.test(probe))
+    throw new Error('In den ersten Zeilen kommt kein Trennzeichen vor – das sieht nicht nach einer CSV-Tabelle aus.');
+  return { text, name: hint };
+}
+
+/* --- Zwischenablage --- */
+async function readClipboard() {
+  if (!navigator.clipboard || !navigator.clipboard.readText)
+    throw new Error('Dieser Browser gibt keinen Zugriff auf die Zwischenablage. Nutze stattdessen das Einfügefeld darunter (langes Tippen → Einsetzen).');
+  /* Manche Browser lassen das Versprechen offen, solange die Erlaubnisabfrage steht.
+     Ohne Zeitlimit würde die Oberfläche stumm hängen. */
+  let txt;
+  try {
+    txt = await Promise.race([
+      navigator.clipboard.readText(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('__timeout__')), 25000))
+    ]);
+  } catch (e) {
+    if (e && e.message === '__timeout__')
+      throw new Error('Die Abfrage der Zwischenablage kam nicht zurück – vermutlich wartet noch eine Erlaubnisabfrage des Browsers. ' +
+                      'Nimm stattdessen das Einfügefeld auf dem Startbildschirm: hineintippen, langes Tippen, „Einsetzen".');
+    throw new Error('Der Zugriff auf die Zwischenablage wurde abgelehnt oder abgebrochen. ' +
+                    'Safari fragt beim Antippen einmal nach – ohne Bestätigung geht es nicht. ' +
+                    'Alternativ das Einfügefeld auf dem Startbildschirm benutzen.');
+  }
+  if (!txt || !txt.trim()) throw new Error('Die Zwischenablage ist leer.');
+  return txt;
+}
+
+/* --- Von einer URL holen --- */
+async function fetchCsv(url, onProgress) {
+  let res;
+  try { res = await fetch(url, { redirect: 'follow' }); }
+  catch (e) {
+    throw new Error('Die Adresse konnte nicht geladen werden. Meist blockiert der fremde Server den Zugriff aus dem Browser (fehlender CORS-Header). ' +
+                    'Die Datei muss von einem Server kommen, der „Access-Control-Allow-Origin" setzt.');
+  }
+  if (!res.ok) throw new Error('Der Server hat mit ' + res.status + ' ' + res.statusText + ' geantwortet.');
+  const total = +(res.headers.get('content-length') || 0);
+  if (!res.body || !total) return new Uint8Array(await res.arrayBuffer());
+  const reader = res.body.getReader();
+  const chunks = []; let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value); got += value.length;
+    if (onProgress) onProgress(got / total, got);
+  }
+  const out = new Uint8Array(got); let p = 0;
+  for (const c of chunks) { out.set(c, p); p += c.length; }
+  return out;
+}
+
+/* Übergabeparameter aus der Adresse lesen */
+function handoffFromUrl() {
+  const q = new URLSearchParams(location.search);
+  const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const src = q.get('src') || h.get('src');
+  const gz  = q.get('gz')  || h.get('gz') || h.get('data');
+  const clip = location.hash === '#clipboard' || location.hash === '#clip' ||
+               q.get('from') === 'clipboard' || h.has('clipboard');
+  const name = q.get('name') || h.get('name');
+  return { src, gz, clip, name };
+}
+/* ============================================================
    Anwendung: Zustand, Navigation, Sektionen
    ============================================================ */
 
@@ -3857,25 +4064,64 @@ function applyTheme(t) {
   requestAnimationFrame(() => { Chart.redrawAll(); if (App.map) App.map.draw(); });
 }
 
-/* ---------- Datei laden ---------- */
-async function loadFile(file) {
-  App.fileName = file.name || 'Messfahrt';
+/* ---------- Daten übernehmen ---------- */
+function progressUI() {
   $('#prog').hidden = false;
   $('#drop').style.opacity = '.45';
-  const setP = (p, label) => {
-    $('#prog-i').style.width = (p * 100).toFixed(1) + '%';
-    $('#prog-p').textContent = Math.round(p * 100) + ' %';
+  const old = $('#load-err'); if (old) old.remove();
+  return (p, label) => {
+    $('#prog-i').style.width = (clamp(p, 0, 1) * 100).toFixed(1) + '%';
+    $('#prog-p').textContent = Math.round(clamp(p, 0, 1) * 100) + ' %';
     if (label) $('#prog-l').textContent = label;
   };
+}
+function loadFailed(e) {
+  $('#prog').hidden = true;
+  $('#drop').style.opacity = '';
+  const old = $('#load-err'); if (old) old.remove();
+  $('#drop').appendChild(el('div', { class: 'note crit', id: 'load-err', style: { marginTop: '18px', textAlign: 'left' } },
+    icon('alert', 'n-i'), el('div', {}, el('b', {}, 'Das hat nicht geklappt'), e.message || String(e))));
+  console.error(e);
+}
+
+/* Einziger Weg in die Auswertung. `src` ist eine Datei, Text, Bytes oder eine Adresse. */
+async function ingest(src) {
+  const setP = progressUI();
   try {
-    setP(0.02, 'Datei wird gelesen …');
-    await new Promise(r => setTimeout(r, 16));
-    const text = await file.text();
-    setP(0.12, 'Zeilen werden ausgewertet …');
+    let text, name = src.name || 'Messfahrt';
+
+    if (src.kind === 'file') {
+      name = src.file.name || name;
+      setP(0.02, 'Datei wird gelesen …');
+      await new Promise(r => setTimeout(r, 16));
+      const head = new Uint8Array(await src.file.slice(0, 8).arrayBuffer());
+      if (MAGIC.gzip(head) || MAGIC.zip(head) || MAGIC.zstd(head)) {
+        setP(0.06, 'Archiv wird entpackt …');
+        const r = await toCsvText(new Uint8Array(await src.file.arrayBuffer()), name);
+        text = r.text; name = r.name || name;
+      } else {
+        text = await src.file.text();
+      }
+    } else if (src.kind === 'url') {
+      setP(0.02, 'Datei wird geladen …');
+      const bytes = await fetchCsv(src.url, p => setP(0.02 + p * 0.1, 'Datei wird geladen … ' + fmt(p * 100, 0) + ' %'));
+      setP(0.12, 'Inhalt wird geprüft …');
+      const r = await toCsvText(bytes, name);
+      text = r.text; name = r.name || decodeURIComponent((src.url.split('/').pop() || name).split('?')[0]);
+    } else {
+      setP(0.04, 'Übergabe wird geprüft …');
+      await new Promise(r => setTimeout(r, 16));
+      const r = await toCsvText(src.kind === 'bytes' ? src.bytes : src.text, name);
+      text = r.text; name = r.name || name;
+    }
+
+    App.fileName = name;
+    setP(0.14, 'Zeilen werden ausgewertet …');
     await new Promise(r => setTimeout(r, 16));
     const parsed = await parseCSV(text, (p, rows) =>
-      setP(0.12 + p * 0.66, 'Zeilen werden ausgewertet … ' + fmt(rows, 0)));
-    if (!parsed.series.size) throw new Error('In dieser Datei wurde keine einzige auswertbare Messreihe gefunden. Ist es wirklich ein OBD-CSV-Export?');
+      setP(0.14 + p * 0.64, 'Zeilen werden ausgewertet … ' + fmt(rows, 0)));
+    if (!parsed.series.size)
+      throw new Error('In dieser Datei wurde keine einzige auswertbare Messreihe gefunden. Ist es wirklich ein OBD-CSV-Export?');
     setP(0.82, 'Kennzahlen werden berechnet …');
     await new Promise(r => setTimeout(r, 16));
     const ds = buildDataset(parsed, { fuel: store.get('fuel', 'petrol') });
@@ -3886,14 +4132,25 @@ async function loadFile(file) {
     $('#hero').hidden = true;
     $('#app').hidden = false;
     document.body.classList.remove('no-data');
-  } catch (e) {
-    $('#prog').hidden = true;
-    $('#drop').style.opacity = '';
-    const old = $('#load-err'); if (old) old.remove();
-    $('#drop').appendChild(el('div', { class: 'note crit', id: 'load-err', style: { marginTop: '18px', textAlign: 'left' } },
-      icon('alert', 'n-i'), el('div', {}, el('b', {}, 'Datei konnte nicht gelesen werden'), e.message)));
-    console.error(e);
-  }
+    if (location.hash || location.search) history.replaceState(null, '', location.pathname);
+  } catch (e) { loadFailed(e); }
+}
+const loadFile = file => ingest({ kind: 'file', file });
+
+/* Zurück zum Startbildschirm — nötig, wenn während einer offenen Auswertung
+   eine neue Übergabe hereinkommt. */
+function resetToHero() {
+  Chart.all.slice().forEach(c => c.destroy());
+  Chart.hoverListeners = [];
+  App.map = null; App.ds = null; App.diag = null; App.gears = null;
+  $('#pages').innerHTML = '';
+  $('#app').hidden = true;
+  $('#hero').hidden = false;
+  document.body.classList.add('no-data');
+  $('#hand').hidden = true;
+  $('#prog').hidden = true;
+  $('#drop').style.opacity = '';
+  const err = $('#load-err'); if (err) err.remove();
 }
 
 function initDataset(ds) {
@@ -4857,7 +5114,8 @@ BUILDERS.data = function (page) {
       el('button', { class: 'btn', onclick: exportStatsCsv }, icon('dl'), 'Statistik als CSV'),
       el('button', { class: 'btn', onclick: exportReport }, icon('dl'), 'Diagnosebericht als Text'),
       el('button', { class: 'btn', onclick: exportJson }, icon('dl'), 'Kennzahlen als JSON'),
-      ds.track ? el('button', { class: 'btn', onclick: exportGpx }, icon('dl'), 'Route als GPX') : null)));
+      ds.track ? el('button', { class: 'btn', onclick: exportGpx }, icon('dl'), 'Route als GPX') : null,
+      canShareFiles() ? el('button', { class: 'btn primary', onclick: shareReport }, icon('share'), 'Bericht teilen') : null)));
 };
 
 /* --- Einstellungen --- */
@@ -4896,6 +5154,45 @@ BUILDERS.settings = function (page) {
   }, el('div', { class: 'chiprow', style: { alignItems: 'center' } },
       el('span', { class: 'dim', style: { fontSize: '12.5px' } }, 'Kraftstoffart'), fuelSel,
       el('span', { class: 'dim', style: { fontSize: '12.5px', marginLeft: '10px' } }, 'Abrollumfang (m)'), circ)));
+
+  const base = location.origin + location.pathname;
+  page.appendChild(card('Vom iPhone hierher — Kurzbefehl einrichten', {
+    hint: 'ohne Umweg über Dateien speichern',
+    foot: 'Warum der Umweg über die Zwischenablage: diese Seite liegt auf statischem Hosting und kann gar nichts entgegennehmen – es gibt keinen Server, der etwas empfangen könnte. Genau das ist der Grund, warum deine Aufzeichnung nirgendwo landet. Die Daten gehen vom Kurzbefehl direkt in den Browser und werden dort ausgewertet.'
+  },
+    el('p', { style: { color: 'var(--text-2)', fontSize: '13px', lineHeight: '1.65', margin: '0 0 14px' } },
+      'In der Kurzbefehle-App einen neuen Kurzbefehl anlegen und diese fünf Aktionen in dieser Reihenfolge hinzufügen. ' +
+      'In den Kurzbefehl-Einstellungen „Bei Teilen anzeigen" aktivieren und als Eingabe „Dateien" wählen – dann taucht er im Teilen-Menü der Dateien-App auf.'),
+    el('ol', { class: 'recipe' },
+      el('li', {}, el('div', {}, el('b', {}, 'Datei auswählen'),
+        el('span', {}, 'Oder bei einem Teilen-Kurzbefehl: „Kurzbefehl-Eingabe erhalten". Damit landet die CSV im Ablauf.'))),
+      el('li', {}, el('div', {}, el('b', {}, 'Archiv erstellen'),
+        el('span', {}, 'Packt die CSV als ZIP. Aus 28 MB werden rund 2 MB – ohne diesen Schritt liegen 28 MB Text in der Zwischenablage, was funktioniert, aber spürbar zäh ist.'))),
+      el('li', {}, el('div', {}, el('b', {}, 'Base64 codieren'),
+        el('span', {}, 'Macht aus dem Archiv reinen Text, denn die Zwischenablage kann nur Text an eine Webseite weitergeben.'))),
+      el('li', {}, el('div', {}, el('b', {}, 'In die Zwischenablage kopieren'),
+        el('span', {}, 'Die Daten bleiben auf dem Gerät.'))),
+      el('li', {}, el('div', {}, el('b', {}, 'URL öffnen'),
+        el('span', {}, 'Adresse: ', el('code', {}, base + '#clipboard'),
+          ' Safari öffnet die Seite, fragt einmal nach der Erlaubnis zum Einsetzen – und die Auswertung steht.')))),
+    el('div', { class: 'chiprow', style: { marginTop: '14px' } },
+      el('button', { class: 'btn', onclick: e => {
+        navigator.clipboard.writeText(base + '#clipboard')
+          .then(() => { e.target.textContent = 'Adresse kopiert'; setTimeout(() => { e.target.textContent = 'Adresse für Schritt 5 kopieren'; }, 2200); })
+          .catch(() => {});
+      } }, 'Adresse für Schritt 5 kopieren'))));
+
+  page.appendChild(card('Weitere Übergabewege', {
+    hint: 'falls der Kurzbefehl nicht passt'
+  }, el('div', { style: { fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.7', display: 'grid', gap: '10px' } },
+    el('p', {}, el('b', { style: { color: 'var(--text-1)' } }, 'Von einer Adresse laden: '),
+      'Hängt man ', el('code', {}, '?src=https://…/fahrt.csv'), ' an die Adresse an, holt die Seite die Datei selbst. ' +
+      'Der Server, auf dem die Datei liegt, muss dafür ', el('code', {}, 'Access-Control-Allow-Origin'), ' senden – ein iCloud-Freigabelink reicht nicht, der liefert eine Vorschauseite statt der Datei.'),
+    el('p', {}, el('b', { style: { color: 'var(--text-1)' } }, 'Direkt einfügen: '),
+      'Auf dem Startbildschirm gibt es ein Einfügefeld. Langes Tippen, „Einsetzen" – fertig. Am Rechner reicht ⌘V beziehungsweise Strg+V irgendwo auf der Seite.'),
+    el('p', {}, el('b', { style: { color: 'var(--text-1)' } }, 'Gepackte Dateien: '),
+      'Der Datei-Dialog nimmt auch ', el('code', {}, '.zip'), ' und ', el('code', {}, '.gz'),
+      ' entgegen und entpackt sie im Browser. Braucht iOS 16.4 oder neuer.'))));
 
   page.appendChild(card('Über dieses Werkzeug', {},
     el('div', { style: { fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.7', display: 'grid', gap: '10px' } },
@@ -4949,6 +5246,9 @@ function exportGpx() {
   download(baseName() + '.gpx', 'application/gpx+xml', gpx);
 }
 function exportReport() {
+  download(baseName() + '_diagnose.txt', 'text/plain;charset=utf-8', reportText());
+}
+function reportText() {
   const ds = App.ds, T = ds.trip, P = App.profile;
   const L = [];
   L.push('DIAGNOSEBERICHT — ' + P.name);
@@ -4961,6 +5261,10 @@ function exportReport() {
   L.push('  Ø / max. Tempo       ' + fmt(T.speedAvgMoving, 1) + ' / ' + fmt(T.speedMax, 0) + ' km/h');
   if (isFinite(T.consAvg)) L.push('  Verbrauch            ' + fmt(T.consAvg, 1) + ' L/100 km  (' + fmt(T.fuelUsed, 2) + ' L)');
   if (isFinite(T.rpmMax))  L.push('  Ø / max. Drehzahl    ' + fmt(T.rpmAvg, 0) + ' / ' + fmt(T.rpmMax, 0) + ' min⁻¹');
+  L.push('');
+  const t = App.diag.tally;
+  L.push('ERGEBNIS: ' + t.ok + ' unauffaellig, ' + t.warn + ' grenzwertig, ' + t.crit + ' auffaellig, ' +
+         (t.unklar + t.missing) + ' nicht bewertbar');
   L.push('');
   L.push('BEFUNDE');
   const label = { ok: 'UNAUFFAELLIG ', warn: 'GRENZWERTIG  ', crit: 'AUFFAELLIG   ', unklar: 'NICHT BEWERTB', missing: 'PID FEHLT    ' };
@@ -4975,8 +5279,21 @@ function exportReport() {
   });
   L.push('');
   L.push('Erzeugt mit OBD Telemetrie Studio. Ersetzt keine Werkstattdiagnose.');
-  download(baseName() + '_diagnose.txt', 'text/plain;charset=utf-8', L.join('\n'));
+  return L.join('\n');
 }
+function canShareFiles() {
+  try { return !!(navigator.canShare && navigator.share &&
+    navigator.canShare({ files: [new File(['x'], 'x.txt', { type: 'text/plain' })] })); }
+  catch (e) { return false; }
+}
+async function shareReport() {
+  const files = [
+    new File([reportText()], baseName() + '_diagnose.txt', { type: 'text/plain' })
+  ];
+  try { await navigator.share({ title: 'Fahrtauswertung ' + baseName(), files }); }
+  catch (e) { if (e && e.name !== 'AbortError') download(files[0].name, 'text/plain;charset=utf-8', files[0]); }
+}
+
 function baseName() {
   return (App.fileName || 'fahrt').replace(/\.[^.]+$/, '').replace(/[^\wäöüÄÖÜß.\- ]+/g, '_');
 }
@@ -5003,6 +5320,52 @@ function baseName() {
     const f = e.dataTransfer && e.dataTransfer.files[0];
     if (f && $('#hero').hidden === false) loadFile(f);
   });
+
+  /* Zwischenablage */
+  $('#paste').addEventListener('click', async () => {
+    try { await ingest({ kind: 'text', text: await readClipboard(), name: 'Aus Zwischenablage' }); }
+    catch (e) { loadFailed(e); }
+  });
+  /* Einfügefeld: funktioniert auch dort, wo der direkte Zugriff verweigert wird */
+  const pasteBox = $('#pastebox');
+  pasteBox.addEventListener('paste', e => {
+    const t = (e.clipboardData || window.clipboardData).getData('text');
+    if (t && t.trim()) { e.preventDefault(); pasteBox.value = ''; ingest({ kind: 'text', text: t, name: 'Eingefügte Daten' }); }
+  });
+  pasteBox.addEventListener('input', () => {
+    const t = pasteBox.value;
+    if (t.length > 200) { pasteBox.value = ''; ingest({ kind: 'text', text: t, name: 'Eingefügte Daten' }); }
+  });
+  document.addEventListener('paste', e => {
+    if (!$('#hero').hidden && document.activeElement !== pasteBox) {
+      const t = (e.clipboardData || window.clipboardData).getData('text');
+      if (t && t.trim().length > 200) { e.preventDefault(); ingest({ kind: 'text', text: t, name: 'Eingefügte Daten' }); }
+    }
+  });
+
+  /* Übergabe per Adresse: ?src=…  ·  #gz=…  ·  #clipboard
+     Auch bei bereits geöffneter Seite: ein Kurzbefehl ändert dann nur den Anker,
+     die Seite lädt nicht neu — deshalb zusätzlich auf hashchange hören. */
+  $('#hand-go').addEventListener('click', async () => {
+    try { await ingest({ kind: 'text', text: await readClipboard(), name: 'Aus Zwischenablage' }); }
+    catch (e) { loadFailed(e); }
+  });
+  $('#hand-alt').addEventListener('click', () => {
+    $('#hand').hidden = true;
+    pasteBox.focus();
+    pasteBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
+  function applyHandoff() {
+    const ho = handoffFromUrl();
+    if (!ho.src && !ho.gz && !ho.clip) return false;
+    resetToHero();
+    if (ho.src)      ingest({ kind: 'url', url: ho.src, name: ho.name });
+    else if (ho.gz)  ingest({ kind: 'text', text: ho.gz, name: ho.name || 'Übergebene Daten' });
+    else             $('#hand').hidden = false;
+    return true;
+  }
+  applyHandoff();
+  window.addEventListener('hashchange', applyHandoff);
 
   /* Beispieldatei neben der HTML-Datei? */
   fetch('data/demo.csv', { method: 'HEAD' }).then(r => {
