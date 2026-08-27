@@ -1,0 +1,5 @@
+# Messdaten bleiben lokal – CSV-Exporte enthalten GPS-Positionen
+*.csv
+data/*
+!data/.gitkeep
+.DS_Store

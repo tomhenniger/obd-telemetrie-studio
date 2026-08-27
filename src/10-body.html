@@ -1,0 +1,84 @@
+</head>
+<body class="no-data">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-gauge"><circle cx="12" cy="12" r="9"/><path d="M12 12l4-4"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></g>
+<g id="i-chart"><path d="M4 19V6M4 19h16"/><path d="M7.5 15l3.5-4.5 3 3L19 8"/></g>
+<g id="i-map"><path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></g>
+<g id="i-bars"><path d="M5 20V11M10 20V5M15 20V14M20 20V8"/></g>
+<g id="i-grid"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 9.5h17M3.5 15h17M9.5 3.5v17M15 3.5v17"/></g>
+<g id="i-stetho"><path d="M6 3v5a4 4 0 008 0V3"/><path d="M10 15v-3"/><circle cx="17" cy="15" r="2.5"/><path d="M10 15a5 5 0 004.6 5"/></g>
+<g id="i-table"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M9 9.5v10"/></g>
+<g id="i-cog"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3"/></g>
+<g id="i-upload"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></g>
+<g id="i-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M22 12h-2M4 12H2M18.4 5.6l-1.4 1.4M7 17l-1.4 1.4M18.4 18.4L17 17M7 7L5.6 5.6"/></g>
+<g id="i-moon"><path d="M20 14.5A8.5 8.5 0 019.5 4 8.5 8.5 0 1020 14.5z"/></g>
+<g id="i-dl"><path d="M12 4v12M8 12l4 4 4-4"/><path d="M4 20h16"/></g>
+<g id="i-alert"><path d="M12 3L2.5 20h19z"/><path d="M12 10v4M12 17.2v.1"/></g>
+<g id="i-info"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.8v.1"/></g>
+<g id="i-check"><path d="M4 12.5l5.5 5.5L20 7"/></g>
+<g id="i-x"><path d="M6 6l12 12M18 6L6 18"/></g>
+<g id="i-car"><path d="M4 16v3h3v-3M17 16v3h3v-3"/><path d="M3.5 16h17v-4l-2-5h-11l-2 5z"/><path d="M6.5 13h2M15.5 13h2"/></g>
+</defs></svg>
+
+<!-- Startbildschirm -->
+<section class="hero" id="hero">
+  <div>
+    <div class="drop" id="drop">
+      <div class="drop-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-upload"/></svg></div>
+      <h2>OBD&#8209;Telemetrie&nbsp;Studio</h2>
+      <p>CSV&#8209;Export deines OBD&#8209;Adapters hier ablegen. Die Datei wird ausschließlich im Browser verarbeitet – nichts wird hochgeladen, nichts verlässt dein Gerät.</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn primary" id="pick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><use href="#i-upload"/></svg>CSV auswählen</button>
+        <button class="btn" id="demo" hidden>Beispielfahrt laden</button>
+      </div>
+      <input type="file" id="file" accept=".csv,.txt,text/csv,text/plain" hidden>
+      <div class="drop-feat">
+        <div><b>Formatunabhängig</b>Long- und Wide-Format, Semikolon, Komma oder Tab, Punkt oder Komma als Dezimaltrenner</div>
+        <div><b>Umfangreiche Statistik</b>Kennzahlen, Verteilungen, Motorkennfelder, Gangerkennung, Beschleunigungswerte</div>
+        <div><b>Diagnose gegen Werksangaben</b>Regelwerk mit Sollbereichen, Ursachen und konkreten Prüfschritten</div>
+        <div><b>GPS-Karte</b>Route auf OpenStreetMap, eingefärbt nach jeder Messgröße</div>
+      </div>
+    </div>
+    <div class="prog" id="prog" hidden style="margin:22px auto 0">
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-2)">
+        <span id="prog-l">Datei wird gelesen …</span><span class="num" id="prog-p">0 %</span>
+      </div>
+      <div class="prog-bar"><i id="prog-i" style="width:0"></i></div>
+    </div>
+    <p style="text-align:center;font-size:11.5px;color:var(--text-3);margin-top:22px">
+      Getestet mit Car&nbsp;Scanner ELM&nbsp;OBD2, Torque&nbsp;Pro und OBDLink. Läuft offline; nur die Kartenkacheln werden nachgeladen.
+    </p>
+  </div>
+</section>
+
+<!-- Anwendung -->
+<div id="app" hidden>
+  <nav class="rail" aria-label="Bereiche">
+    <div class="brand">
+      <div class="brand-mark">OB</div>
+      <div class="brand-txt"><b>Telemetrie Studio</b><span id="brand-sub">Keine Fahrt geladen</span></div>
+    </div>
+    <div id="nav"></div>
+    <div class="rail-foot">
+      <button class="btn sm" id="new-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><use href="#i-upload"/></svg><span class="lbl">Andere CSV</span></button>
+    </div>
+  </nav>
+
+  <main>
+    <header class="topbar">
+      <div style="min-width:0">
+        <h1 id="page-title">Überblick</h1>
+        <div class="sub" id="page-sub"></div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn icon" id="theme" title="Hell/Dunkel umschalten" aria-label="Hell/Dunkel umschalten">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-moon" id="theme-ico"/></svg>
+        </button>
+      </div>
+    </header>
+    <div id="pages"></div>
+  </main>
+
+  <nav class="tabbar" id="tabbar" aria-label="Bereiche"></nav>
+</div>
