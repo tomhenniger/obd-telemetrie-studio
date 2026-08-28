@@ -997,8 +997,8 @@ BUILDERS.fields = function (page) {
         'Der höchste Gang fehlt meist, weil er auf der Strecke nicht gebraucht wurde; der niedrigste, weil beim ' +
         'Anfahren die Kupplung schleift und dabei gar kein festes Verhältnis vorliegt. ' +
         (g.spread.every((x, i) => i === 0 || x <= g.spread[i - 1] + 0.02)
-          ? 'Die Stufensprünge werden hier von Stufe zu Stufe kleiner – so sieht eine echte Getriebeabstufung aus, das spricht dafür, dass alle erkannten Stufen echt sind.'
-          : 'Achtung: die Stufensprünge werden nicht durchgehend kleiner. Bei einer echten Getriebeabstufung tun sie das – hier könnte eine Stufe fehlen oder eine erfunden sein.'))));
+          ? 'Die Stufensprünge werden hier von Stufe zu Stufe kleiner, wie bei den meisten Getrieben – das spricht dafür, dass alle erkannten Stufen echt sind.'
+          : 'Die Stufensprünge werden nicht durchgehend kleiner. Das ist kein sicheres Fehlerzeichen: mehrere verbreitete Wandlerautomaten (ZF 8HP, Mercedes 9G-Tronic) haben rund um den Direktgang bewusst gestauchte Nachbarstufen. Passt es nicht zu deinem Getriebe, könnte aber eine Stufe fehlen oder eine erfunden sein.'))));
   }
 
   /* Geschwindigkeit × Verbrauch */
@@ -2027,6 +2027,25 @@ function gearboxCard() {
       el('span', { class: 'dim', style: { fontSize: '12.5px' } }, 'Angabe'), modeSel));
 
     if (s.mode === 'catalog') {
+      // Vorschlag aus der Messung: die Abstaende der Uebersetzungen sind ein
+      // Fingerabdruck, den der Achsantrieb nicht veraendert.
+      if (App.gears && App.gears.gears.length >= 4 && GEARBOXES.length) {
+        const meas = App.gears.gears.map(g => g.kmhPer1000).sort((a, b) => a - b);
+        const sug = suggestGearboxes(meas, rc, 4).filter(h => h.worst <= 0.06);
+        if (sug.length) {
+          const box = el('div', { class: 'note', style: { marginBottom: '10px' } },
+            el('b', {}, 'Aus der Messung vorgeschlagen'),
+            el('div', { class: 'chiprow', style: { flexWrap: 'wrap', marginTop: '6px' } },
+              sug.map(h => el('button', { class: 'btn' + (h.worst <= 0.025 ? ' primary' : ''), type: 'button',
+                onclick: () => { setGearboxSetting({ mode: 'catalog', id: h.gb.id, final: 0 }); render(); recompute(); } },
+                h.gb.kennung + ' · ' + fmt(h.worst * 100, 1) + ' % · Achse ' + fmt(h.final, 2)))),
+            el('p', { class: 'dim2', style: { fontSize: '12px', marginTop: '6px' } },
+              'Verglichen werden nur die Abstände der Gänge – dafür muss der Achsantrieb nicht bekannt sein. ' +
+              'Unter etwa 1 % ist die Übereinstimmung eindeutig; darüber können mehrere Getriebe ähnlich abgestuft sein. ' +
+              'Das ersetzt keinen Blick in die Papiere.'));
+          wrap.appendChild(box);
+        }
+      }
       if (!GEARBOXES.length) {
         wrap.appendChild(noteBox('warn', 'Noch kein Getriebe im Katalog',
           'Für dieses Werkzeug sind noch keine Werksübersetzungen hinterlegt. Trag sie über „Übersetzungen selbst eintragen" ein – die Zahlen stehen in den Fahrzeugpapieren, im Reparaturleitfaden oder im Selbststudienprogramm des Herstellers.'));
@@ -2052,14 +2071,33 @@ function gearboxCard() {
         q.addEventListener('input', paint); paint();
         wrap.appendChild(q); wrap.appendChild(list);
         const gb = gearboxById(s.id);
-        if (gb) wrap.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center', marginTop: '10px' } },
-          el('span', { class: 'dim', style: { fontSize: '12.5px' } }, 'Achsantrieb abweichend'),
-          el('input', { class: 'inp', type: 'number', step: '0.001', style: { width: '110px' },
-            placeholder: String(gb.final || ''), value: s.final > 0 ? String(s.final) : '',
-            onchange: e => { const v = parseFloat(e.target.value);
-              setGearboxSetting(Object.assign({}, s, { final: v > 0 ? v : 0 })); render(); recompute(); } }),
-          el('span', { class: 'dim', style: { fontSize: '12px' } },
-            'nur nötig, wenn dein Fahrzeug einen anderen als ' + fmt(gb.final, 3) + ' hat')));
+        if (gb) {
+          const gi2 = App.gears && App.gears.gearbox;
+          const fitted = gi2 && gi2.finalFitted;
+          wrap.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center', marginTop: '10px' } },
+            el('span', { class: 'dim', style: { fontSize: '12.5px' } }, 'Achsantrieb'),
+            el('input', { class: 'inp', type: 'number', step: '0.001', style: { width: '110px' },
+              placeholder: gb.final > 0 ? String(gb.final) : (fitted ? fmt(fitted, 3) : 'aus Messung'),
+              value: s.final > 0 ? String(s.final) : '',
+              onchange: e => { const v = parseFloat(e.target.value);
+                setGearboxSetting(Object.assign({}, s, { final: v > 0 ? v : 0 })); render(); recompute(); } }),
+            el('span', { class: 'dim', style: { fontSize: '12px' } },
+              gb.final > 0 ? 'Werkswert ' + fmt(gb.final, 3) + ' – nur ändern, wenn dein Fahrzeug abweicht'
+                           : 'steht am Fahrzeug, nicht am Getriebe – leer lassen, dann wird er aus der Messung bestimmt')));
+          if (!(s.final > 0) && fitted)
+            wrap.appendChild(noteBox('ok', 'Achsantrieb aus der Messung bestimmt: ' + fmt(fitted, 3),
+              'Die Abstände der gemessenen Übersetzungen passen zu ' + gb.kennung + '; daraus folgt dieser Achsantrieb. ' +
+              'Er hängt am eingestellten Abrollumfang (' + fmt(rc, 3) + ' m) – stimmt der nicht, ist auch dieser Wert verschoben, ' +
+              'die Gangnummern bleiben davon aber unberührt.'));
+          if (gi2 && gi2.needsFinal)
+            wrap.appendChild(noteBox('warn', 'Achsantrieb ließ sich nicht aus der Messung bestimmen',
+              'Die gemessenen Übersetzungen passen nicht zu den Abständen dieses Getriebes' +
+              (isFinite(gi2.fitWorst) ? ' (beste Anpassung noch ' + fmt(gi2.fitWorst * 100, 1) + ' % daneben)' : '') +
+              '. Entweder ist es ein anderes Getriebe, oder es wurden zu wenige Gänge gefahren. Die Gangzahl (' +
+              gb.gears + ') wird trotzdem verwendet.'));
+          if (gb.hinweis) wrap.appendChild(el('p', { class: 'dim2', style: { fontSize: '12px', marginTop: '8px' } }, gb.hinweis));
+          if (gb.quelle) wrap.appendChild(el('p', { class: 'dim2', style: { fontSize: '11.5px', marginTop: '4px' } }, 'Quelle: ' + gb.quelle));
+        }
       }
     }
 
@@ -2082,8 +2120,13 @@ function gearboxCard() {
           value: ratios[i] > 0 ? String(ratios[i]) : '',
           onchange: e => { const r = ratios.slice(); r[i] = parseFloat(e.target.value) || 0; save({ ratios: r }); } })));
       wrap.appendChild(rows);
+      const gi3 = App.gears && App.gears.gearbox;
+      if (!(s.final > 0) && gi3 && gi3.finalFitted)
+        wrap.appendChild(noteBox('ok', 'Achsantrieb aus der Messung bestimmt: ' + fmt(gi3.finalFitted, 3),
+          'Das Feld oben darf leer bleiben – aus den Abständen deiner Übersetzungen und der Messung folgt dieser Wert.'));
       wrap.appendChild(el('p', { class: 'dim2', style: { fontSize: '12px', marginTop: '8px' } },
-        'Getriebeübersetzungen, nicht Gesamtübersetzungen – der Achsantrieb wird separat verrechnet. ' +
+        'Getriebeübersetzungen, nicht Gesamtübersetzungen – der Achsantrieb wird separat verrechnet ' +
+        'und darf leer bleiben, dann wird er aus der Messung bestimmt. ' +
         'Doppelkupplungsgetriebe haben oft zwei Achsantriebe, einen je Teilgetriebe. Ist das bei dir so, ' +
         'trag den der ungeraden Gänge oben ein und den zweiten hier:'));
       wrap.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center' } },
