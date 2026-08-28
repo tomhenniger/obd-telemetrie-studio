@@ -88,16 +88,49 @@ Eine CSV unter `data/demo.csv` ablegen – dann erscheint auf dem Startbildschir
 „Beispielfahrt laden". Der `data/`-Ordner ist absichtlich in `.gitignore`, damit keine
 GPS-Spuren versehentlich veröffentlicht werden.
 
+## Kaufcheck
+
+Ein eigener Bereich für die Gebrauchtwagen-Besichtigung, nutzbar **ohne geladene CSV** – beim
+Termin gibt es die Messdaten noch nicht, die Checkliste aber schon.
+
+- **85 Prüfpunkte in neun Phasen**, vom Telefonat vor dem Termin über Papiere, Karosserie,
+  kalten Motorraum, Kaltstart, Innenraum und Fahrwerk bis zur Probefahrt und dem Blick unter das
+  warme Auto. Je Punkt: was genau zu tun ist, woran man erkennt dass es passt, das Warnsignal,
+  Schweregrad, grobe Reparaturkosten und benötigtes Hilfsmittel.
+- **Dreiwertiger Zustand** je Punkt – in Ordnung, Befund, übersprungen. Übersprungen bleibt
+  bewusst ein eigener Zustand: ein ungeprüfter Punkt ist etwas anderes als ein geprüfter ohne Befund.
+- **Mitlaufende Kostenbilanz** aus den markierten Befunden als Verhandlungsgrundlage.
+  Abbruchkriterien erscheinen gesondert statt in der Summe unterzugehen.
+- **Elf Messfahrten** in Durchführungsreihenfolge, vom Vorbereitungsabend über den Kaltstart
+  (gibt es pro Termin genau einmal) bis zum zweiten Fehlerspeicher-Scan – je Schritt mit Dauer,
+  genauer Fahranweisung und Erwartungswerten in Zahlen.
+- **PID-Empfehlungen** getrennt für Benziner und Diesel, nach Pflicht, nützlich und optional,
+  mit Hinweis zur sinnvollen Obergrenze: je mehr Werte gleichzeitig, desto langsamer jeder einzelne.
+- **Mehrere Besichtigungen** parallel führbar. Alles im Gerätespeicher, Export als Textprotokoll.
+
 ## Fahrzeugprofile
 
-Die Sollbereiche der Diagnose kommen aus dem gewählten Fahrzeugprofil. Hinterlegt sind:
+Die Sollbereiche der Diagnose kommen aus dem gewählten Fahrzeugprofil. Der Katalog umfasst
+**220 Profile** – VW-Konzern, Mercedes-Benz, BMW, Toyota, Hyundai/Kia, Mazda, Honda, Nissan,
+Suzuki und mehr, Benziner wie Diesel, Baujahre etwa 2003 bis heute. 200 davon sind vollständig
+belegt, jedes bringt seine bekannten Schwachstellen samt Erkennungssignatur mit.
 
-- **Audi S5 B8.5, 3.0 TFSI Kompressor (CGWC)** – vollständige Werksangaben inklusive
-  bekannter Schwachstellen und ihrer Signatur in den Messwerten
-- Generische Profile für aufgeladene Benziner, Saugmotoren und Diesel
+Gesucht wird über Marke, Motorfamilie, Motorkennbuchstaben, Leistung, Hubraum, Trägerfahrzeug
+oder Baujahr – „cjeb", „320d", „a4 tdi 150" oder „2015" führen alle zum Ziel. Findet die Suche
+nichts, das alle Begriffe trifft, zeigt sie die besten Teiltreffer statt einer leeren Liste.
+
+**Was ein Profil nicht belegt, wird nicht erfunden.** Leerlaufdrehzahl, Ladedruck-Sollband und
+Thermostat-Temperatur stehen in keinem öffentlichen Datenblatt; sie fehlen deshalb in den meisten
+Profilen und werden aus dem Klassenprofil der Motorbauart ergänzt. Die betroffenen Befunde tragen
+sichtbar den Hinweis „Sollwert klassenbasiert" – ein weit gefasster ehrlicher Bereich statt einer
+erfundenen Werksangabe.
+
+Acht Klassenprofile decken alles ab, wofür es keinen Einzeleintrag gibt: Sauger, kleine und große
+Turbo-Benziner, Kompressor, Vollhybrid, Pumpe-Düse-Diesel sowie Common-Rail-Diesel mit vier und
+mit sechs Zylindern. Eigene Profile lassen sich anlegen, bearbeiten, als JSON sichern und einlesen.
 
 Das passende Profil wird beim Laden automatisch vorgeschlagen (anhand Zylinderbänken,
-Ladeluftkühler-Sensoren, Lastniveau und Höchstdrehzahl) und lässt sich in den Einstellungen wechseln.
+Ladeluftkühler-Sensoren, Lastniveau und Höchstdrehzahl) und lässt sich jederzeit wechseln.
 
 ## Zurückhaltung als Prinzip
 
@@ -125,10 +158,13 @@ statt eines Urteils auf dünner Datenbasis.
 | `src/23-stats.js` | Datensatzaufbau, abgeleitete Größen, Ereignisse, Ganganalyse |
 | `src/24-chart.js` | Canvas-Diagramme (Linien, Histogramm, Streubild, Dichte) |
 | `src/25-map.js` | Slippy-Map mit OSM-Kacheln |
-| `src/26-diag.js` | Fahrzeugprofile und Diagnose-Regelwerk |
-| `src/27-ui.js` | UI-Bausteine |
-| `src/28-ingest.js` | Übergabewege: Zwischenablage, Adresse, ZIP- und gzip-Entpacken |
-| `src/29-app.js` | Zustand, Navigation und Sektionen |
+
+| `src/26-profiles.js` | Fahrzeugprofil-Katalog, Suche, Klassenwerte, eigene Profile |
+| `src/27-diag.js` | Diagnose-Regelwerk |
+| `src/28-ui.js` | UI-Bausteine |
+| `src/29-ingest.js` | Übergabewege: Zwischenablage, Adresse, ZIP- und gzip-Entpacken |
+| `src/30-buycheck.js` | Kaufcheck: Prüfpunkte, Messprotokoll, PID-Listen |
+| `src/31-app.js` | Zustand, Navigation und Sektionen |
 
 ## Hinweis
 

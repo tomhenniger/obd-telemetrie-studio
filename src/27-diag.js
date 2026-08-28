@@ -248,17 +248,17 @@ const DIAG_RULES = [
 },
 /* ---------------- Gemisch ---------------- */
 {
-  id: 'ltft_b1', group: 'Gemisch', title: 'Langzeit-Gemischkorrektur Bank 1',
+  id: 'ltft_b1', fuel: 'petrol', group: 'Gemisch', title: 'Langzeit-Gemischkorrektur Bank 1',
   requires: ['ltft_b1'], confidence: 'hoch', provenance: 'gemessen',
   run(c) { return ltftRule(c, 'ltft_b1', 'Bank 1'); }
 },
 {
-  id: 'ltft_b2', group: 'Gemisch', title: 'Langzeit-Gemischkorrektur Bank 2',
+  id: 'ltft_b2', fuel: 'petrol', group: 'Gemisch', title: 'Langzeit-Gemischkorrektur Bank 2',
   requires: ['ltft_b2'], confidence: 'hoch', provenance: 'gemessen',
   run(c) { return ltftRule(c, 'ltft_b2', 'Bank 2'); }
 },
 {
-  id: 'ltft_bank_delta', group: 'Gemisch', title: 'Gemischkorrektur – Bankabgleich',
+  id: 'ltft_bank_delta', fuel: 'petrol', group: 'Gemisch', title: 'Gemischkorrektur – Bankabgleich',
   requires: ['ltft_b1', 'ltft_b2'], confidence: 'hoch', provenance: 'gemessen',
   run(c) {
     const m = c.combine(c.masks.warm, c.mask(i => !c.masks.coast[i]));
@@ -278,7 +278,7 @@ const DIAG_RULES = [
   }
 },
 {
-  id: 'ltft_load_dep', group: 'Gemisch', title: 'Lastabhängigkeit der Gemischkorrektur',
+  id: 'ltft_load_dep', fuel: 'petrol', group: 'Gemisch', title: 'Lastabhängigkeit der Gemischkorrektur',
   requires: ['ltft_b1'], confidence: 'mittel', provenance: 'abgeleitet',
   run(c) {
     const load = c.V('load_abs') || c.V('load_calc');
@@ -366,7 +366,7 @@ const DIAG_RULES = [
 },
 /* ---------------- Zündung ---------------- */
 {
-  id: 'timing_wot', group: 'Zündung', title: 'Zündwinkel unter Volllast',
+  id: 'timing_wot', fuel: 'petrol', group: 'Zündung', title: 'Zündwinkel unter Volllast',
   requires: ['timing'], confidence: 'hoch', provenance: 'gemessen',
   run(c) {
     const rpm = c.V('rpm');
@@ -387,7 +387,7 @@ const DIAG_RULES = [
   }
 },
 {
-  id: 'timing_partload', group: 'Zündung', title: 'Zündwinkel-Freigabe im Teillast',
+  id: 'timing_partload', fuel: 'petrol', group: 'Zündung', title: 'Zündwinkel-Freigabe im Teillast',
   requires: ['timing'], confidence: 'mittel', provenance: 'gemessen',
   run(c) {
     const m = c.masks.partLoad;
@@ -402,7 +402,7 @@ const DIAG_RULES = [
   }
 },
 {
-  id: 'timing_trend', group: 'Zündung', title: 'Zündwinkel-Trend über die Volllastzüge',
+  id: 'timing_trend', fuel: 'petrol', group: 'Zündung', title: 'Zündwinkel-Trend über die Volllastzüge',
   requires: ['timing'], confidence: 'mittel', provenance: 'abgeleitet',
   run(c) {
     const ev = c.ds.events.wot.filter(w => w.dur >= 1.5 && w.rpmMax > 3000)
@@ -602,6 +602,13 @@ function runDiagnostics(ds, profile) {
   const out = [];
   const derivedSet = new Set(c.derivedSpecs);
   for (const rule of DIAG_RULES) {
+    if (rule.fuel && profile && profile.fuel && rule.fuel !== profile.fuel) {
+      out.push(Object.assign({}, rule, { status: S.UNCLEAR,
+        note: rule.fuel === 'petrol'
+          ? 'Diese Prüfung gilt nur für Ottomotoren. Beim Diesel gibt es weder einen Zündwinkel noch eine Lambda-Gemischkorrektur; an ihre Stelle treten Raildruck, Luftmassen-Soll/Ist, AGR-Regelabweichung und die Mengenabweichung je Zylinder – allesamt herstellerspezifische Messwerte, die im Standard-OBD-Export nicht enthalten sind.'
+          : 'Diese Prüfung gilt nur für Dieselmotoren.' }));
+      continue;
+    }
     const missing = (rule.requires || []).filter(id => !c.has(id));
     if (missing.length) {
       out.push(Object.assign({}, rule, {

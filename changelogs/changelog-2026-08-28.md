@@ -110,3 +110,17 @@
   wie ein unauffälliger Verlauf aussieht und was ein Warnsignal wäre.
 - **Anwendung ohne Aufzeichnung nutzbar**: die Kaufcheckliste öffnet sich direkt vom Startbildschirm,
   ohne dass eine CSV geladen sein muss — beim Besichtigungstermin gibt es die noch gar nicht.
+
+## Neue Features (Profilkatalog)
+
+- **220 Fahrzeugprofile** statt vier: VW-Konzern, Mercedes-Benz, BMW, Toyota, Hyundai/Kia, Mazda,
+  Honda, Nissan, Suzuki und weitere, Benziner wie Diesel, Baujahre etwa 2003 bis heute.
+  200 davon mit vollständig belegten Kernzahlen, jedes mit seinen bekannten Schwachstellen und
+  deren Erkennungssignatur. Herstellerweise recherchiert und anschließend von eigenen Prüfagenten
+  gegengelesen; unbelegte Angaben wurden gestrichen statt geschätzt.
+- **Acht Klassenprofile** als Rückfallebene: Sauger, Turbo klein und groß, Kompressor, Vollhybrid,
+  Pumpe-Düse-Diesel, Common-Rail-Diesel mit vier und mit sechs Zylindern.
+- **Gewichtete Volltextsuche** über Name, Marke, Motorfamilie, Motorkennbuchstaben, Leistung,
+  Hubraum, Trägerfahrzeuge und Baujahr; Teiltreffer statt leerer Liste, wenn nichts alle Begriffe trifft.
+- **Ottomotor-Regeln werden bei Dieselprofilen übersprungen** statt als fehlende PID gemeldet,
+  mit Erklärung, welche Diesel-Messgrößen an ihre Stelle träten und warum sie im Standard-Export fehlen.
