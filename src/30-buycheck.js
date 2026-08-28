@@ -35,10 +35,18 @@ function deleteInspection(id) {
   store.set('inspections', inspections().filter(x => x.id !== id));
   if (store.get('activeInspection', null) === id) store.del('activeInspection');
 }
+function newInspectionSeq() {
+  const used = new Set(inspections().map(x => String(x.id)));
+  let seq = (store.get('inspSeq', 0) | 0) + 1, id;
+  do { id = seq; seq++; } while (used.has('i' + id.toString(36)));
+  store.set('inspSeq', id);
+  return id;
+}
 function newInspection(profileId) {
   const insp = {
-    id: 'i' + Math.abs(hashCode(String(inspections().length) + (profileId || '') + BUY_CHECKS.length)).toString(36) +
-        inspections().length,
+    // Aus der Listenlänge gebildet kollidiert die ID nach einem Löschvorgang mit einer
+    // bestehenden – saveInspection ersetzt dann still die falsche Besichtigung.
+    id: 'i' + newInspectionSeq().toString(36),
     name: '', model: '', km: '', price: '', year: '', vin: '', seller: '', gearbox: '',
     profileId: profileId || null,
     marks: {}, notes: {}, created: null
@@ -50,7 +58,15 @@ function newInspection(profileId) {
 function activeInspection(profileId) {
   const id = store.get('activeInspection', null);
   const found = inspections().find(x => x.id === id);
-  return found || (inspections()[0] || newInspection(profileId));
+  // Gespeicherte Stände aus einer älteren Fassung tragen marks/notes nicht. Ohne
+  // Auffüllen bricht der ganze Kaufcheck ab – und zwar bei jedem Öffnen erneut.
+  return normInspection(found || inspections()[0] || newInspection(profileId));
+}
+function normInspection(insp) {
+  if (!insp || typeof insp !== 'object') return insp;
+  if (!insp.marks || typeof insp.marks !== 'object') insp.marks = {};
+  if (!insp.notes || typeof insp.notes !== 'object') insp.notes = {};
+  return insp;
 }
 
 /* Welche Prüfpunkte gelten für dieses Fahrzeug?
@@ -68,7 +84,10 @@ const GEARBOX_KINDS = [
 ];
 
 function modelHaystack(profile, insp) {
-  const typed = [insp && insp.model, insp && insp.name].filter(Boolean).join(' ').trim();
+  /* Nur das Modellfeld zählt. Der Name ist ein freies Bezeichnungsfeld ("Besichtigung
+     bei Müller") – als Modell gelesen blendet er modellabhängige Prüfpunkte aus, ohne
+     dass der Nutzer merkt, dass er das ausgelöst hat. */
+  const typed = String((insp && insp.model) || '').trim();
   if (typed) return { text: typed.toLowerCase(), quelle: 'eingabe' };
   const fromProfile = [profile && profile.models, profile && profile.name].filter(Boolean).join(' ');
   return { text: fromProfile.toLowerCase(), quelle: fromProfile ? 'profil' : 'leer' };
@@ -115,6 +134,9 @@ function checkApplies(c, profile, insp) {
    { base, petrol, diesel, turbo, sauger, cvt, dkg, wandler, manuell }.
    Zusammengesetzt wird base plus alles, was zum Fahrzeug passt — so steht beim
    Ottomotor nichts über Glühkerzen und beim Diesel nichts über Zündkerzen. */
+/* Ist das Getriebe unbekannt, alle Getriebevarianten anhängen statt keine. Sonst fehlt
+   genau die Warnung, die der Basistext voraussetzt ("ein Hochschalten mitten im Zug macht
+   den Test unbrauchbar") – und der Nutzer erfährt nie, dass sie ihn betrifft. */
 function variantKeys(profile, insp) {
   const k = [];
   if (profile) {
@@ -123,6 +145,7 @@ function variantKeys(profile, insp) {
   }
   const g = insp && insp.gearbox;
   if (g) k.push(g);
+  else k.push.apply(k, GEARBOX_KINDS.map(x => x.id).filter(Boolean));
   return k;
 }
 function resolveText(field, keys) {
@@ -184,7 +207,7 @@ function pidsFor(profile) {
 /* Fortschritt und Ampel einer Besichtigung */
 function inspectionScore(insp, profile) {
   const list = checksFor(profile, insp);
-  let done = 0, bad = 0, ko = 0, teuer = 0;
+  let done = 0, bad = 0, ko = 0, teuer = 0, koText = 0;
   for (const c of list) {
     const m = insp.marks[c.id];
     if (m === 'ok' || m === 'bad' || m === 'na') done++;
@@ -192,9 +215,13 @@ function inspectionScore(insp, profile) {
       bad++;
       if (c.severity === 'ko') ko++;
       else if (c.severity === 'teuer') teuer++;
+      // Etliche Prüfpunkte nennen im Befundtext einen Abbruchgrund, tragen aber nicht
+      // die Stufe "ko" – meist weil er an eine Bedingung geknüpft ist. Getrennt zählen,
+      // statt ihn in der Ampel verschwinden zu lassen.
+      if (c.severity !== 'ko' && /abbruchgrund|abbruchkriterium/i.test(String(c.bad || ''))) koText++;
     }
   }
-  return { total: list.length, done, bad, ko, teuer, share: list.length ? done / list.length : 0 };
+  return { total: list.length, done, bad, ko, koText, teuer, share: list.length ? done / list.length : 0 };
 }
 
 /* --- Inhalte: Prüfpunkte, Messfahrten, PID-Listen --------------- */

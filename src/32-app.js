@@ -48,8 +48,16 @@ function loadFailed(e) {
   $('#prog').hidden = true;
   $('#drop').style.opacity = '';
   const old = $('#load-err'); if (old) old.remove();
-  $('#drop').appendChild(el('div', { class: 'note crit', id: 'load-err', style: { marginTop: '18px', textAlign: 'left' } },
-    icon('alert', 'n-i'), el('div', {}, el('b', {}, 'Das hat nicht geklappt'), e.message || String(e))));
+  const box = el('div', { class: 'note crit', id: 'load-err', style: { marginTop: '18px', textAlign: 'left' } },
+    icon('alert', 'n-i'), el('div', {}, el('b', {}, 'Das hat nicht geklappt'), e.message || String(e)));
+  // Bei offener Auswertung ist der Startbildschirm versteckt – dort waere die Meldung
+  // unsichtbar und der Nutzer bekaeme gar keine Rueckmeldung.
+  if ($('#hero').hidden) {
+    box.style.margin = '0 0 18px';
+    const host = $('#pages') || $('#app');
+    host.insertBefore(box, host.firstChild);
+    box.scrollIntoView({ block: 'nearest' });
+  } else $('#drop').appendChild(box);
   console.error(e);
 }
 
@@ -123,6 +131,15 @@ function resetToHero() {
 }
 
 function initDataset(ds) {
+  // Alles aus der vorherigen Datei verwerfen. Ohne das bleiben die bereits gebauten
+  // Seiten im DOM stehen und zeigen beim Sektionswechsel die Messreihen der alten Datei,
+  // waehrend App.ds laengst die neue ist.
+  if (App.ds) {
+    Chart.all.slice().forEach(c => c.destroy());
+    Chart.hoverListeners = [];
+    App.map = null;
+    $('#pages').innerHTML = '';
+  }
   App.ds = ds;
   const pid = store.get('profile', null) || autoProfile(ds);
   App.profile = profileById(pid) || defaultProfile();
@@ -676,8 +693,8 @@ BUILDERS.map = function (page) {
   if (tr.gaps.length) {
     page.appendChild(noteBox('warn', 'GPS-Lücken in der Aufzeichnung',
       'An ' + tr.gaps.length + ' Stelle(n) ist das Signal ausgefallen; die längste Lücke dauerte ' +
-      fmtDur(Math.max.apply(null, tr.gaps.map(g => g.dt))) + ' und überbrückt ' +
-      fmt(Math.max.apply(null, tr.gaps.map(g => g.d)) / 1000, 1) + ' km. Diese Abschnitte sind gestrichelt gezeichnet und als Luftlinie gerechnet – die tatsächlich gefahrene Strecke ist also eher länger als die angegebene.'));
+      fmtDur(maxOf(tr.gaps.map(g => g.dt))) + ' und überbrückt ' +
+      fmt(maxOf(tr.gaps.map(g => g.d)) / 1000, 1) + ' km. Diese Abschnitte sind gestrichelt gezeichnet und als Luftlinie gerechnet – die tatsächlich gefahrene Strecke ist also eher länger als die angegebene.'));
   }
   if (ds.meta.gpsSource) {
     page.appendChild(noteBox('info', 'Woher die Positionen stammen',
@@ -699,7 +716,7 @@ BUILDERS.map = function (page) {
     }, { type: 'timeseries', syncHover: false });
     page.appendChild(cc.node);
     const alt = smooth(tr.alt, 11);
-    cc.chart.axes = [{ unit: 'm', lo: Math.min.apply(null, Array.from(alt)) - 1, hi: Math.max.apply(null, Array.from(alt)) + 1, color: '#a5d6a7' }];
+    cc.chart.axes = [{ unit: 'm', lo: minOf(alt) - 1, hi: maxOf(alt) + 1, color: '#a5d6a7' }];
     cc.chart.opts.onZoom = null;
     cc.chart.setData({
       series: [{ x: tr.dist, y: alt, n: tr.n, color: '#7cb342', axis: 0, fill: true, label: 'Höhe', unit: 'm' }],
@@ -956,7 +973,7 @@ BUILDERS.fields = function (page) {
         foot: 'Anders als der Momentanverbrauch der App ist das eine echte, streckenbezogene Rechnung. Klassen mit unter drei Sekunden Verweildauer sind ausgelassen.'
       }, { type: 'timeseries', syncHover: false });
       const yv = Float64Array.from(ys), xv = Float64Array.from(xs);
-      cc.chart.axes = [{ unit: 'L/100km', lo: 0, hi: Math.max.apply(null, ys) * 1.1, color: '#a1887f' }];
+      cc.chart.axes = [{ unit: 'L/100km', lo: 0, hi: maxOf(ys) * 1.1, color: '#a1887f' }];
       cc.chart.setData({ series: [{ x: xv, y: yv, n: xv.length, color: '#a1887f', axis: 0, fill: true, label: 'Verbrauch', unit: 'L/100km' }],
         bands: null, xRange: [xv[0], xv[xv.length - 1]], xFormat: v => fmt(v, 0) + ' km/h' });
       legendItems(cc.legend, [{ color: '#a1887f', label: 'Verbrauch je Geschwindigkeitsklasse', unit: 'L/100km' }]);
@@ -2125,7 +2142,10 @@ function baseName() {
   const drop = $('#drop');
   ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
   ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
-  drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+  drop.addEventListener('drop', e => {
+    e.stopPropagation();                          // sonst faengt der window-Handler dieselbe Datei nochmal
+    const f = e.dataTransfer.files[0]; if (f) loadFile(f);
+  });
   window.addEventListener('dragover', e => e.preventDefault());
   window.addEventListener('drop', e => {
     e.preventDefault();

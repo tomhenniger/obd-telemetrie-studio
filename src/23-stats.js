@@ -59,8 +59,22 @@ function cleanTrack(gps, vMaxKmh) {
   const n = gps.n;
   const keep = [];
   let rejected = 0;
-  keep.push(0);
-  for (let i = 1; i < n; i++) {
+  /* Auch der erste Punkt muss sich bewähren. Viele Apps schreiben als ersten Fix die
+     zuletzt bekannte Position – die kann vom Vortag und aus einer anderen Stadt stammen. */
+  let first = 0;
+  while (first + 2 < n) {
+    const d = haversine(gps.lat[first], gps.lon[first], gps.lat[first + 1], gps.lon[first + 1]);
+    const dt = gps.t[first + 1] - gps.t[first];
+    const lim = dt > 0.05 ? (dt * vMaxKmh / 3.6) + 25 : 35;
+    if (d <= lim) break;
+    // Nur verwerfen, wenn die Folgepunkte untereinander zusammenhängen
+    const d2 = haversine(gps.lat[first + 1], gps.lon[first + 1], gps.lat[first + 2], gps.lon[first + 2]);
+    const dt2 = gps.t[first + 2] - gps.t[first + 1];
+    if (d2 > (dt2 > 0.05 ? (dt2 * vMaxKmh / 3.6) + 25 : 35)) break;
+    first++; rejected++;
+  }
+  keep.push(first);
+  for (let i = first + 1; i < n; i++) {
     const j = keep[keep.length - 1];
     const d = haversine(gps.lat[j], gps.lon[j], gps.lat[i], gps.lon[i]);
     const dt = gps.t[i] - gps.t[j];
@@ -209,7 +223,8 @@ function buildDataset(parsed, profile) {
     else if (c === c) { speedMix[i] = c; speedSrc[i] = 3; }
     else { speedMix[i] = NaN; speedSrc[i] = 0; }
   }
-  G.speed_mix = speedMix;
+  const hasSpeedSrc = !!(G.speed || G.speed_gps || trackSpeed);
+  if (hasSpeedSrc) G.speed_mix = speedMix;
 
   /* --- abgeleitete Metriken auf dem Raster --- */
   const derived = [];
@@ -275,13 +290,28 @@ function buildDataset(parsed, profile) {
   }
   if (G.accel === undefined && G.speed_mix) {
     const acc = new Float64Array(N);
-    const sp = smooth(speedMix, 5);
+    /* Das Ableitungsfenster muss mindestens so breit sein wie der Takt der Quelle.
+       Eine 1-Hz-Geschwindigkeit auf einem 0,16-s-Raster ist eine Treppe: über zwei
+       Rasterschritte gemessen ergibt jede Stufe kurzzeitig die dreifache Beschleunigung
+       und dazwischen null. Aus konstanter Fahrt werden so abwechselnd "Beschleunigung"
+       und "Verzögerung". */
+    let srcDt = 0;
+    for (const id of ['speed', 'speed_gps']) {
+      const m = metrics.get(id);
+      if (m && m.n > 2) srcDt = Math.max(srcDt, (m.t[m.n - 1] - m.t[0]) / (m.n - 1));
+    }
+    if (track && track.n > 2) srcDt = Math.max(srcDt, 0);
+    const half = Math.max(1, Math.round(Math.max(0.5, srcDt) / step));
+    const sp = smooth(speedMix, Math.max(5, half * 2 + 1));
     for (let i = 0; i < N; i++) {
-      if (i === 0 || i === N - 1) { acc[i] = NaN; continue; }
-      const dv = (sp[i + 1] - sp[i - 1]) / 3.6, dt = grid[i + 1] - grid[i - 1];
+      const a = i - half, b = i + half;
+      if (a < 0 || b >= N) { acc[i] = NaN; continue; }
+      const dv = (sp[b] - sp[a]) / 3.6, dt = grid[b] - grid[a];
       acc[i] = dt > 0 ? dv / dt / 9.80665 : NaN;
     }
-    addDerived('accel', 'Längsbeschleunigung (aus v)', 'Beschl.', 'g', 3, 'drive', '#9ccc65', acc);
+    addDerived('accel', 'Längsbeschleunigung (aus v)', 'Beschl.', 'g', 3, 'drive', '#9ccc65', acc,
+      'Aus der Geschwindigkeit abgeleitet, über ein Fenster von rund ' + (2 * half * step).toFixed(1) +
+      ' s. Kürzer gemessen zeigt eine niedrig getaktete Geschwindigkeitsquelle nur ihre eigenen Stufen.');
   }
 
   /* --- Statistik je Metrik --- */
@@ -391,10 +421,19 @@ function computeTrip(ds) {
   /* Höhenmeter */
   if (track && track.alt && track.n > 5) {
     const a = smooth(track.alt, 11);
-    let up = 0, down = 0;
-    for (let i = 1; i < track.n; i++) { const d = a[i] - a[i - 1]; if (d > 0.15) up += d; else if (d < -0.15) down -= d; }
+    /* Das Totband muss über der Rauschamplitude des GPS liegen und darf nicht von der
+       Abtastrate abhängen: 0,15 m je Messpunkt summiert bei 1 Hz und 2,5 m Höhenrauschen
+       über eine halbe Stunde zu über 200 Phantom-Höhenmetern auf ebener Strecke.
+       Deshalb erst zählen, wenn sich die Höhe um mehr als 3 m verändert hat. */
+    const DEAD = 3;
+    let up = 0, down = 0, ref = a[0], dir = 0;
+    for (let i = 1; i < track.n; i++) {
+      const d = a[i] - ref;
+      if (d > DEAD) { if (dir >= 0) up += d - (dir === 0 ? 0 : 0); else up += d - DEAD; ref = a[i]; dir = 1; }
+      else if (d < -DEAD) { down += -d; ref = a[i]; dir = -1; }
+    }
     T.ascent = up; T.descent = down;
-    T.altMin = Math.min.apply(null, Array.from(a)); T.altMax = Math.max.apply(null, Array.from(a));
+    T.altMin = minOf(a); T.altMax = maxOf(a);
   }
 
   /* Warmlauf */
@@ -445,11 +484,9 @@ function computePhases(ds) {
   const time = {}; PHASES.forEach(p => time[p.id] = 0);
   for (let i = 0; i < N; i++) {
     const s = sp ? sp[i] : NaN;
-    let a = acc ? acc[i] : NaN;
-    if (!(a === a) && sp && i > 0 && i < N - 1) {
-      const dv = (sp[i + 1] - sp[i - 1]) / 3.6, dt = grid[i + 1] - grid[i - 1];
-      a = dt > 0 ? dv / dt / 9.80665 : NaN;
-    }
+    // Kein Ersatzquotient über zwei Rasterschritte mehr: der zeigt bei niedrig
+    // getakteten Quellen nur die Treppenstufen der Vorwärtsfüllung.
+    const a = acc ? acc[i] : NaN;
     let id = null;
     if (s === s && s <= 1.5) id = 'stand';
     else if (s === s) {
@@ -581,17 +618,48 @@ function computeEvents(ds) {
   }
 
   /* Zündwinkel-Rücknahme unter Last (Klopfverdacht) */
-  if (G.timing && (G.load_abs || G.load_calc)) {
+  if (G.timing && G.rpm && (G.load_abs || G.load_calc)) {
     const load = G.load_abs || G.load_calc;
     const thr = G.load_abs ? 120 : 70;
+    /* Gegen eine drehzahlabhängige Grundlinie prüfen, nicht gegen die feste Null.
+       Aufgeladene Ottomotoren fahren unten herum planmäßig mit negativem Zündwinkel –
+       gegen 0° geprüft meldet der Detektor das gesamte Low-End-Kennfeld als Klopfen. */
+    const NB = 14, RSTEP = 500;                    // Klassen zu 500 min⁻¹ bis 7000
+    const bins = Array.from({ length: NB }, () => []);
+    for (let i = 0; i < N; i++) {
+      if (!(load[i] >= thr * 0.85) || !(G.timing[i] === G.timing[i]) || !(G.rpm[i] === G.rpm[i])) continue;
+      const b = Math.min(NB - 1, Math.max(0, Math.floor(G.rpm[i] / RSTEP)));
+      bins[b].push(G.timing[i]);
+    }
+    const base = bins.map(a => a.length >= 8 ? quantileSorted(a.slice().sort((x, y) => x - y), .5) : NaN);
+    // Lücken in der Grundlinie aus den Nachbarklassen füllen
+    for (let b = 0; b < NB; b++) if (!(base[b] === base[b])) {
+      let l = b - 1, r = b + 1;
+      while (l >= 0 && !(base[l] === base[l])) l--;
+      while (r < NB && !(base[r] === base[r])) r++;
+      base[b] = (l >= 0 && r < NB) ? (base[l] + base[r]) / 2 : (l >= 0 ? base[l] : (r < NB ? base[r] : NaN));
+    }
+    const DROP = 4;                                // ° unter der Grundlinie derselben Drehzahl
+    const below = i => {
+      if (!(G.timing[i] === G.timing[i]) || !(G.rpm[i] === G.rpm[i])) return false;
+      const b = Math.min(NB - 1, Math.max(0, Math.floor(G.rpm[i] / RSTEP)));
+      const ref = base[b];
+      return (ref === ref) ? G.timing[i] < ref - DROP : G.timing[i] < 0;
+    };
     let i = 0;
     while (i < N) {
-      if (load[i] >= thr && G.timing[i] < 0) {
-        let j = i; while (j + 1 < N && load[j + 1] >= thr * 0.85 && G.timing[j + 1] < 2) j++;
+      if (load[i] >= thr && below(i)) {
+        let j = i; while (j + 1 < N && load[j + 1] >= thr * 0.85 && below(j + 1)) j++;
         const dur = (j - i + 1) * step;
-        let tmin = Infinity, rmax = -Infinity;
-        for (let k = i; k <= j; k++) { if (G.timing[k] < tmin) tmin = G.timing[k]; if (G.rpm && G.rpm[k] > rmax) rmax = G.rpm[k]; }
-        if (dur >= 0.4) ev.knock.push({ i0: i, i1: j, t0: grid[i], dur, timingMin: tmin, rpmMax: rmax });
+        let tmin = Infinity, rmax = -Infinity, worst = 0;
+        for (let k = i; k <= j; k++) {
+          if (G.timing[k] < tmin) tmin = G.timing[k];
+          if (G.rpm[k] > rmax) rmax = G.rpm[k];
+          const b = Math.min(NB - 1, Math.max(0, Math.floor(G.rpm[k] / RSTEP)));
+          const dd = (base[b] === base[b]) ? base[b] - G.timing[k] : -G.timing[k];
+          if (dd > worst) worst = dd;
+        }
+        if (dur >= 0.4) ev.knock.push({ i0: i, i1: j, t0: grid[i], dur, timingMin: tmin, rpmMax: rmax, drop: worst });
         i = j + 1;
       } else i++;
     }

@@ -50,8 +50,15 @@ function fmtTick(v, step) {
   const a = Math.abs(v);
   if (a >= 1e6) return fmt(v / 1e6, 1) + 'M';
   if (a >= 1e4) return fmt(v / 1e3, a >= 1e5 ? 0 : 1) + 'k';
-  const dec = step === undefined ? (a >= 100 ? 0 : a >= 10 ? 1 : 2)
-            : step >= 100 ? 0 : step >= 10 ? 0 : step >= 1 ? 0 : step >= 0.1 ? 1 : step >= 0.01 ? 2 : 3;
+  let dec;
+  if (step === undefined) dec = a >= 100 ? 0 : a >= 10 ? 1 : 2;
+  else {
+    dec = step >= 100 ? 0 : step >= 10 ? 0 : step >= 1 ? 0 : step >= 0.1 ? 1 : step >= 0.01 ? 2 : 3;
+    // Die Stellenzahl muss die Schrittweite darstellen können. niceTicks erzeugt auch
+    // 2,5er-Schritte; mit null Nachkommastellen wird der Tick bei 2,5 als "3" beschriftet –
+    // die Gitterlinie sitzt dann richtig und die Zahl daneben ist falsch.
+    while (dec < 6 && Math.abs(+step.toFixed(dec) - step) > Math.abs(step) * 1e-9) dec++;
+  }
   return nf(dec).format(v);
 }
 
@@ -100,6 +107,8 @@ function haversine(lat1, lon1, lat2, lon2) {
 }
 
 /* Binäre Suche: größter Index mit arr[i] <= x  (arr aufsteigend) */
+function minOf(a) { let m = Infinity; for (let i = 0; i < a.length; i++) if (a[i] < m) m = a[i]; return m; }
+function maxOf(a) { let m = -Infinity; for (let i = 0; i < a.length; i++) if (a[i] > m) m = a[i]; return m; }
 function bisect(arr, x, lo, hi) {
   lo = lo || 0; hi = (hi === undefined ? arr.length : hi) - 1;
   if (hi < 0) return -1;
@@ -149,24 +158,37 @@ function lttb(xs, ys, threshold) {
   if (threshold >= n || threshold <= 2) {
     const ix = new Int32Array(n); for (let i = 0; i < n; i++) ix[i] = i; return ix;
   }
-  const out = new Int32Array(threshold);
+  /* Zwei Plätze je Eimer: einer für den kennzeichnenden Messpunkt, einer für einen
+     Lückenmarker. Ohne den verschwinden kurze Datenlücken beim Verkleinern und die Linie
+     wird über sie hinweg durchgezogen – sie sieht dann nach Messung aus, wo keine war. */
+  const out = new Int32Array(threshold * 2);
   const every = (n - 2) / (threshold - 2);
   let a = 0, oi = 0;
   out[oi++] = 0;
   for (let i = 0; i < threshold - 2; i++) {
-    let avgX = 0, avgY = 0, avgStart = Math.floor((i + 1) * every) + 1,
-        avgEnd = Math.min(Math.floor((i + 2) * every) + 1, n);
-    const avgLen = avgEnd - avgStart || 1;
-    for (let j = avgStart; j < avgEnd; j++) { avgX += xs[j]; avgY += ys[j]; }
-    avgX /= avgLen; avgY /= avgLen;
-    const rangeStart = Math.floor(i * every) + 1, rangeEnd = Math.floor((i + 1) * every) + 1;
-    const ax = xs[a], ay = ys[a];
-    let maxArea = -1, maxIdx = rangeStart;
-    for (let j = rangeStart; j < rangeEnd && j < n; j++) {
+    let avgX = 0, avgY = 0, avgCnt = 0;
+    const avgStart = Math.floor((i + 1) * every) + 1,
+          avgEnd = Math.min(Math.floor((i + 2) * every) + 1, n);
+    // NaN aus dem Mittelwert heraushalten: sonst ist jede Dreiecksfläche NaN, der
+    // Größenvergleich schlägt nie an und es wird stumpf der erste Punkt genommen –
+    // eine Spitze direkt vor einer Lücke fällt damit weg.
+    for (let j = avgStart; j < avgEnd; j++) if (ys[j] === ys[j]) { avgX += xs[j]; avgY += ys[j]; avgCnt++; }
+    if (avgCnt) { avgX /= avgCnt; avgY /= avgCnt; }
+    else { avgX = xs[Math.min(avgStart, n - 1)]; avgY = ys[a] === ys[a] ? ys[a] : 0; }
+    const rangeStart = Math.floor(i * every) + 1, rangeEnd = Math.min(Math.floor((i + 1) * every) + 1, n);
+    const ax = xs[a], ay = ys[a] === ys[a] ? ys[a] : avgY;
+    let maxArea = -1, maxIdx = -1, nanIdx = -1;
+    for (let j = rangeStart; j < rangeEnd; j++) {
+      if (!(ys[j] === ys[j])) { if (nanIdx < 0) nanIdx = j; continue; }
       const area = Math.abs((ax - avgX) * (ys[j] - ay) - (ax - xs[j]) * (avgY - ay));
       if (area > maxArea) { maxArea = area; maxIdx = j; }
     }
-    out[oi++] = maxIdx; a = maxIdx;
+    if (maxIdx < 0 && nanIdx < 0) continue;
+    if (maxIdx < 0) { out[oi++] = nanIdx; continue; }
+    if (nanIdx >= 0 && nanIdx < maxIdx) out[oi++] = nanIdx;
+    out[oi++] = maxIdx;
+    if (nanIdx > maxIdx) out[oi++] = nanIdx;
+    a = maxIdx;
   }
   out[oi++] = n - 1;
   return out.subarray(0, oi);

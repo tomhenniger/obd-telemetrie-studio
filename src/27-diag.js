@@ -9,8 +9,11 @@ function autoProfile(ds) {
   const hasTiming = !!s.timing;
   const loadMax = s.load_abs ? s.load_abs.max : (s.load_calc ? s.load_calc.max : 0);
   const twoBanks = !!(s.ltft_b2 || s.cac_b2 || s.stft_b2);
+  // Gemischadaption gibt es nur beim Ottomotor. Wo LTFT/STFT geloggt sind, ist die Frage
+  // entschieden – der fehlende Zündwinkel allein macht aus einem Benziner keinen Diesel.
+  const hasTrim = !!(s.ltft_b1 || s.ltft_b2 || s.stft_b1 || s.stft_b2 || s.lambda);
   if (twoBanks && s.cac_b1 && rpmMax > 5800 && loadMax > 170 && hasTiming) return 'audi_s5_b85_cgwc';
-  if (!hasTiming && rpmMax < 5200) return 'generic_diesel';
+  if (!hasTiming && !hasTrim && rpmMax < 5200) return 'generic_diesel';
   if (loadMax > 115) return 'generic_turbo';
   return 'generic_na';
 }
@@ -117,10 +120,32 @@ const DIAG_RULES = [
     const P = c.P.coolantGreen || [85, 105];
     const m = c.combine(c.masks.warm, c.masks.engineOn);
     const d = c.dur(m);
-    if (d < 120) return { status: S.UNCLEAR, note: 'Zu wenig Betriebszeit im warmen Zustand (' + fmtDur(d) + ').' };
+    if (d < 120) {
+      /* Die Maske verlangt >= 80 °C – ein Motor, der auf 75 °C hängen bleibt, erzeugt hier
+         eine leere Maske. Das als "zu wenig Daten" zu melden verwechselt den Defekt mit
+         einer Datenlücke: genau so sieht ein offen hängendes Thermostat aus. */
+      const on = c.dur(c.masks.engineOn);
+      const co = c.V('coolant');
+      let plateau = NaN;
+      if (on >= 480) {
+        const late = c.combine(c.masks.engineOn, c.mask(i => (c.grid[i] - c.ds.t0) > 420));
+        if (c.dur(late) >= 120) plateau = c.agg('coolant', late, 'median');
+      }
+      if (isFinite(plateau) && plateau < P[0] - 5)
+        return { status: plateau < P[0] - 12 ? S.CRIT : S.WARN, value: plateau, unit: '°C', dec: 0,
+          ref: P[0] + '–' + P[1] + ' °C', refLo: P[0], refHi: P[1],
+          cond: 'Motor läuft, ab 7 min nach Aufzeichnungsbeginn',
+          extra: [['Betriebszeit', fmtDur(on)], ['Zeit über 80 °C', fmtDur(d)]],
+          text: 'Der Motor erreicht die Betriebstemperatur nicht: nach der Warmlaufphase liegt das Plateau bei ' + fmt(plateau, 0) + ' °C statt bei ' + P[0] + '–' + P[1] + ' °C. Typische Ursache ist ein offen hängendes oder falsches Thermostat. Folgen sind mehr Verbrauch, stärkere Ventilverkokung und Kraftstoffeintrag ins Öl.',
+          action: ['Thermostat und Temperaturgeber G62 prüfen', 'Kühlmitteltemperatur im Stand nach 15 min Leerlauf gegenprüfen'] };
+      return { status: S.UNCLEAR, note: 'Zu wenig Betriebszeit im warmen Zustand (' + fmtDur(d) + ').' };
+    }
     const med = c.agg('coolant', m, 'median'), mx = c.agg('coolant', m, 'max'), mn = c.agg('coolant', m, 'min');
     let st = inRange(med, P[0], P[1], 5, 5);
-    if (mx > 112) st = S.CRIT;
+    // Ein einzelner Rasterpunkt über 112 °C ist ein Sensor- oder Übertragungsausreißer,
+    // keine Überhitzung. Erst eine zusammenhängende Sekunde zählt.
+    const hot = c.dur(c.combine(m, c.mask(i => { const v = c.V('coolant'); return v && v[i] > 112; })));
+    if (hot >= 1) st = S.CRIT;
     return {
       status: st, value: med, unit: '°C', dec: 0,
       ref: P[0] + '–' + P[1] + ' °C', refLo: P[0], refHi: P[1],
@@ -319,7 +344,11 @@ const DIAG_RULES = [
           (diff < -0.5
             ? ' – sie steigt also mit der Last, statt zu fallen. Genau umgekehrt verhält sich Falschluft: eine konstante Leckluftmenge fällt bei kleiner Füllung relativ stark ins Gewicht und verschwindet unter Last. Ein mit der Last zunehmender Korrekturbedarf zeigt stattdessen auf etwas, das proportional zur eingespritzten Menge wirkt – Kraftstoffsorte (E10 braucht rund 3 % mehr Masse), Einspritzmenge oder Luftmassenmesser.'
             : '. Falschluft würde bei niedriger Last deutlich stärker korrigiert werden – dieses Muster liegt hier nicht vor.')
-        : 'Bei niedriger Last wird um ' + fmt(diff, 2) + ' %-Punkte stärker korrigiert als bei hoher Last. Genau so verhält sich Falschluft: die Leckluftmenge ist absolut konstant und fällt bei kleiner Füllung relativ stark ins Gewicht.',
+        : diff > 0
+          ? 'Bei niedriger Last wird um ' + fmt(diff, 2) + ' %-Punkte stärker korrigiert als bei hoher Last. Genau so verhält sich Falschluft: die Leckluftmenge ist absolut konstant und fällt bei kleiner Füllung relativ stark ins Gewicht.'
+          // Die Gegenrichtung spricht GEGEN Falschluft. Denselben Text zu drucken schickt
+          // die Werkstatt ans falsche Ende des Motors.
+          : 'Bei hoher Last wird um ' + fmt(-diff, 2) + ' %-Punkte stärker korrigiert als bei niedriger Last. Das spricht gegen Falschluft – die fällt bei kleiner Füllung stärker ins Gewicht, nicht bei großer. Diese Richtung deutet auf die Kraftstoffversorgung (Förderdruck, Hochdruckpumpe, verengter Filter) oder auf einen driftenden Luftmassenmesser.',
       action: st === S.OK ? null : ['Rauchtest inklusive Kurbelgehäuseentlüftung', 'Saugrohr- und Ladeluftschlauch-Dichtungen prüfen'] };
   }
 },
@@ -328,19 +357,45 @@ const DIAG_RULES = [
   id: 'load_wot', usesSpec: ['loadWotGreen'], group: 'Aufladung', title: 'Absolute Motorlast bei Volllast',
   requires: ['load_abs'], confidence: 'hoch', provenance: 'gemessen',
   run(c) {
-    const m = c.combine(c.masks.wot, c.mask(i => { const r = c.V('rpm'); return r && r[i] > 3000; }));
-    const use = c.dur(m) > 1 ? m : c.masks.wot;
-    const d = c.dur(use);
-    if (d < 1) return { status: S.UNCLEAR, note: 'Kein Volllastzug in dieser Fahrt (Last dauerhaft unter ' + c.wotThr + ' %).' };
-    const p95 = c.agg('load_abs', use, 'p95'), mx = c.agg('load_abs', use, 'max');
+    /* Volllast am Fahrerwunsch erkennen, nicht an der Last. Über die Last definiert ist
+       die Maske zirkulär: das p95 der Last innerhalb "Last >= Schwelle" liegt zwangsläufig
+       über der Schwelle, der Warn- und der Kritisch-Zweig sind dann toter Code — und ein
+       gedeckelter Ladedruck, also genau der gesuchte Defekt, erzeugt eine leere Maske
+       und meldet "nicht bewertbar" statt "auffällig". */
+    const rpm = c.V('rpm');
+    const ped = c.V('pedal') || c.V('throttle');
+    const pst = c.V('pedal') ? c.stats.pedal : c.stats.throttle;
+    let m = null, viaPedal = false;
+    if (ped && pst && isFinite(pst.max) && pst.max > 20) {
+      const lim = pst.max * 0.92;                 // VAG-Pedale enden bei ~67 %, darum relativ
+      const cand = c.mask(i => ped[i] >= lim && rpm && rpm[i] > 2500);
+      if (c.dur(cand) >= 1) { m = cand; viaPedal = true; }
+    }
+    if (!m) {
+      const byLoad = c.combine(c.masks.wot, c.mask(i => rpm && rpm[i] > 3000));
+      m = c.dur(byLoad) > 1 ? byLoad : c.masks.wot;
+    }
+    const d = c.dur(m);
+    if (d < 1) return { status: S.UNCLEAR, note: viaPedal
+      ? 'Kein Volllastzug in dieser Fahrt.'
+      : 'Kein Volllastzug erkennbar. Ohne Fahrpedal- oder Drosselklappenstellung im Log lässt sich Vollgas nur über die Last selbst erkennen – ein gedeckelter Ladedruck bliebe dabei unsichtbar. Für eine belastbare Prüfung die PID „Accelerator Pedal Position D/E" mitloggen.' };
+    const p95 = c.agg('load_abs', m, 'p95'), mx = c.agg('load_abs', m, 'max');
     const G = c.P.loadWotGreen || [150, 220];
     const st = p95 >= G[0] ? (p95 <= G[1] ? S.OK : S.WARN) : p95 >= G[0] * 0.8 ? S.WARN : S.CRIT;
+    const low = p95 < G[0];
     return { status: st, value: p95, unit: '%', dec: 0, ref: G[0] + '–' + G[1] + ' %', refLo: G[0], refHi: G[1],
-      extra: [['Spitzenwert', fmt(mx, 1) + ' %'], ['Bewertete Volllastzeit', fmtDur(d)]],
+      cond: viaPedal ? 'Fahrpedal über 92 % des Maximums, Drehzahl über 2500 min⁻¹'
+                     : 'Last über ' + c.wotThr + ' % (kein Pedalsignal im Log)',
+      extra: [['Spitzenwert', fmt(mx, 1) + ' %'], ['Bewertete Volllastzeit', fmtDur(d)],
+              ['Volllast erkannt über', viaPedal ? 'Fahrpedalstellung' : 'Motorlast selbst']],
       text: st === S.OK
         ? 'Unter Volllast erreicht die absolute Motorlast ' + fmt(p95, 0) + ' % (Spitze ' + fmt(mx, 0) + ' %). Werte über 100 % sind beim aufgeladenen Motor normal und zeigen, dass Lader, Riemen, Bypassklappe und die gesamte Ladeluftstrecke liefern. Ein Notlauf oder eine Leistungsreduktion liegt nicht vor.'
-        : 'Unter Vollgas werden nur ' + fmt(p95, 0) + ' % Last erreicht. Erwartet werden ' + G[0] + '–' + G[1] + ' %. Das ist die typische Signatur eines Notlaufs, eines rutschenden Kompressorriemens oder eines Lecks in der Ladeluftstrecke.',
-      action: st === S.OK ? null : ['Fehlerspeicher auslesen (Notlauf?)', 'Kompressorriemen und Spanner sichtprüfen', 'Ladeluftstrecke abdrücken', 'Bypassklappe stellgliedtesten'] };
+        : low
+          ? 'Bei Vollgas werden nur ' + fmt(p95, 0) + ' % Last erreicht, erwartet werden ' + G[0] + '–' + G[1] + ' %. Das ist die typische Signatur eines Notlaufs, eines rutschenden Kompressorriemens oder eines Lecks in der Ladeluftstrecke.'
+          : 'Bei Vollgas werden ' + fmt(p95, 0) + ' % Last erreicht und damit mehr als die erwarteten ' + G[0] + '–' + G[1] + ' %. Das ist für sich genommen kein Defekt: entweder ist der Erwartungsbereich für diesen Motor zu eng gefasst (bei einem Rückfallprofil der Normalfall), oder der Ladedruck wurde angehoben. Erhöhte Ladedrücke gehören zusammen mit Zündwinkelrücknahme und Ladelufttemperatur beurteilt.',
+      action: st === S.OK ? null : low
+        ? ['Fehlerspeicher auslesen (Notlauf?)', 'Kompressorriemen und Spanner sichtprüfen', 'Ladeluftstrecke abdrücken', 'Bypassklappe stellgliedtesten']
+        : ['Prüfen, ob ein Softwarestand ab Werk oder eine Leistungssteigerung vorliegt', 'Zündwinkelrücknahme unter Volllast mitbeurteilen', 'Ladelufttemperatur unter Dauerlast beobachten'] };
   }
 },
 {

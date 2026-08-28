@@ -264,3 +264,88 @@ nicht sichtbar waren. Alle Punkte wurden gegen die Rohdatei nachgerechnet und be
   auf welche Fahrsituation der Wert eingegrenzt ist. Damit steht im UI dasselbe wie im XML.
 - „Aussagekraft“ wird bei nicht bewerteten Befunden ausgeblendet — dort beschrieb sie das Gewicht
   der Regel und wurde als Belastbarkeit des Ergebnisses gelesen.
+
+## Bugfixes (Prüfung durch acht Agenten)
+
+Acht Agenten haben je einen Bereich des Werkzeugs gegen die echte Aufzeichnung geprüft.
+Ohne Befund blieben: XSS-Wege (keiner gefunden), Namenskollisionen im globalen Scope
+(232 Top-Level-Namen, keine Doppelung), Kachelmathematik, Maßstabsbalken, Histogramm- und
+Dichte-Geometrie, sowie der Profilkatalog in 13 von 14 Plausibilitätsregeln.
+
+### Rechenkern
+- **Klopfverdacht** wurde gegen die feste Null geprüft. Aufgeladene Ottomotoren fahren
+  unten herum planmäßig mit negativem Zündwinkel — der Detektor meldete das gesamte
+  Low-End-Kennfeld. Jetzt gegen eine drehzahlabhängige Grundlinie, 14 Ereignisse → 9,
+  jedes mit einer echten Rücknahme von 6–14° gegenüber gleicher Drehzahl.
+- **Beschleunigung** wurde als Differenz über zwei Rasterschritte gebildet. Eine 1-Hz-
+  Geschwindigkeit auf 0,16-s-Raster ist eine Treppe: jede Stufe ergab kurz die dreifache
+  Beschleunigung, dazwischen null. Aus konstanter Fahrt wurden abwechselnd
+  „Beschleunigung" und „Verzögerung" — im Test 89 s + 90 s von 300 s Konstantfahrt,
+  jetzt 300 s Konstantfahrt. Das Fenster richtet sich nun nach dem Takt der Quelle.
+- **Erster GPS-Fix** konnte nie verworfen werden. Die von vielen Apps geschriebene
+  „zuletzt bekannte Position" blähte im Test die Strecke von 20,5 auf 131,7 km.
+- **Höhenmeter**: das Totband von 0,15 m je Messpunkt lag unter dem GPS-Rauschen und
+  hing an der Abtastrate — auf ebener Strecke entstanden 210 Phantom-Höhenmeter.
+- **`Math.min.apply`** stürzt ab etwa 125.000 Argumenten ab; ein 10-Hz-Logger erreichte
+  das nach einer knappen Stunde und das Werkzeug zeigte gar nichts mehr an.
+- **Reine Motor-Logs ohne Geschwindigkeit** brachen den XML-Export ab.
+
+### Diagnose
+- **Volllast-Regel war zirkulär**: die Maske war über die Last selbst definiert, damit
+  lag das Ergebnis zwangsläufig im grünen Bereich und der Warn- wie der Kritisch-Zweig
+  waren toter Code. Ein gedeckelter Ladedruck — genau der gesuchte Defekt — erzeugte eine
+  leere Maske und meldete „nicht bewertbar". Volllast wird jetzt am Fahrpedal erkannt.
+- **Rückfallprofile** trugen Sollwerte der *berechneten* Last (85–100 %), bewertet wird die
+  *absolute* (150–200 % bei Aufladung). Jeder nicht katalogisierte Turbo bekam einen
+  Fehlalarm — mit dem Text „nur 190 % erreicht, erwartet werden 85–100 %".
+- **Untertemperatur war unsichtbar**: die Maske verlangt ≥ 80 °C, ein auf 75 °C hängender
+  Motor erzeugte eine leere Maske und meldete eine Datenlücke statt des Defekts.
+- Ein einzelner Ausreißer über 112 °C kippte die ganze Fahrt auf „auffällig".
+- Der Text zur lastabhängigen Gemischkorrektur nannte immer Falschluft, auch wenn die
+  Korrektur mit der Last *stieg* — das spricht dagegen und zeigt zur Kraftstoffversorgung.
+- Ein Benziner ohne Zündwinkel-PID wurde zum Diesel erklärt und verlor alle Gemischregeln,
+  obwohl die Gemischadaption im Log stand.
+
+### Parser und Einheiten
+Siehe eigener Abschnitt oben — Mitternachtsübergang, Feldübernahme aus der Vorzeile,
+Dezimalkomma, GPS-Sortierung, Wide-Format-Namenskollision, Datumsformat, Infinity,
+base64-Fehldeutung, hp/PS, kg/h, MPa, AFR, °C-Falschmeldung, Ist- gegen Soll-Ladedruck.
+
+### Diagramme und Karte
+- **Achsenbeschriftung** rundete 2,5er-Schritte weg: die Gitterlinie saß bei 2,5, daneben
+  stand „3". Bei Schritt 0,25 wurde 0,75 zu „0,8".
+- **Downsampling** verwarf Extremwerte neben Datenlücken (jede Dreiecksfläche wurde NaN,
+  der Größenvergleich schlug nie an) und ließ kurze Lücken verschwinden, sodass die Linie
+  über sie hinweg durchgezogen wurde.
+- Höhenprofil und Verbrauchskurve sendeten ihre X-Werte (Meter, km/h) als Zeit an das
+  synchronisierte Fadenkreuz — der Kartenkasten zeigte dann eine erfundene Uhrzeit.
+
+### Oberfläche
+- Drag&Drop löste den Ladevorgang **zweimal** aus (zwei parallele Parse-Läufe der 29-MB-Datei).
+- Beim Laden einer zweiten Datei blieben die Seiten der ersten im DOM stehen; ein
+  Sektionswechsel zeigte deren Messreihen, während intern längst die neue Datei aktiv war.
+- Fehlermeldungen beim Zweitladen landeten im versteckten Startbildschirm und waren unsichtbar.
+- Ein Kaufcheck-Stand aus einer älteren Fassung ließ den ganzen Bereich dauerhaft abbrechen.
+
+### Kaufcheck und KI-Export
+- **Steuerzeichen** in einem Spaltennamen machten das gesamte XML unlesbar — beide Parser
+  (Chromium und Python) brachen ab. Jetzt gestrippt.
+- **Prompt-Injection**: Spaltennamen und Notizen landen als Klartext im Dokument. Die
+  Anleitung sagt dem empfangenden Modell jetzt ausdrücklich, dass diese Felder Daten sind
+  und keine Anweisungen, und dass es auf solche Texte hinweisen statt ihnen folgen soll.
+- Die Liste lückenhafter Messreihen wurde still bei 20 gekürzt.
+- Das freie Feld „Name" wurde als Modell gelesen und blendete Prüfpunkte aus.
+- Neue Besichtigungen bekamen nach einem Löschvorgang die ID einer bestehenden und
+  überschrieben sie.
+- Bei unbekanntem Getriebe fehlte die getriebespezifische Anweisung zu den Messfahrten ganz.
+- 14 Prüfpunkte nennen im Text einen Abbruchgrund, wurden aber nicht als solcher gezählt.
+
+### Profilkatalog
+- `vag_ea888_g3_20tsi_290`: 213 kW bei 5000 min⁻¹ hätten 407 Nm gebraucht, hinterlegt
+  waren 370 Nm — physikalisch unmöglich. Auf die belegten Cupra-290-Werte gesetzt.
+- Der 3.0-TDI mit 400 Nm nannte A6 C7 und A7 C7, dort saß aber die 500-Nm-Ausführung.
+- Einen AMG GLB 45 gab es nie; Baujahr des CJXC auf 2013 korrigiert; Verbrauch des
+  Prius-III-Hybrids auf 3,8 L; Verdichtung des 8NR-FTS auf 10,5.
+- Dedupe hielt „Golf VI" für „Golf VII" (Teilstring), kürte den Gewinner nach beliebigen
+  Feldern statt nach Sollwerten und warf dessen Sollwerte weg.
+- Jeder Diesel mit Baujahr vor 2007 galt als Pumpe-Düse.

@@ -77,7 +77,10 @@ class Chart {
     const inside = px >= this.plot.x - 8 && px <= this.plot.x + this.plot.w + 8;
     this.hover = inside ? { px, py } : null;
     this.draw();
-    if (this.opts.type === 'timeseries' && this.xScale)
+    // Nur senden, wenn die X-Achse wirklich die Zeit ist. Das Höhenprofil hat Meter auf
+    // X, die Verbrauchskurve km/h – als Zeit verschickt erzeugen die im Kartenkasten eine
+    // erfundene Uhrzeit und die Messwerte einer ganz anderen Stelle der Fahrt.
+    if (this.opts.type === 'timeseries' && this.xScale && this.opts.syncHover !== false)
       Chart.emitHover(this.hover ? this.xScale.inv(clamp(px, this.plot.x, this.plot.x + this.plot.w)) : null, this);
   }
   setExternalHover(xValue) {
