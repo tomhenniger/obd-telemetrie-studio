@@ -1,63 +1,7 @@
 /* ============================================================
-   Fahrzeugprofile + Diagnose-Engine
+   Diagnose-Engine
    Fünf Zustände je Regel: ok | warn | crit | missing | unklar
    ============================================================ */
-
-const VEHICLE_PROFILES = [
-{
-  id: 'audi_s5_b85_cgwc',
-  name: 'Audi S5 B8.5 · 3.0 TFSI (CGWC)',
-  short: 'S5 B8.5 CGWC',
-  engine: 'V6 90°, 24V DOHC, Roots-Kompressor Eaton TVS 1320',
-  aspiration: 'kompressor', fuel: 'petrol',
-  specs: {
-    displacement: 2995, bore: 84.5, stroke: 89, compression: 10.5,
-    powerPS: 333, powerKW: 245, powerRpm: [5500, 6500],
-    torqueNm: 440, torqueRpm: [2900, 5300],
-    redline: 7000, idleWarm: [620, 780], idleCold: [900, 1300],
-    boostMaxBar: 0.80, boostWotGreen: [0.65, 0.90],
-    coolantGreen: [85, 105], thermostat: 87,
-    loadWotGreen: [150, 220], loadIdleGreen: [18, 42],
-    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
-    oilSpec: 'VW 502 00 / 504 00 · 5W-40 bzw. 5W-30 · ≈ 6,8 L',
-    injection: 'FSI-Direkteinspritzung, bis 150 bar',
-    ecu: 'Simos 8.x',
-    massKg: 1750, cw: 0.32, area: 2.16, cr: 0.012,
-    consNEDC: 8.1, consUrban: 10.9, consExtra: 6.4, consReal: 13.7,
-    co2NEDC: 190, accel0100: 4.9, vmax: 250,
-    gearbox: '7-Gang S tronic (DL501)', tyre: '255/35 R19', rollCircum: 2.077,
-    banks: 2, cacType: 'wasser'
-  },
-  weakSpots: [
-    { t: 'Zusatz-Wasserpumpe des Ladeluft-Kreises (P190C-Familie)', s: 'LLK-Temperatur bleibt nach Volllast oben, kühlt im Teillast nicht zurück' },
-    { t: 'Internes Leck der wassergekühlten LLK im Laderkäfig', s: 'Bank-Delta der Ladelufttemperatur dauerhaft > 6 K, Kühlmittelverlust ohne äußere Leckage' },
-    { t: 'Kompressorriemen / Spanner', s: 'Volllast trotz Vollgas unter 130 % Last, Ladedruck bricht im Zug ein' },
-    { t: 'Kohlenstoffablagerungen an den Einlassventilen (FSI, ab ~100.000 km)', s: 'Unruhiger Leerlauf (σ > 40 min⁻¹), erhöhte Leerlauf-Last, LTFT im Leerlauf höher als unter Last' },
-    { t: 'Falschluft: Saugrohrdichtung, Ladeluftschläuche, Kurbelgehäuseentlüftung', s: 'LTFT im Leerlauf/Teillast deutlich höher als unter Volllast' },
-    { t: 'Kennfeldthermostat / Kühlerlüfter', s: 'Kühlmittel-Plateau unter 82 °C oder Sägezahn über 105 °C' }
-  ],
-  extraPids: ['Short term fuel trim B1/B2', 'Intake manifold absolute pressure (0x0B)',
-              'Fuel rail pressure (0x23/0x59)', 'Misfire count Cyl 1–6',
-              'Intake air temperature (0x0F)', 'Engine oil temperature (0x5C)']
-},
-{
-  id: 'generic_turbo', name: 'Generisch · Turbo-/Kompressor-Benziner', short: 'Turbo Benzin',
-  engine: 'unbekannt', aspiration: 'turbo', fuel: 'petrol',
-  specs: { redline: 6800, idleWarm: [600, 800], coolantGreen: [85, 108], loadWotGreen: [130, 220],
-           boostWotGreen: [0.6, 1.6], banks: 2 }
-},
-{
-  id: 'generic_na', name: 'Generisch · Saugmotor Benzin', short: 'Sauger Benzin',
-  engine: 'unbekannt', aspiration: 'sauger', fuel: 'petrol',
-  specs: { redline: 6800, idleWarm: [650, 850], coolantGreen: [80, 105], loadWotGreen: [85, 100], banks: 1 }
-},
-{
-  id: 'generic_diesel', name: 'Generisch · Diesel', short: 'Diesel',
-  engine: 'unbekannt', aspiration: 'turbo', fuel: 'diesel',
-  specs: { redline: 5000, idleWarm: [700, 900], coolantGreen: [80, 100], loadWotGreen: [100, 220],
-           boostWotGreen: [0.8, 2.2], banks: 1 }
-}
-];
 
 function autoProfile(ds) {
   const s = ds.stats;
@@ -74,7 +18,9 @@ function autoProfile(ds) {
 /* ---------- Auswerte-Kontext ---------- */
 function buildContext(ds, profile) {
   const { G, N, step, grid, stats } = ds;
-  const P = profile.specs || {};
+  const R = resolveSpecs(profile);
+  const P = R.specs;                    // Profilwerte, ergänzt um Klassenwerte
+  const derivedSpecs = R.derived;       // welche davon nicht aus dem Profil stammen
   const has = id => !!G[id];
   const mask = fn => { const m = new Uint8Array(N); for (let i = 0; i < N; i++) m[i] = fn(i) ? 1 : 0; return m; };
   const V = id => G[id];
@@ -143,7 +89,7 @@ function buildContext(ds, profile) {
   const combine = (...ms) => mask(i => ms.every(m => m[i]));
   const maskFn = fn => mask(fn);
 
-  return { ds, profile, P, G, N, step, grid, stats, has, V, agg, dur, mask: maskFn, combine,
+  return { ds, profile, P, derivedSpecs, G, N, step, grid, stats, has, V, agg, dur, mask: maskFn, combine,
            masks: { warm, engineOn, coast, wot, idle, partLoad, moving }, loadIsAbs, wotThr };
 }
 
@@ -165,7 +111,7 @@ function inRange(v, lo, hi, tolLo, tolHi) {
 const DIAG_RULES = [
 /* ---------------- Kühlkreis ---------------- */
 {
-  id: 'coolant_operating', group: 'Kühlkreis', title: 'Kühlmitteltemperatur im Betrieb',
+  id: 'coolant_operating', usesSpec: ['coolantGreen'], group: 'Kühlkreis', title: 'Kühlmitteltemperatur im Betrieb',
   requires: ['coolant'], confidence: 'hoch', provenance: 'gemessen',
   run(c) {
     const P = c.P.coolantGreen || [85, 105];
@@ -359,7 +305,7 @@ const DIAG_RULES = [
 },
 /* ---------------- Aufladung & Last ---------------- */
 {
-  id: 'load_wot', group: 'Aufladung', title: 'Absolute Motorlast bei Volllast',
+  id: 'load_wot', usesSpec: ['loadWotGreen'], group: 'Aufladung', title: 'Absolute Motorlast bei Volllast',
   requires: ['load_abs'], confidence: 'hoch', provenance: 'gemessen',
   run(c) {
     const m = c.combine(c.masks.wot, c.mask(i => { const r = c.V('rpm'); return r && r[i] > 3000; }));
@@ -378,7 +324,7 @@ const DIAG_RULES = [
   }
 },
 {
-  id: 'load_idle', group: 'Aufladung', title: 'Motorlast im Leerlauf',
+  id: 'load_idle', usesSpec: ['loadIdleGreen'], group: 'Aufladung', title: 'Motorlast im Leerlauf',
   requires: ['load_abs'], confidence: 'niedrig', provenance: 'gemessen',
   run(c) {
     const m = c.masks.idle;
@@ -400,7 +346,7 @@ const DIAG_RULES = [
   }
 },
 {
-  id: 'boost_wot', group: 'Aufladung', title: 'Ladedruck bei Volllast', noLight: true,
+  id: 'boost_wot', usesSpec: ['boostWotGreen'], group: 'Aufladung', title: 'Ladedruck bei Volllast', noLight: true,
   requires: ['boost'], confidence: 'niedrig', provenance: 'abgeleitet',
   run(c) {
     const m = c.masks.wot;
@@ -476,7 +422,7 @@ const DIAG_RULES = [
 },
 /* ---------------- Motor allgemein ---------------- */
 {
-  id: 'idle_rpm', group: 'Motor', title: 'Leerlaufdrehzahl und -ruhe',
+  id: 'idle_rpm', usesSpec: ['idleWarm'], group: 'Motor', title: 'Leerlaufdrehzahl und -ruhe',
   requires: ['rpm'], confidence: 'hoch', provenance: 'gemessen',
   run(c) {
     const m = c.masks.idle;
@@ -505,7 +451,7 @@ const DIAG_RULES = [
   }
 },
 {
-  id: 'rpm_limit', group: 'Motor', title: 'Drehzahlausnutzung',
+  id: 'rpm_limit', usesSpec: ['redline'], group: 'Motor', title: 'Drehzahlausnutzung',
   requires: ['rpm'], confidence: 'hoch', provenance: 'gemessen',
   run(c) {
     const red = c.P.redline || (c.stats.rpm.p99 + 400);
@@ -654,6 +600,7 @@ function ltftRule(c, id, bankLabel) {
 function runDiagnostics(ds, profile) {
   const c = buildContext(ds, profile);
   const out = [];
+  const derivedSet = new Set(c.derivedSpecs);
   for (const rule of DIAG_RULES) {
     const missing = (rule.requires || []).filter(id => !c.has(id));
     if (missing.length) {
@@ -665,7 +612,9 @@ function runDiagnostics(ds, profile) {
     let r;
     try { r = rule.run(c); }
     catch (e) { r = { status: S.UNCLEAR, note: 'Regel konnte nicht ausgewertet werden: ' + e.message }; }
-    out.push(Object.assign({}, rule, r));
+    // Regeln, deren Sollbereich nur aus dem Klassenprofil stammt, werden gekennzeichnet
+    const usesDerived = (rule.usesSpec || []).some(k => derivedSet.has(k));
+    out.push(Object.assign({}, rule, r, usesDerived ? { specDerived: true } : null));
   }
   const order = { crit: 0, warn: 1, ok: 2, unklar: 3, missing: 4 };
   out.sort((a, b) => (order[a.status] - order[b.status]) || 0);

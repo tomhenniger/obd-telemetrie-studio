@@ -18,10 +18,12 @@ OUT=index.html
   cat src/23-stats.js
   cat src/24-chart.js
   cat src/25-map.js
-  cat src/26-diag.js
-  cat src/27-ui.js
-  cat src/28-ingest.js
-  cat src/29-app.js
+  cat src/26-profiles.js
+  cat src/27-diag.js
+  cat src/28-ui.js
+  cat src/29-ingest.js
+  cat src/30-buycheck.js
+  cat src/31-app.js
   echo '</script>'
   cat src/99-tail.html
 } > "$OUT"

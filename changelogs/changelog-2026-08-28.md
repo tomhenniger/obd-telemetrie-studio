@@ -84,3 +84,29 @@
 - Der Zugriff auf die Zwischenablage kann in manchen Browsern unbegrenzt offen bleiben, solange eine
   Erlaubnisabfrage aussteht. Nach 25 s bricht die Übernahme jetzt mit einem Hinweis auf das
   Einfügefeld ab, statt stumm zu hängen.
+
+## Neue Features (Kaufcheck und Profile)
+
+- **Kaufcheck-Bereich**: 85 Prüfpunkte in neun Phasen vom Telefonat vor dem Termin bis zum Blick
+  unter das warme Auto. Je Punkt: was genau zu tun ist, woran man erkennt dass es in Ordnung ist,
+  das Warnsignal, Schweregrad, grobe Reparaturkosten und benötigtes Hilfsmittel. Dreiwertiger
+  Zustand je Punkt (in Ordnung / Befund / übersprungen), Notizfeld, Fortschritt je Phase.
+- **Mitlaufende Kostenbilanz**: jeder als Befund markierte Punkt trägt seine Kostenspanne in eine
+  Summe ein. Abbruchkriterien lösen ein eigenes Warnfeld aus statt in der Summe unterzugehen.
+- **Mehrere Besichtigungen** parallel führbar, mit Fahrzeugdaten, Preis und Laufleistung.
+  Alles im Gerätespeicher, nichts wird übertragen. Export als Textprotokoll und über das Teilen-Menü.
+- **OBD-Messprotokoll**: elf Messfahrten in Durchführungsreihenfolge, vom Vorbereitungsabend über
+  den Kaltstart bis zum zweiten Fehlerspeicher-Scan. Je Schritt Dauer, genaue Fahranweisung,
+  was sie zeigt und Erwartungswerte mit Zahlen.
+- **PID-Empfehlungslisten** getrennt für Benziner und Diesel, nach Pflicht/nützlich/optional
+  sortiert, jeweils mit Begründung und einem Hinweis zur sinnvollen Obergrenze.
+- **Fahrzeugprofile mit Suche**: Volltextsuche über Marke, Familie, Motorkennbuchstaben, Leistung
+  und Baujahr, dazu Filter nach Kraftstoff und Aufladung. Eigene Profile anlegen, bearbeiten,
+  sichern und einlesen.
+- **Klassenbasierte Rückfallwerte**: was ein Profil nicht belegt hat, wird aus der Motorklasse
+  ergänzt. Die betroffenen Befunde tragen sichtbar den Hinweis „Sollwert klassenbasiert" statt
+  einen Werkswert vorzutäuschen.
+- **Erklärfelder an jedem Diagramm**: ein Info-Knopf klappt aus, wie das Diagramm zu lesen ist,
+  wie ein unauffälliger Verlauf aussieht und was ein Warnsignal wäre.
+- **Anwendung ohne Aufzeichnung nutzbar**: die Kaufcheckliste öffnet sich direkt vom Startbildschirm,
+  ohne dass eine CSV geladen sein muss — beim Besichtigungstermin gibt es die noch gar nicht.

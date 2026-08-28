@@ -12,6 +12,29 @@
 .card-b.flush { padding: 0; }
 .card-f { padding: 10px 15px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--text-3); }
 
+/* Erklärknopf und -feld */
+.infobtn {
+  width: 22px; height: 22px; flex: none; border-radius: 50%;
+  border: 1px solid var(--border-2); background: var(--surface-2); color: var(--text-3);
+  font-family: var(--mono); font-size: 12px; font-weight: 700; font-style: italic;
+  line-height: 1; display: grid; place-items: center;
+  transition: all .14s var(--ease);
+}
+.infobtn:hover { border-color: var(--accent-line); color: var(--accent); background: var(--accent-soft); }
+.infobtn[aria-expanded="true"] { border-color: var(--accent-line); color: var(--accent); background: var(--accent-soft); }
+.info-panel {
+  margin: 0 15px 12px; padding: 12px 14px; border-radius: var(--r-sm);
+  background: var(--surface-2); border: 1px solid var(--border);
+  font-size: 12.5px; line-height: 1.62; color: var(--text-2);
+  display: grid; gap: 9px;
+}
+.info-panel p { margin: 0; }
+.info-panel .iv { display: grid; grid-template-columns: 18px 1fr; gap: 9px; align-items: start; }
+.info-panel .iv-m { font-size: 11px; font-weight: 700; line-height: 1.5; }
+.info-panel .iv.ok  .iv-m { color: var(--ok); }
+.info-panel .iv.bad .iv-m { color: var(--crit); }
+.info-panel .iv b { color: var(--text-1); }
+
 /* ===== KPI-Kachel ================================================ */
 .kpi {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
@@ -69,6 +92,8 @@
 .btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
 .btn.icon { padding: 8px; min-width: 36px; }
 .btn.sm { padding: 5px 10px; min-height: 30px; font-size: 12px; }
+.btn.ghost { background: none; border-color: transparent; color: var(--text-2); }
+.btn.ghost:hover { background: var(--surface-2); border-color: var(--border); color: var(--text-1); }
 
 select.sel, input.inp {
   padding: 7px 10px; min-height: 34px; border-radius: var(--r-sm); font-size: 12.5px;
@@ -175,6 +200,29 @@ select.sel { padding-right: 26px; appearance: none;
 .f-act li::before { content: "→"; color: var(--accent); flex: none; }
 .f-meta { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 2px; }
 
+/* ===== Kaufcheck ================================================= */
+.chk { border: 1px solid var(--border); border-radius: var(--r); background: var(--surface);
+       overflow: hidden; border-left: 3px solid var(--border-2); }
+.chk.m-ok  { border-left-color: var(--ok); }
+.chk.m-bad { border-left-color: var(--crit); }
+.chk.m-na  { border-left-color: var(--border-hi); opacity: .68; }
+.chk-h { display: flex; align-items: flex-start; gap: 11px; padding: 11px 13px; width: 100%; text-align: left; }
+.chk-marks { display: flex; gap: 4px; flex: none; }
+.mk { width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border-2);
+      background: var(--surface-2); color: var(--text-3); font-size: 13px; font-weight: 700;
+      display: grid; place-items: center; transition: all .12s var(--ease); }
+.mk:hover { border-color: var(--border-hi); color: var(--text-1); }
+.mk.ok[aria-pressed="true"]  { background: var(--ok-soft);   border-color: var(--ok-line);   color: var(--ok); }
+.mk.bad[aria-pressed="true"] { background: var(--crit-soft); border-color: var(--crit-line); color: var(--crit); }
+.mk.na[aria-pressed="true"]  { background: var(--muted-soft); border-color: var(--border-hi); color: var(--text-2); }
+.chk-t { flex: 1; min-width: 0; padding-top: 2px; }
+.chk-t b { display: block; font-size: 13.5px; font-weight: 600; }
+.chk-t span { display: block; font-size: 12px; color: var(--text-3); line-height: 1.45;
+              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chk[open] .chk-t span { white-space: normal; }
+.chk .f-b { padding: 0 13px 13px 58px; }
+@media (max-width: 560px) { .chk .f-b { padding-left: 13px; } }
+
 /* ===== Tabellen ================================================== */
 .tblwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 table.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 520px; }
@@ -267,6 +315,35 @@ table.tbl tbody tr:hover td:first-child { background: var(--surface-2); }
            background: var(--surface-2); border: 1px solid var(--border); }
 .weak b { font-size: 12.5px; }
 .weak span { font-size: 12px; color: var(--text-2); line-height: 1.55; }
+
+/* Profilauswahl */
+.psel { display: flex; align-items: center; gap: 12px; padding: 11px 13px;
+        background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: var(--r-sm); }
+.psel-t { flex: 1; min-width: 0; }
+.psel-t b { display: block; font-size: 13.5px; }
+.psel-t span { display: block; font-size: 12px; color: var(--text-2); font-family: var(--mono); }
+.plist { max-height: 340px; overflow-y: auto; border: 1px solid var(--border);
+         border-radius: var(--r-sm); background: var(--surface-2); }
+.plist-h { position: sticky; top: 0; z-index: 1; padding: 7px 13px 5px; font-size: 10.5px;
+           text-transform: uppercase; letter-spacing: .08em; font-weight: 600; color: var(--text-3);
+           background: var(--surface-3); border-bottom: 1px solid var(--border); }
+.prow { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+        padding: 9px 13px; border-bottom: 1px solid var(--border); min-height: 46px; }
+.prow:last-child { border-bottom: 0; }
+.prow:hover { background: var(--surface-3); }
+.prow[aria-pressed="true"] { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.prow-t { flex: 1; min-width: 0; }
+.prow-t b { display: block; font-size: 13px; font-weight: 550; }
+.prow-t span { display: block; font-size: 11.5px; color: var(--text-3); font-family: var(--mono);
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.pform { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 11px; }
+.pform-s { grid-column: 1 / -1; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em;
+           font-weight: 600; color: var(--text-3); padding-top: 8px; border-top: 1px solid var(--border); }
+.pform-f { display: grid; gap: 4px; min-width: 0; }
+.pform-f.wide { grid-column: 1 / -1; }
+.pform-f span { font-size: 11.5px; color: var(--text-2); }
+.pform-f .inp { width: 100%; }
 
 /* Zeitbereichs-Regler */
 .range { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; }

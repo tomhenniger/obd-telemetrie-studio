@@ -15,15 +15,40 @@ function icon(name, cls) {
   return s;
 }
 
+/* Erklärfeld: „Wie lese ich das?" — als aufklappbares Feld statt schwebendem Fenster,
+   damit es auf dem Handy nicht über den Inhalt fällt. */
+function infoPanel(info) {
+  if (!info) return null;
+  const rows = [];
+  if (info.read) rows.push(el('p', {}, info.read));
+  if (info.good) rows.push(el('div', { class: 'iv ok' },
+    el('span', { class: 'iv-m' }, '✓'), el('div', {}, el('b', {}, 'Unauffällig: '), info.good)));
+  if (info.bad) rows.push(el('div', { class: 'iv bad' },
+    el('span', { class: 'iv-m' }, '▲'), el('div', {}, el('b', {}, 'Auffällig: '), info.bad)));
+  if (info.note) rows.push(el('p', { class: 'dim2' }, info.note));
+  return el('div', { class: 'info-panel', hidden: true }, rows);
+}
+
 function card(title, opts, ...body) {
   opts = opts || {};
-  const tools = opts.tools ? el('div', { class: 'tools' }, opts.tools) : null;
+  const panel = infoPanel(opts.info);
+  const infoBtn = panel ? el('button', {
+    class: 'infobtn', type: 'button', 'aria-expanded': 'false',
+    'aria-label': 'Wie lese ich dieses Diagramm?', title: 'Wie lese ich das?',
+    onclick: e => {
+      const open = panel.hidden;
+      panel.hidden = !open;
+      e.currentTarget.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+  }, 'i') : null;
+  const tools = (opts.tools || infoBtn) ? el('div', { class: 'tools' }, opts.tools || null, infoBtn) : null;
   const head = (title || tools) ? el('div', { class: 'card-h' },
     title ? el('h3', {}, title) : null,
     opts.hint ? el('span', { class: 'hint' }, opts.hint) : null,
     tools) : null;
   return el('div', { class: 'card' + (opts.class ? ' ' + opts.class : '') },
     head,
+    panel,
     el('div', { class: 'card-b' + (opts.flush ? ' flush' : '') }, body),
     opts.foot ? el('div', { class: 'card-f' }, opts.foot) : null);
 }
@@ -91,11 +116,17 @@ function findingCard(r) {
         el('span', {}, k), el('b', {}, v)))));
   if (r.action && r.action.length)
     body.appendChild(el('ul', { class: 'f-act' }, r.action.map(a => el('li', {}, a))));
+  if (r.specDerived)
+    body.appendChild(el('p', { class: 'dim2', style: { fontSize: '12px' } },
+      'Für dieses Fahrzeugprofil ist der Sollbereich dieser Größe nicht hinterlegt. Bewertet wurde gegen den ' +
+      'Rückfallwert der Motorklasse – der ist bewusst weit gefasst, damit er keine Fehlalarme erzeugt, ' +
+      'und entsprechend grob. Ein eigenes Profil mit dem Werkswert macht diese Prüfung schärfer.'));
   body.appendChild(el('div', { class: 'f-meta' },
     el('span', { class: 'badge mute' }, 'Aussagekraft: ' + (r.confidence || '–')),
     el('span', { class: 'badge mute' }, r.provenance === 'gemessen' ? 'gemessener Wert'
       : r.provenance === 'abgeleitet' ? 'abgeleiteter Wert' : 'Schätzung'),
-    r.ref ? el('span', { class: 'badge mute' }, 'Soll: ' + r.ref) : null));
+    r.ref ? el('span', { class: 'badge mute' }, 'Soll: ' + r.ref) : null,
+    r.specDerived ? el('span', { class: 'badge warn' }, 'Sollwert klassenbasiert') : null));
 
   return el('details', { class: 'finding acc ' + st, open: st === 'crit' || st === 'warn' },
     el('summary', { class: 'f-h' },

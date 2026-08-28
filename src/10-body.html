@@ -36,6 +36,10 @@
         <button class="btn" id="paste"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-clip"/></svg>Aus Zwischenablage</button>
         <button class="btn" id="demo" hidden>Beispielfahrt laden</button>
       </div>
+      <button class="btn ghost" id="open-buy" style="margin-top:14px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-clip"/></svg>
+        Kaufcheckliste öffnen — ohne Datei
+      </button>
       <input type="file" id="file" accept=".csv,.txt,.gz,.zip,text/csv,text/plain,application/gzip,application/zip" hidden>
       <textarea id="pastebox" class="pastebox" rows="1" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"
         placeholder="… oder hier hineintippen und einsetzen (langes Tippen → Einsetzen)"></textarea>
@@ -78,7 +82,7 @@
     </div>
     <div id="nav"></div>
     <div class="rail-foot">
-      <button class="btn sm" id="new-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><use href="#i-upload"/></svg><span class="lbl">Andere CSV</span></button>
+      <button class="btn sm" id="new-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><use href="#i-upload"/></svg><span class="lbl" id="new-file-lbl">Andere CSV</span></button>
     </div>
   </nav>
 
