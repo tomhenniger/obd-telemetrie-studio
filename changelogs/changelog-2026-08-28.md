@@ -147,3 +147,19 @@
   Kaufcheck zur Verfügung: die Profilzeile klappt die Suchleiste mit Filtern direkt auf,
   statt in die Einstellungen zu springen.
 - Deutsche Anführungszeichen durchgängig typografisch korrekt geschlossen.
+
+## Bugfixes (Kaufcheck-Filter)
+
+- **A4-spezifische Prüfpunkte erschienen beim S5.** Sie hingen an der Marke, und der S5 ist ein Audi.
+  Der eigentliche Unterscheider ist aber Baureihe und Getriebeart, und die stehen nicht im Motorprofil:
+  derselbe CGWC sitzt in A4, S4, A5, S5 und Q5. Die Besichtigung hat jetzt eigene Felder für Baureihe
+  und Getriebeart, und die Prüfpunkte filtern danach. Was sich noch nicht entscheiden lässt, wird
+  angezeigt und als bedingt gekennzeichnet, statt stillschweigend ein- oder ausgeblendet zu werden.
+- „multitronic beim A4 meiden" heißt jetzt „Stufenloses Getriebe abklären" und gilt für jedes CVT,
+  nicht nur für Audi. Der Rückrufcode-Punkt gilt für die betroffenen Baureihen statt für die Marke,
+  der Motornummer-Punkt für den ganzen VW-Konzern. Heckklappenrost und nicht eingetragene
+  Fahrwerksumbauten sind allgemeine Punkte mit dem A4 als Beispiel.
+- Der Pfeil an den Checklisten-Karten drehte sich beim Aufklappen nicht — die CSS-Regel griff nur
+  für Diagnose-Befunde.
+- Die Markierungen für Soll- und Warnzustand standen in den Prüfpunkten auf eigener Zeile statt
+  neben dem Text.

@@ -29,11 +29,11 @@
   display: grid; gap: 9px;
 }
 .info-panel p { margin: 0; }
-.info-panel .iv { display: grid; grid-template-columns: 18px 1fr; gap: 9px; align-items: start; }
-.info-panel .iv-m { font-size: 11px; font-weight: 700; line-height: 1.5; }
-.info-panel .iv.ok  .iv-m { color: var(--ok); }
-.info-panel .iv.bad .iv-m { color: var(--crit); }
-.info-panel .iv b { color: var(--text-1); }
+.iv { display: grid; grid-template-columns: 18px 1fr; gap: 9px; align-items: start; }
+.iv-m { font-size: 11px; font-weight: 700; line-height: 1.5; }
+.iv.ok  .iv-m { color: var(--ok); }
+.iv.bad .iv-m { color: var(--crit); }
+.iv b { color: var(--text-1); }
 
 /* ===== KPI-Kachel ================================================ */
 .kpi {
@@ -176,7 +176,7 @@ select.sel { padding-right: 26px; appearance: none;
 .f-val b { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 600; }
 .f-val span { font-size: 11px; color: var(--text-3); display: block; }
 .f-caret { flex: none; color: var(--text-3); transition: transform .18s var(--ease); margin-top: 3px; }
-.finding[open] .f-caret { transform: rotate(90deg); }
+.finding[open] .f-caret, .chk[open] .f-caret, details.acc[open] > summary .f-caret { transform: rotate(90deg); }
 .f-b { padding: 0 15px 15px; display: grid; gap: 12px; font-size: 13px; color: var(--text-2); line-height: 1.62; }
 .f-b p { margin: 0; }
 

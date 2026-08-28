@@ -1413,7 +1413,7 @@ function parseCost(txt) {
 BUILDERS.buy = function (page) {
   const prof = App.profile;
   let insp = activeInspection(prof && prof.id);
-  const checks = checksFor(prof);
+  const checks = checksFor(prof, insp);
   const view = { phase: store.get('buyPhase', 'vorher'), koOnly: false, tab: store.get('buyTab', 'checks') };
 
   const persist = () => { insp.profileId = prof && prof.id; saveInspection(insp); };
@@ -1443,6 +1443,11 @@ BUILDERS.buy = function (page) {
   },
     el('div', { class: 'pform' },
       fld('name', 'Fahrzeug / Inserat', 'A4 Avant 2.0 TDI, Autoscout …', true),
+      fld('model', 'Baureihe', 'A4 Avant B9 · schaltet baureihenspezifische Punkte frei'),
+      el('label', { class: 'pform-f' },
+        el('span', {}, 'Getriebeart'),
+        el('select', { class: 'sel', onchange: e => { insp.gearbox = e.target.value; persist(); rerender(); } },
+          GEARBOX_KINDS.map(g => el('option', { value: g.id, selected: (insp.gearbox || '') === g.id ? true : null }, g.label)))),
       fld('year', 'Erstzulassung', '06/2017'),
       fld('km', 'Kilometerstand', '142000'),
       fld('price', 'Preis (€)', '16900'),
@@ -1541,6 +1546,8 @@ function checkRow(c, insp, persist, rerender) {
     el('p', {}, c.what),
     el('div', { class: 'iv ok' }, el('span', { class: 'iv-m' }, '✓'), el('div', {}, el('b', {}, 'In Ordnung: '), c.good)),
     el('div', { class: 'iv bad' }, el('span', { class: 'iv-m' }, '▲'), el('div', {}, el('b', {}, 'Warnsignal: '), c.bad)),
+    c.bedingung ? el('p', { class: 'dim2', style: { fontSize: '12.5px' } },
+      'Dieser Punkt trifft nur zu, wenn: ' + c.bedingung + '. Weil das noch nicht feststeht, wird er vorsichtshalber gezeigt — trage Baureihe und Getriebeart oben ein, dann filtert die Liste genauer.') : null,
     el('div', { class: 'f-meta' },
       el('span', { class: 'badge ' + sev.badge }, sev.label),
       c.cost ? el('span', { class: 'badge mute' }, 'Kosten: ' + c.cost) : null,
@@ -1562,6 +1569,7 @@ function checkRow(c, insp, persist, rerender) {
       el('div', { class: 'chk-t' },
         el('b', {}, c.title),
         el('span', {}, c.what.length > 92 ? c.what.slice(0, 91) + '…' : c.what)),
+      c.bedingung ? el('span', { class: 'badge mute', title: 'Gilt nur unter dieser Bedingung' }, c.bedingung) : null,
       c.severity === 'ko' ? el('span', { class: 'badge crit' }, 'K.o.') : null,
       el('div', { class: 'f-caret' }, '›')),
     body);
@@ -1629,7 +1637,7 @@ function buildWeakSpots(page, prof) {
 }
 
 function inspectionText(insp, prof) {
-  const checks = checksFor(prof);
+  const checks = checksFor(prof, insp);
   const sc = inspectionScore(insp, prof);
   const L = [];
   L.push('BESICHTIGUNGSPROTOKOLL');

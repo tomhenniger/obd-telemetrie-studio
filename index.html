@@ -278,11 +278,11 @@ main { min-width: 0; }
   display: grid; gap: 9px;
 }
 .info-panel p { margin: 0; }
-.info-panel .iv { display: grid; grid-template-columns: 18px 1fr; gap: 9px; align-items: start; }
-.info-panel .iv-m { font-size: 11px; font-weight: 700; line-height: 1.5; }
-.info-panel .iv.ok  .iv-m { color: var(--ok); }
-.info-panel .iv.bad .iv-m { color: var(--crit); }
-.info-panel .iv b { color: var(--text-1); }
+.iv { display: grid; grid-template-columns: 18px 1fr; gap: 9px; align-items: start; }
+.iv-m { font-size: 11px; font-weight: 700; line-height: 1.5; }
+.iv.ok  .iv-m { color: var(--ok); }
+.iv.bad .iv-m { color: var(--crit); }
+.iv b { color: var(--text-1); }
 
 /* ===== KPI-Kachel ================================================ */
 .kpi {
@@ -425,7 +425,7 @@ select.sel { padding-right: 26px; appearance: none;
 .f-val b { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 600; }
 .f-val span { font-size: 11px; color: var(--text-3); display: block; }
 .f-caret { flex: none; color: var(--text-3); transition: transform .18s var(--ease); margin-top: 3px; }
-.finding[open] .f-caret { transform: rotate(90deg); }
+.finding[open] .f-caret, .chk[open] .f-caret, details.acc[open] > summary .f-caret { transform: rotate(90deg); }
 .f-b { padding: 0 15px 15px; display: grid; gap: 12px; font-size: 13px; color: var(--text-2); line-height: 1.62; }
 .f-b p { margin: 0; }
 
@@ -4576,7 +4576,7 @@ function newInspection(profileId) {
   const insp = {
     id: 'i' + Math.abs(hashCode(String(inspections().length) + (profileId || '') + BUY_CHECKS.length)).toString(36) +
         inspections().length,
-    name: '', km: '', price: '', year: '', vin: '', seller: '',
+    name: '', model: '', km: '', price: '', year: '', vin: '', seller: '', gearbox: '',
     profileId: profileId || null,
     marks: {}, notes: {}, created: null
   };
@@ -4590,23 +4590,71 @@ function activeInspection(profileId) {
   return found || (inspections()[0] || newInspection(profileId));
 }
 
-/* Welche Prüfpunkte gelten für dieses Fahrzeug? */
-function checksFor(profile) {
-  return BUY_CHECKS.filter(c => {
-    const a = c.appliesTo;
-    if (!a) return true;
-    if (a.fuel && profile && profile.fuel && a.fuel !== profile.fuel) return false;
-    if (a.aspiration && profile && profile.aspiration) {
-      const isBoosted = profile.aspiration !== 'sauger';
-      if (a.aspiration === 'sauger' && isBoosted) return false;
-      if (a.aspiration !== 'sauger' && !isBoosted) return false;
+/* Welche Prüfpunkte gelten für dieses Fahrzeug?
+   Kraftstoff und Aufladung kommen aus dem Motorprofil — das weiß der Motor.
+   Modell und Getriebeart kommen aus der Besichtigung, denn dieselbe Motorisierung
+   sitzt oft in mehreren Baureihen: aus einem Motorprofil lässt sich ein A4 nicht
+   von einem S5 unterscheiden. Was sich nicht entscheiden lässt, wird angezeigt und
+   als bedingt gekennzeichnet, statt es stillschweigend ein- oder auszublenden. */
+const GEARBOX_KINDS = [
+  { id: '', label: 'weiß ich noch nicht' },
+  { id: 'manuell', label: 'Handschalter' },
+  { id: 'wandler', label: 'Wandlerautomatik' },
+  { id: 'dkg', label: 'Doppelkupplung (DSG, S tronic, PDK)' },
+  { id: 'cvt', label: 'Stufenlos (CVT, multitronic)' }
+];
+
+function modelHaystack(profile, insp) {
+  const typed = [insp && insp.model, insp && insp.name].filter(Boolean).join(' ').trim();
+  if (typed) return { text: typed.toLowerCase(), quelle: 'eingabe' };
+  const fromProfile = [profile && profile.models, profile && profile.name].filter(Boolean).join(' ');
+  return { text: fromProfile.toLowerCase(), quelle: fromProfile ? 'profil' : 'leer' };
+}
+
+/* Prüft einen Punkt gegen Fahrzeug und Besichtigung.
+   Ergebnis: null = gilt nicht · {} = gilt · {bedingung} = gilt vielleicht */
+function checkApplies(c, profile, insp) {
+  const a = c.appliesTo;
+  if (!a) return {};
+  if (a.fuel && profile && profile.fuel && a.fuel !== profile.fuel) return null;
+  if (a.aspiration && profile && profile.aspiration) {
+    const boosted = profile.aspiration !== 'sauger';
+    if (a.aspiration === 'sauger' && boosted) return null;
+    if (a.aspiration !== 'sauger' && !boosted) return null;
+  }
+  if (a.brandAny && profile && profile.brand) {
+    const b = String(profile.brand).toLowerCase();
+    if (!a.brandAny.some(x => b.indexOf(String(x).toLowerCase()) >= 0)) return null;
+  }
+  const cond = [];
+  if (a.models) {
+    const hay = modelHaystack(profile, insp);
+    const hit = a.models.some(mdl => new RegExp('(^|[^a-z0-9])' + mdl.toLowerCase() + '([^a-z0-9]|$)').test(hay.text));
+    if (!hit) {
+      if (hay.quelle === 'eingabe') return null;          // Modell bekannt und passt nicht
+      cond.push('nur bei ' + a.models.map(x => x.toUpperCase()).join(', '));
+    } else if (hay.quelle !== 'eingabe') {
+      cond.push('Baureihe im Feld „Modell“ eintragen, damit das sicher stimmt');
     }
-    if (a.brand && profile && profile.brand) {
-      const list = Array.isArray(a.brand) ? a.brand : [a.brand];
-      if (!list.some(b => String(profile.brand).toLowerCase().indexOf(String(b).toLowerCase()) >= 0)) return false;
-    }
-    return true;
-  });
+  }
+  if (a.gearbox) {
+    const g = (insp && insp.gearbox) || '';
+    if (g && a.gearbox.indexOf(g) < 0) return null;        // Getriebe bekannt und passt nicht
+    if (!g) cond.push('nur bei ' + a.gearbox.map(x => {
+      const k = GEARBOX_KINDS.find(y => y.id === x); return k ? k.label : x;
+    }).join(' oder '));
+  }
+  return cond.length ? { bedingung: cond.join(' · ') } : {};
+}
+
+function checksFor(profile, insp) {
+  const out = [];
+  for (const c of BUY_CHECKS) {
+    const r = checkApplies(c, profile, insp);
+    if (!r) continue;
+    out.push(r.bedingung ? Object.assign({}, c, { bedingung: r.bedingung }) : c);
+  }
+  return out;
 }
 function measuresFor(profile) {
   return MEASURE_PLAN.filter(m => !m.fuel || !profile || !profile.fuel || m.fuel === profile.fuel)
@@ -4619,7 +4667,7 @@ function pidsFor(profile) {
 
 /* Fortschritt und Ampel einer Besichtigung */
 function inspectionScore(insp, profile) {
-  const list = checksFor(profile);
+  const list = checksFor(profile, insp);
   let done = 0, bad = 0, ko = 0, teuer = 0;
   for (const c of list) {
     const m = insp.marks[c.id];
@@ -4649,10 +4697,10 @@ const BUY_CHECKS = [
     phase: 'vorher',
     title: 'Motornummer-Präfix prüfen',
     what: 'Nach dem Präfix der Motornummer fragen. 06J ist EA888 Gen1/Gen2 mit Ölverbrauchs- und Kettenrisiko, 06K ist EA888 Gen3 ab etwa Mitte 2012 und deutlich entschärft. 03L ist der 2.0 TDI EA189 mit Abgasskandal und Ölpumpen-Sechskant, 04L der spätere EA288.',
-    good: 'Beim Benziner 06K, beim Diesel 04L. Beim A4 sind 1.8 TFSI CJEB, 2.0 TFSI CNCD, 2.0 TDI CSUA und CSUB sowie die B9-Motoren die risikoarmen Varianten.',
-    bad: 'Beim A4 B8 die Kombination 06J mit CDNB, CDNC, CAEA oder CAEB. Dieser Motor hat Ölverbrauch und Steuerkette in einem, die Kolbeninstandsetzung liegt bei etwa 3.000 EUR frei und 5.000 bis 6.000 EUR bei Audi.',
+    good: 'Beim Benziner 06K, beim Diesel 04L. Risikoarm sind unter anderem 1.8 TFSI CJEB, 2.0 TFSI CNCD, die 2.0 TDI CSUA und CSUB sowie die späteren EA288-Varianten.',
+    bad: 'Die Kombination 06J mit CDNB, CDNC, CAEA oder CAEB — verbaut vor allem in A4 B8, A5 8T und Q5 8R. Dieser Motor hat Ölverbrauch und Steuerkette in einem, die Kolbeninstandsetzung liegt bei etwa 3.000 EUR frei und 5.000 bis 6.000 EUR beim Vertragshändler.',
     severity: 'hinweis',
-    appliesTo: { brand: 'Audi' }
+    appliesTo: { brandAny: ['VW', 'Audi', 'Seat', 'Skoda', 'Cupra'] }
   },
   {
     id: 'getriebeart_klaeren',
@@ -4667,13 +4715,13 @@ const BUY_CHECKS = [
   {
     id: 'multitronic_meiden',
     phase: 'vorher',
-    title: 'multitronic beim A4 meiden',
-    what: 'Beim A4 gilt: Frontantrieb mit Automatik bedeutet immer multitronic, also das stufenlose CVT, verbaut von 12/2007 bis 08/2015. Vor dem Termin klären, ob quattro mit tiptronic oder S tronic oder ein Handschalter vorliegt.',
-    good: 'quattro mit tiptronic oder S tronic, oder Handschalter. Bei multitronic nur mit lückenlosem Nachweis von Ölwechseln alle 60.000 km oder vier Jahre samt anschließender Grundeinstellung.',
-    bad: 'multitronic ohne Belege. Häufungen ab 100.000 bis 150.000 km, dokumentierte Ausfälle schon ab 60.000 km, rund 18 Prozent Getriebeprobleme in Zuverlässigkeitsumfragen. Angebote bis 6.800 EUR, damit wirtschaftlicher Totalschaden.',
+    title: 'Stufenloses Getriebe abklären',
+    what: 'Bei Audi A4, A5, A6 und A7 mit Frontantrieb und Automatik ist es immer die multitronic, also ein stufenloses CVT, verbaut von 12/2007 bis 08/2015. Klären, ob stattdessen quattro mit tiptronic oder S tronic oder ein Handschalter vorliegt — quattro schließt die multitronic aus. Stufenlose Getriebe bauen auch Toyota, Nissan, Subaru und Honda; dort gilt sinngemäß dasselbe.',
+    good: 'Handschalter, Wandlerautomatik oder Doppelkupplung. Bei einem stufenlosen Getriebe nur mit lückenlosem Nachweis von Ölwechseln alle 60.000 km oder vier Jahre samt anschließender Grundeinstellung.',
+    bad: 'Stufenloses Getriebe ohne Belege. Bei der multitronic Häufungen ab 100.000 bis 150.000 km, dokumentierte Ausfälle schon ab 60.000 km, rund 18 Prozent Getriebeprobleme in Zuverlässigkeitsumfragen. Angebote bis 6.800 EUR, damit wirtschaftlicher Totalschaden.',
     severity: 'ko',
     cost: '2.500-6.800 EUR',
-    appliesTo: { brand: 'Audi' }
+    appliesTo: { gearbox: ['cvt'] }
   },
   {
     id: 'zahnriemen_beleg',
@@ -4735,12 +4783,12 @@ const BUY_CHECKS = [
   {
     id: 'audi_rueckrufcodes',
     phase: 'vorher',
-    title: 'A4-Rückrufcodes gezielt abfragen',
+    title: 'Baureihen-Rückrufcodes abfragen',
     what: 'Beim Audi-Partner konkret nach diesen Aktionen fragen: 23Q7 EA189-Abgasupdate, 23DW Thermofenster und AGR für die Modelljahre 2010 bis 2017, 27H2 und 27H8 Riemenstartergenerator beim B9-Mildhybrid, Wasserpumpenrückruf, Kraftstoffverteiler bis 2018, Sperrbolzen der Anhängevorrichtung bis 2018 und Alu-Zierleisten 2014 bis 2017.',
     good: 'Alle zutreffenden Aktionen sind als erledigt vermerkt.',
     bad: '27H2 offen bedeutet Brandgefahr durch den Riemenstartergenerator, Audi rät Betroffenen sogar vom Parken in der Garage ab. 23Q7 nicht durchgeführt bedeutet Stilllegungsrisiko. 23DW offen bedeutet, eine weitere Verschärfung der Abgasrückführung steht bevor.',
     severity: 'hinweis',
-    appliesTo: { brand: 'Audi' }
+    appliesTo: { models: ['A4', 'A5', 'S4', 'S5', 'Q5', 'allroad'] }
   },
   {
     id: 'kaltstart_vereinbaren',
@@ -4875,8 +4923,7 @@ const BUY_CHECKS = [
     good: 'Trockene, blanke Kanten und keine Kondenswasserspuren in der Klappe.',
     bad: 'Kondenswasser in der Klappe ist der Vorbote, der Rost wird spät sichtbar, weil er von innen kommt. Eine gebrauchte Heckklappe mit Lackierung kostet 500 bis 900 EUR, ein Kotflügel je Seite 400 bis 700 EUR.',
     severity: 'teuer',
-    cost: '400-900 EUR',
-    appliesTo: { brand: 'Audi' }
+    cost: '400-900 EUR'
   },
   {
     id: 'reserveradmulde',
@@ -5250,9 +5297,8 @@ const BUY_CHECKS = [
     title: 'Nicht eingetragene Fahrwerksumbauten',
     what: 'Prüfen, ob Fahrwerk, Felgen oder Spurverbreiterungen vom Serienstand abweichen, und die Eintragungen im Fahrzeugschein unter Feld 22 dagegenhalten. Beim A4 Avant gibt es ab Werk kein Luftfahrwerk, auch der allroad fährt auf Stahlfedern, es gibt nur adaptive Dämpfer.',
     good: 'Serienzustand oder Umbau mit Teilegutachten und Eintragung.',
-    bad: 'Ein Luftfahrwerk im A4 ist immer nachgerüstet und ohne Papiere ein Abbruchgrund. Dazu kommen Kompressor- und Balgverschleiß sowie Wertminderung.',
-    severity: 'ko',
-    appliesTo: { brand: 'Audi' }
+    bad: 'Ein Luftfahrwerk in einem Fahrzeug, das es ab Werk nie damit gab — beim A4 Avant etwa, auch beim allroad —, ist immer nachgerüstet und ohne Papiere ein Abbruchgrund. Dazu kommen Kompressor- und Balgverschleiß sowie Wertminderung.',
+    severity: 'ko'
   },
   {
     id: 'lenkung_rangieren',
@@ -6001,11 +6047,11 @@ function appendInspection(p) {
   const marks = Object.keys(insp.marks || {});
   if (!marks.length && !insp.name) return;
   const prof = App.profile;
-  const checks = checksFor(prof);
+  const checks = checksFor(prof, insp);
   const sc = inspectionScore(insp, prof);
   p('');
-  p('<kaufcheck' + xattr({ fahrzeug: insp.name, erstzulassung: insp.year, kilometerstand: insp.km,
-    preis_eur: insp.price, verkaeufer: insp.seller,
+  p('<kaufcheck' + xattr({ fahrzeug: insp.name, baureihe: insp.model, getriebe: insp.gearbox,
+    erstzulassung: insp.year, kilometerstand: insp.km, preis_eur: insp.price, verkaeufer: insp.seller,
     geprueft: sc.done, punkte_gesamt: sc.total, befunde: sc.bad, abbruchkriterien: sc.ko }) + '>');
   p('  <hinweis>Stand einer Gebrauchtwagen-Besichtigung. „nicht geprueft“ bedeutet offen, nicht in Ordnung.</hinweis>');
   checks.forEach(c => {
@@ -7435,7 +7481,7 @@ function parseCost(txt) {
 BUILDERS.buy = function (page) {
   const prof = App.profile;
   let insp = activeInspection(prof && prof.id);
-  const checks = checksFor(prof);
+  const checks = checksFor(prof, insp);
   const view = { phase: store.get('buyPhase', 'vorher'), koOnly: false, tab: store.get('buyTab', 'checks') };
 
   const persist = () => { insp.profileId = prof && prof.id; saveInspection(insp); };
@@ -7465,6 +7511,11 @@ BUILDERS.buy = function (page) {
   },
     el('div', { class: 'pform' },
       fld('name', 'Fahrzeug / Inserat', 'A4 Avant 2.0 TDI, Autoscout …', true),
+      fld('model', 'Baureihe', 'A4 Avant B9 · schaltet baureihenspezifische Punkte frei'),
+      el('label', { class: 'pform-f' },
+        el('span', {}, 'Getriebeart'),
+        el('select', { class: 'sel', onchange: e => { insp.gearbox = e.target.value; persist(); rerender(); } },
+          GEARBOX_KINDS.map(g => el('option', { value: g.id, selected: (insp.gearbox || '') === g.id ? true : null }, g.label)))),
       fld('year', 'Erstzulassung', '06/2017'),
       fld('km', 'Kilometerstand', '142000'),
       fld('price', 'Preis (€)', '16900'),
@@ -7563,6 +7614,8 @@ function checkRow(c, insp, persist, rerender) {
     el('p', {}, c.what),
     el('div', { class: 'iv ok' }, el('span', { class: 'iv-m' }, '✓'), el('div', {}, el('b', {}, 'In Ordnung: '), c.good)),
     el('div', { class: 'iv bad' }, el('span', { class: 'iv-m' }, '▲'), el('div', {}, el('b', {}, 'Warnsignal: '), c.bad)),
+    c.bedingung ? el('p', { class: 'dim2', style: { fontSize: '12.5px' } },
+      'Dieser Punkt trifft nur zu, wenn: ' + c.bedingung + '. Weil das noch nicht feststeht, wird er vorsichtshalber gezeigt — trage Baureihe und Getriebeart oben ein, dann filtert die Liste genauer.') : null,
     el('div', { class: 'f-meta' },
       el('span', { class: 'badge ' + sev.badge }, sev.label),
       c.cost ? el('span', { class: 'badge mute' }, 'Kosten: ' + c.cost) : null,
@@ -7584,6 +7637,7 @@ function checkRow(c, insp, persist, rerender) {
       el('div', { class: 'chk-t' },
         el('b', {}, c.title),
         el('span', {}, c.what.length > 92 ? c.what.slice(0, 91) + '…' : c.what)),
+      c.bedingung ? el('span', { class: 'badge mute', title: 'Gilt nur unter dieser Bedingung' }, c.bedingung) : null,
       c.severity === 'ko' ? el('span', { class: 'badge crit' }, 'K.o.') : null,
       el('div', { class: 'f-caret' }, '›')),
     body);
@@ -7651,7 +7705,7 @@ function buildWeakSpots(page, prof) {
 }
 
 function inspectionText(insp, prof) {
-  const checks = checksFor(prof);
+  const checks = checksFor(prof, insp);
   const sc = inspectionScore(insp, prof);
   const L = [];
   L.push('BESICHTIGUNGSPROTOKOLL');

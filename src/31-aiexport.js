@@ -343,11 +343,11 @@ function appendInspection(p) {
   const marks = Object.keys(insp.marks || {});
   if (!marks.length && !insp.name) return;
   const prof = App.profile;
-  const checks = checksFor(prof);
+  const checks = checksFor(prof, insp);
   const sc = inspectionScore(insp, prof);
   p('');
-  p('<kaufcheck' + xattr({ fahrzeug: insp.name, erstzulassung: insp.year, kilometerstand: insp.km,
-    preis_eur: insp.price, verkaeufer: insp.seller,
+  p('<kaufcheck' + xattr({ fahrzeug: insp.name, baureihe: insp.model, getriebe: insp.gearbox,
+    erstzulassung: insp.year, kilometerstand: insp.km, preis_eur: insp.price, verkaeufer: insp.seller,
     geprueft: sc.done, punkte_gesamt: sc.total, befunde: sc.bad, abbruchkriterien: sc.ko }) + '>');
   p('  <hinweis>Stand einer Gebrauchtwagen-Besichtigung. „nicht geprueft“ bedeutet offen, nicht in Ordnung.</hinweis>');
   checks.forEach(c => {
