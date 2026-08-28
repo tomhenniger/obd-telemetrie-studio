@@ -449,6 +449,16 @@ select.sel { padding-right: 26px; appearance: none;
 .f-act li::before { content: "→"; color: var(--accent); flex: none; }
 .f-meta { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 2px; }
 
+.xmlbox {
+  margin: 0; padding: 13px 15px; max-height: 460px; overflow: auto;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm);
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.55; color: var(--text-2);
+  white-space: pre; -webkit-overflow-scrolling: touch; tab-size: 2;
+}
+.btn.big { padding: 12px 18px; min-height: 46px; font-size: 14px; font-weight: 550; }
+.btn.big.done { background: var(--ok); border-color: var(--ok); color: #06231a; }
+.pchooser { display: block; }
+
 /* ===== Kaufcheck ================================================= */
 .chk { border: 1px solid var(--border); border-radius: var(--r); background: var(--surface);
        overflow: hidden; border-left: 3px solid var(--border-2); }
@@ -640,6 +650,7 @@ details.acc > summary::-webkit-details-marker { display: none; }
 <g id="i-clip"><rect x="7.5" y="3.5" width="9" height="4" rx="1.4"/><path d="M7.5 5.5H6a2 2 0 00-2 2v11a2 2 0 002 2h12a2 2 0 002-2v-11a2 2 0 00-2-2h-1.5"/><path d="M8.5 12h7M8.5 15.5h4.5"/></g>
 <g id="i-share"><path d="M12 15V3.5M8.5 7L12 3.5 15.5 7"/><path d="M5 13v6a2 2 0 002 2h10a2 2 0 002-2v-6"/></g>
 <g id="i-phone"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 5.5h3"/><path d="M11 18.6h2"/></g>
+<g id="i-ai"><path d="M12 3.5l1.9 4.6 4.6 1.9-4.6 1.9L12 16.5l-1.9-4.6L5.5 10l4.6-1.9z"/><path d="M18.5 15.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></g>
 <g id="i-car"><path d="M4 16v3h3v-3M17 16v3h3v-3"/><path d="M3.5 16h17v-4l-2-5h-11l-2 5z"/><path d="M6.5 13h2M15.5 13h2"/></g>
 </defs></svg>
 
@@ -1677,14 +1688,14 @@ function buildDataset(parsed, profile) {
       notices.push({
         kind: 'unit', level: 'info',
         title: 'Ladedruck-Einheit korrigiert',
-        text: 'Der Ladedruck war als „bar" ausgezeichnet, erreicht aber ' + fmt(bs.max, 2) +
+        text: 'Der Ladedruck war als „bar“ ausgezeichnet, erreicht aber ' + fmt(bs.max, 2) +
               ' – physikalisch unmöglich. Die Werte sind offensichtlich psi und wurden nach bar umgerechnet (Spitze jetzt ' +
               fmt(bs.max / 14.503774, 2) + ' bar).'
       });
     }
   }
 
-  /* --- Ist der „Ladedruck" nur eine Linearabbildung der Motorlast? --- */
+  /* --- Ist der „Ladedruck“ nur eine Linearabbildung der Motorlast? --- */
   {
     const b = metrics.get('boost'), l = metrics.get('load_abs') || metrics.get('load_calc');
     if (b && l && b.n > 100 && Math.abs(b.n - l.n) < b.n * 0.05) {
@@ -1703,7 +1714,7 @@ function buildDataset(parsed, profile) {
           boostR2 = r * r;
           notices.push({ kind: 'derived', level: 'warn',
             title: 'Ladedruck ist ein Rechenwert, keine Messung',
-            text: 'Der Ladedruck folgt der Motorlast mit R² = ' + fmt(r * r, 4) + ' exakt linear – die App leitet ihn aus der Last ab, statt den Saugrohrdruck zu messen. Er trägt damit keine eigenständige Information und ist im Absolutbetrag nicht kalibriert. Für eine belastbare Ladedruckdiagnose die PID „Intake Manifold Absolute Pressure" (0x0B) mitloggen.' });
+            text: 'Der Ladedruck folgt der Motorlast mit R² = ' + fmt(r * r, 4) + ' exakt linear – die App leitet ihn aus der Last ab, statt den Saugrohrdruck zu messen. Er trägt damit keine eigenständige Information und ist im Absolutbetrag nicht kalibriert. Für eine belastbare Ladedruckdiagnose die PID „Intake Manifold Absolute Pressure“ (0x0B) mitloggen.' });
         }
       }
     }
@@ -3085,7 +3096,7 @@ function mixHex(a, b, f) {
 
 /* --- Klassenbasierte Rückfallwerte -------------------------------
    Greifen, wenn ein Profil ein Feld nicht mitbringt. Bewusst weit gefasst:
-   ein zu enger Sollbereich erzeugt Fehlalarme, ein zu weiter nur ein „unauffällig".
+   ein zu enger Sollbereich erzeugt Fehlalarme, ein zu weiter nur ein „unauffällig“.
    Die Bänder stammen aus den recherchierten Klassenprofilen; `loadWotGreen`
    ist auf die ABSOLUTE Motorlast bezogen, die beim aufgeladenen Motor
    bauartbedingt über 100 % liegt. */
@@ -3427,7 +3438,7 @@ function profileById(id) {
 
 /* --- Suche --------------------------------------------------------
    Sucht über Name, Marke, Familie, Motorkennbuchstaben, Trägerfahrzeuge und Baujahr.
-   Alle Teilbegriffe müssen treffen, damit „audi 2.0 tdi" sinnvoll filtert. */
+   Alle Teilbegriffe müssen treffen, damit „audi 2.0 tdi“ sinnvoll filtert. */
 function searchProfiles(query, filters) {
   filters = filters || {};
   const terms = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
@@ -3462,7 +3473,7 @@ function searchProfiles(query, filters) {
         best = Math.max(best, w + (i === 0 ? 4 : 0));
       }
       if (!best) {
-        // Baujahr-Suche: „2014" trifft jedes Profil, dessen Bauzeitraum das Jahr enthält
+        // Baujahr-Suche: „2014“ trifft jedes Profil, dessen Bauzeitraum das Jahr enthält
         const y = parseInt(t, 10);
         if (y > 1990 && y < 2035 && p.years && y >= p.years[0] && y <= p.years[1]) { score += 4; hits++; continue; }
         ok = false; continue;                // Begriff verfehlt – für den Notnagel weiterzählen
@@ -3863,7 +3874,7 @@ const DIAG_RULES = [
       text: 'Bei Volllast werden ' + fmt(p95, 2) + ' bar Ladedruck erreicht (Spitze ' + fmt(mx, 2) + ' bar / ' + fmt(mx * 14.5038, 1) + ' psi)' +
             (G ? ', der Werksbereich liegt bei ' + G[0] + '–' + G[1] + ' bar' : '') + '. ' +
             (derived
-              ? 'Bewusst ohne Ampel: dieser Wert ist keine Messgröße. Die App rechnet ihn linear aus der Motorlast – er trägt keine eigene Information und ist im Absolutbetrag nicht kalibriert. Für eine belastbare Ladedruckdiagnose die PID „Intake Manifold Absolute Pressure" (0x0B) mitloggen; bis dahin ist die absolute Motorlast der verlässlichere Indikator.'
+              ? 'Bewusst ohne Ampel: dieser Wert ist keine Messgröße. Die App rechnet ihn linear aus der Motorlast – er trägt keine eigene Information und ist im Absolutbetrag nicht kalibriert. Für eine belastbare Ladedruckdiagnose die PID „Intake Manifold Absolute Pressure“ (0x0B) mitloggen; bis dahin ist die absolute Motorlast der verlässlichere Indikator.'
               : 'Ohne Ampel, weil die Absolutkalibrierung des Werts nicht überprüfbar ist.') };
   }
 },
@@ -4053,7 +4064,7 @@ const DIAG_RULES = [
               ['Angenommener spez. Verbrauch', '0,33–0,40 kg/kWh']],
       text: 'Aus dem Spitzen-Kraftstofffluss von ' + fmt(rate, 1) + ' L/h ergibt sich eine Leistung von ' + fmt(lo, 0) + '–' + fmt(hi, 0) + ' kW (' + fmt(lo * 1.35962, 0) + '–' + fmt(hi * 1.35962, 0) + ' PS)' +
             (ref ? ', Werk sind ' + fmt(ref, 0) + ' kW / ' + fmt(c.P.powerPS, 0) + ' PS' : '') + '. ' +
-            'Bewusst ohne Ampel und nur als Spanne: der Kraftstofffluss ist in dieser App selbst ein Rechenwert aus Luftmasse und Last, und der angenommene spezifische Verbrauch geht direkt linear ein. Die Abschätzung kann ein Leistungsdefizit weder belegen noch ausschließen. Der von der App gemeldete Momentanwert „Instant engine power" überschätzt systematisch und ist als Absolutwert unbrauchbar – nur sein Verlauf ist aussagekräftig.' };
+            'Bewusst ohne Ampel und nur als Spanne: der Kraftstofffluss ist in dieser App selbst ein Rechenwert aus Luftmasse und Last, und der angenommene spezifische Verbrauch geht direkt linear ein. Die Abschätzung kann ein Leistungsdefizit weder belegen noch ausschließen. Der von der App gemeldete Momentanwert „Instant engine power“ überschätzt systematisch und ist als Absolutwert unbrauchbar – nur sein Verlauf ist aussagekräftig.' };
   }
 },
 {
@@ -4149,7 +4160,7 @@ function icon(name, cls) {
   return s;
 }
 
-/* Erklärfeld: „Wie lese ich das?" — als aufklappbares Feld statt schwebendem Fenster,
+/* Erklärfeld: „Wie lese ich das?“ — als aufklappbares Feld statt schwebendem Fenster,
    damit es auf dem Handy nicht über den Inhalt fällt. */
 function infoPanel(info) {
   if (!info) return null;
@@ -4377,7 +4388,7 @@ async function decompress(bytes, format) {
 }
 
 /* Minimaler ZIP-Leser: liest das zentrale Verzeichnis und liefert den
-   größten enthaltenen Eintrag (Shortcuts „Archiv erstellen" packt genau eine Datei). */
+   größten enthaltenen Eintrag (Shortcuts „Archiv erstellen“ packt genau eine Datei). */
 function zipEntries(u8) {
   const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
   let eocd = -1;
@@ -4480,7 +4491,7 @@ async function readClipboard() {
   } catch (e) {
     if (e && e.message === '__timeout__')
       throw new Error('Die Abfrage der Zwischenablage kam nicht zurück – vermutlich wartet noch eine Erlaubnisabfrage des Browsers. ' +
-                      'Nimm stattdessen das Einfügefeld auf dem Startbildschirm: hineintippen, langes Tippen, „Einsetzen".');
+                      'Nimm stattdessen das Einfügefeld auf dem Startbildschirm: hineintippen, langes Tippen, „Einsetzen“.');
     throw new Error('Der Zugriff auf die Zwischenablage wurde abgelehnt oder abgebrochen. ' +
                     'Safari fragt beim Antippen einmal nach – ohne Bestätigung geht es nicht. ' +
                     'Alternativ das Einfügefeld auf dem Startbildschirm benutzen.');
@@ -4495,7 +4506,7 @@ async function fetchCsv(url, onProgress) {
   try { res = await fetch(url, { redirect: 'follow' }); }
   catch (e) {
     throw new Error('Die Adresse konnte nicht geladen werden. Meist blockiert der fremde Server den Zugriff aus dem Browser (fehlender CORS-Header). ' +
-                    'Die Datei muss von einem Server kommen, der „Access-Control-Allow-Origin" setzt.');
+                    'Die Datei muss von einem Server kommen, der „Access-Control-Allow-Origin“ setzt.');
   }
   if (!res.ok) throw new Error('Der Server hat mit ' + res.status + ' ' + res.statusText + ' geantwortet.');
   const total = +(res.headers.get('content-length') || 0);
@@ -5646,6 +5657,370 @@ const PID_SETS = {
 };
 
 const PID_LIMIT_NOTE = 'Ein einfacher ELM327-Clone schafft insgesamt nur 6 bis 10 Abfragen je Sekunde, ein guter STN-Adapter mit Multi-PID-Request bündelt bis zu sechs Standard-PIDs pro CAN-Anfrage und kommt auf 30 bis 80 Abfragen je Sekunde. Weil sich diese Gesamtrate auf alle aktiven Sensoren aufteilt, liegt die sinnvolle Obergrenze bei etwa 10 PIDs mit dem billigen und 14 bis 16 PIDs mit dem guten Adapter: darunter fällt die Rate je PID unter die 2 Hz, die Drehzahl, Last und Zündwinkel brauchen, und Startüberhöhung wie Klopfeingriff verschwinden zwischen den Messpunkten. Deshalb zwei getrennte Sets nutzen, ein schmales Kaltstart-Set mit sechs PIDs und ein breiteres Fahrt-Set, und VAG-Custom-PIDs sparsam einsetzen, weil sie sich nicht bündeln lassen und jeder von ihnen die Gesamtrate um etwa 15 Prozent senkt.';/* ============================================================
+   KI-Prompt-Export — die Auswertung als XML-Dokument, das man in
+   ChatGPT, Claude oder ein anderes Sprachmodell einfügt.
+   Enthält Anleitung, Fahrzeugprofil, Kennzahlen, Befunde und eine
+   heruntergerechnete Zeitreihe. Die Rohdatei bleibt außen vor:
+   28 MB passen in kein Kontextfenster.
+   ============================================================ */
+
+function xesc(v) {
+  return String(v === null || v === undefined ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+/* In Textinhalten müssen nur & < > maskiert werden — Anführungszeichen dort
+   zu escapen macht das Dokument nur schwerer lesbar. */
+function xtext(v) {
+  return String(v === null || v === undefined ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function xattr(o) {
+  const out = [];
+  for (const k in o) {
+    const v = o[k];
+    if (v === null || v === undefined || v === '' || (typeof v === 'number' && !isFinite(v))) continue;
+    out.push(k + '="' + xesc(typeof v === 'number' ? round(v) : v) + '"');
+  }
+  return out.length ? ' ' + out.join(' ') : '';
+}
+function round(v, d) {
+  if (!isFinite(v)) return '';
+  const a = Math.abs(v);
+  d = d !== undefined ? d : a >= 1000 ? 0 : a >= 100 ? 1 : a >= 1 ? 2 : 4;
+  return String(+v.toFixed(d));
+}
+
+const AI_DETAIL = {
+  kompakt:     { step: 15, hist: 0,  label: 'Kompakt',     hint: 'Kennzahlen und Befunde, Zeitreihe alle 15 s' },
+  standard:    { step: 5,  hist: 20, label: 'Standard',    hint: 'zusätzlich Verteilungen, Zeitreihe alle 5 s' },
+  vollstaendig:{ step: 2,  hist: 30, label: 'Vollständig', hint: 'feinste Auflösung, Zeitreihe alle 2 s' }
+};
+
+const AI_RULES = [
+  'Die Werte in diesem Dokument sind bereits ausgewertet. Rechne sie nicht neu und leite keine Zahlen ab, die hier nicht stehen.',
+  'Jede Messgröße trägt ein Attribut herkunft. „gemessen“ heißt: vom Steuergerät geliefert. „berechnet“ heißt: von diesem Werkzeug aus anderen Größen abgeleitet. „app-rechenwert“ heißt: die Aufzeichnungs-App hat den Wert selbst errechnet statt gemessen — solche Werte können ein Problem weder belegen noch ausschließen und dürfen nicht als Beweis benutzt werden.',
+  'Jeder Befund trägt einen Status. „unauffaellig“, „grenzwertig“ und „auffaellig“ sind bewertete Ergebnisse. „nicht-bewertbar“ heißt: die dafür nötige Fahrsituation kam in dieser Aufzeichnung nicht vor. „pid-fehlt“ heißt: die Messgröße wurde gar nicht aufgezeichnet. Die letzten beiden sind keine Entwarnung, sondern eine Wissenslücke — behandle sie als solche.',
+  'Sollwerte tragen ein Attribut sollwert-quelle. Bei „klassenbasiert“ stammt der Sollbereich nicht aus den Werksangaben dieses Motors, sondern aus einem weit gefassten Rückfallwert der Motorbauart. Solche Befunde tragen weniger Gewicht.',
+  'Erfinde keine Werksangaben, keine Fehlercodes und keine Messwerte. Fehlt dir etwas für eine Aussage, sage das und benenne, welche Messgröße oder welche Fahrsituation du bräuchtest.',
+  'Eine einzelne Fahrt ist eine Momentaufnahme. Formuliere Verdachtsmomente als solche und nenne jeweils, wie sich der Verdacht erhärten oder ausräumen ließe.',
+  'Antworte auf Deutsch, sachlich und ohne Panikmache. Wenn alles unauffällig ist, sage das klar, statt Auffälligkeiten zu konstruieren.'
+];
+
+const AI_TASKS = [
+  'Fasse den technischen Zustand des Motors in wenigen Sätzen zusammen.',
+  'Benenne die drei auffälligsten Punkte, jeweils mit der Messgröße, auf die du dich stützt.',
+  'Prüfe die Befunde auf Zusammenhänge, die einzeln unauffällig aussehen, gemeinsam aber ein Muster ergeben.',
+  'Sage, welche Messgrößen oder Fahrsituationen der nächsten Aufzeichnung fehlen, um die offenen Punkte zu klären.',
+  'Nenne konkrete nächste Schritte, nach Aufwand und Nutzen geordnet.'
+];
+
+const AI_LIMITS = [
+  'Mechanische Zustände ohne eigenen Sensor: Kompression, Ventilspiel, Turbolader-Spiel, Kupplungsverschleiß, Zustand von Fahrwerk und Bremsen.',
+  'Ölverbrauch, Ölqualität, Kühlmittelqualität und Füllstände.',
+  'Steuerkettenlängung, sofern kein Nockenwellen-Verstellwinkel aufgezeichnet wurde.',
+  'Fehlercodes und Freeze-Frame-Daten — dieses Werkzeug wertet nur die Messwertaufzeichnung aus, nicht den Fehlerspeicher.',
+  'Alles, was Sichtprüfung braucht: Leckagen, Rost, Unfallspuren, Verschleißbild.'
+];
+
+/* --- Hauptfunktion: erzeugt das komplette XML-Dokument --- */
+function buildAiPrompt(detailKey) {
+  const ds = App.ds, prof = App.profile;
+  const D = AI_DETAIL[detailKey] || AI_DETAIL.standard;
+  const L = [];
+  const p = (s) => L.push(s);
+  const xf = ds ? xFormatter() : null;
+
+  p('<?xml version="1.0" encoding="UTF-8"?>');
+  p('<obd-fahrtanalyse version="1" sprache="de" erzeugt-von="OBD Telemetrie Studio">');
+  p('');
+
+  /* ---- Anleitung ---- */
+  p('<anleitung>');
+  p('  <was-ist-das>Dies ist die fertig ausgewertete Aufzeichnung einer OBD2-Fahrtdatenerfassung eines Kraftfahrzeugs. ' +
+    'Die Rohdatei mit mehreren hunderttausend Messpunkten ist bewusst nicht enthalten — stattdessen findest du hier ' +
+    'die Statistik jeder Messgröße, die Ergebnisse eines Diagnose-Regelwerks gegen hinterlegte Werksangaben, ' +
+    'die erkannten Fahrereignisse und eine heruntergerechnete Zeitreihe.</was-ist-das>');
+  p('  <rolle>Du bist ein erfahrener Kfz-Diagnosetechniker. Du liest Messwerte kritisch, unterscheidest Messung von Rechenwert ' +
+    'und sagst offen, wenn die Datenlage für eine Aussage nicht reicht.</rolle>');
+  p('  <aufgabe>');
+  AI_TASKS.forEach(t => p('    <punkt>' + xtext(t) + '</punkt>'));
+  p('  </aufgabe>');
+  p('  <umgang-mit-den-daten>');
+  AI_RULES.forEach(r => p('    <regel>' + xtext(r) + '</regel>'));
+  p('  </umgang-mit-den-daten>');
+  p('  <nicht-beantwortbar>');
+  p('    <hinweis>Aus einer OBD-Messwertaufzeichnung lassen sich die folgenden Dinge grundsätzlich nicht beurteilen. ' +
+    'Behaupte dazu nichts.</hinweis>');
+  AI_LIMITS.forEach(t => p('    <punkt>' + xtext(t) + '</punkt>'));
+  p('  </nicht-beantwortbar>');
+  p('</anleitung>');
+  p('');
+
+  /* ---- Fahrzeug ---- */
+  if (prof) {
+    const R = resolveSpecs(prof);
+    const derived = new Set(R.derived);
+    p('<fahrzeug>');
+    p('  <profil' + xattr({
+      name: prof.name, marke: prof.brand, motorfamilie: prof.family,
+      motorkennbuchstaben: (prof.engineCode || []).join(', '),
+      baujahre: prof.years ? prof.years[0] + '–' + prof.years[1] : '',
+      fahrzeuge: prof.models,
+      kraftstoff: prof.fuel === 'diesel' ? 'Diesel' : 'Benzin',
+      aufladung: prof.aspiration,
+      datenlage: prof.custom ? 'vom Nutzer selbst eingetragen'
+                : prof.generic ? 'allgemeines Klassenprofil, keine Werksangaben eines konkreten Motors'
+                : prof.confidence === 'hoch' ? 'Werksangaben belegt' : 'Werksangaben teilweise belegt'
+    }) + '/>');
+    const NAMES = {
+      displacement: ['Hubraum', 'cm³'], bore: ['Bohrung', 'mm'], stroke: ['Hub', 'mm'],
+      compression: ['Verdichtung', ':1'], powerPS: ['Leistung', 'PS'], powerKW: ['Leistung', 'kW'],
+      torqueNm: ['Drehmoment', 'Nm'], redline: ['Drehzahlbegrenzer', 'min⁻¹'],
+      thermostat: ['Thermostat-Öffnung', '°C'], boostMaxBar: ['Ladedruck Werk', 'bar'],
+      massKg: ['Leergewicht', 'kg'], consNEDC: ['Normverbrauch', 'L/100km'],
+      consReal: ['Realverbrauch', 'L/100km'], co2NEDC: ['CO₂ Norm', 'g/km'],
+      accel0100: ['0–100 km/h', 's'], vmax: ['Höchstgeschwindigkeit', 'km/h'],
+      banks: ['Zylinderbänke', ''], timingDrive: ['Steuertrieb', ''],
+      fuelSpec: ['Kraftstoff', ''], oilSpec: ['Motoröl', ''], injection: ['Einspritzung', ''],
+      ecu: ['Steuergerät', ''], gearbox: ['Getriebe', ''], tyre: ['Bereifung', '']
+    };
+    const RANGES = {
+      powerRpm: ['Nennleistung bei', 'min⁻¹'], torqueRpm: ['Nenndrehmoment bei', 'min⁻¹'],
+      idleWarm: ['Leerlauf warm', 'min⁻¹'], idleCold: ['Leerlauf kalt', 'min⁻¹'],
+      coolantGreen: ['Kühlmittel Sollbereich', '°C'], loadWotGreen: ['Absolute Last bei Volllast', '%'],
+      loadIdleGreen: ['Absolute Last im Leerlauf', '%'], boostWotGreen: ['Ladedruck bei Volllast', 'bar']
+    };
+    p('  <werksangaben>');
+    for (const k in NAMES) {
+      const v = R.specs[k];
+      if (v === undefined || v === null || v === '') continue;
+      p('    <angabe' + xattr({ groesse: NAMES[k][0], schluessel: k, wert: v, einheit: NAMES[k][1],
+        quelle: derived.has(k) ? 'klassenbasiert' : 'profil' }) + '/>');
+    }
+    for (const k in RANGES) {
+      const v = R.specs[k];
+      if (!v || !v.length) continue;
+      p('    <angabe' + xattr({ groesse: RANGES[k][0], schluessel: k, von: v[0], bis: v[1],
+        einheit: RANGES[k][1], quelle: derived.has(k) ? 'klassenbasiert' : 'profil' }) + '/>');
+    }
+    p('  </werksangaben>');
+    if (prof.weakSpots && prof.weakSpots.length) {
+      p('  <bekannte-schwachstellen hinweis="Dokumentierte Schwachpunkte dieser Motorbaureihe. Prüfe, ob die Messwerte eine davon stützen.">');
+      prof.weakSpots.forEach(w => p('    <schwachstelle' + xattr({ titel: w.t, ab: w.km }) + '>' + xtext(w.s) + '</schwachstelle>'));
+      p('  </bekannte-schwachstellen>');
+    }
+    p('</fahrzeug>');
+    p('');
+  }
+
+  if (!ds) {
+    p('<hinweis>Es ist keine Messwertaufzeichnung geladen. Dieses Dokument enthält nur das Fahrzeugprofil' +
+      (typeof BUY_CHECKS !== 'undefined' ? ' und den Stand der Kaufcheckliste' : '') + '.</hinweis>');
+    appendInspection(p);
+    p('</obd-fahrtanalyse>');
+    return L.join('\n');
+  }
+
+  /* ---- Aufzeichnung ---- */
+  const m = ds.meta, T = ds.trip;
+  p('<aufzeichnung>');
+  p('  <datei' + xattr({ name: App.fileName, format: m.format === 'long' ? 'Long-Format (eine Zeile je Messwert)' : 'Wide-Format (eine Spalte je Messgröße)',
+    datenzeilen: m.rows, messreihen: m.seriesCount, uebersprungen: m.skipped }) + '/>');
+  p('  <zeitraum' + xattr({ von: xf(ds.t0), bis: xf(ds.t1), dauer_s: round(ds.duration, 0),
+    auswerteraster_s: round(ds.step, 3), stuetzstellen: ds.N }) + '/>');
+  if (m.gpsPoints) p('  <gps' + xattr({ punkte: m.gpsPoints, quelle: m.gpsSource,
+    verworfene_ausreisser: ds.track ? ds.track.rejected : 0,
+    luecken: ds.track ? ds.track.gaps.length : 0 }) + '/>');
+  if (ds.notices.length) {
+    p('  <erkannte-artefakte hinweis="Dieses Werkzeug hat folgende Eigenheiten der Aufzeichnung erkannt und bereits berücksichtigt.">');
+    ds.notices.forEach(n => p('    <artefakt' + xattr({ stufe: n.level, titel: n.title }) + '>' + xtext(n.text) + '</artefakt>'));
+    p('  </erkannte-artefakte>');
+  }
+  if (T.unknownTime > ds.duration * 0.05)
+    p('  <luecke groesse="Geschwindigkeit"' + xattr({ dauer_s: round(T.unknownTime, 0) }) +
+      '>Für diesen Teil der Fahrt liegt keine Geschwindigkeit vor. Alle geschwindigkeitsabhängigen Kennzahlen beziehen sich ausschließlich auf den abgedeckten Zeitraum.</luecke>');
+  p('</aufzeichnung>');
+  p('');
+
+  /* ---- Fahrt-Kennzahlen ---- */
+  const K = [
+    ['Fahrtdauer', T.duration, 's'], ['Zeit in Bewegung', T.movingTime, 's'],
+    ['Standzeit', T.stoppedTime, 's'], ['Leerlaufzeit', T.idleTime, 's'],
+    ['Strecke', T.dist, 'km', T.distSource], ['davon Luftlinie über GPS-Lücken', T.gapDist, 'km'],
+    ['Durchschnittsgeschwindigkeit in Bewegung', T.speedAvgMoving, 'km/h'],
+    ['Höchstgeschwindigkeit', T.speedMax, 'km/h'],
+    ['Kraftstoff verbraucht', T.fuelUsed, 'L'], ['Verbrauch', T.consAvg, 'L/100km'],
+    ['Kosten', T.cost, '€'], ['CO2', T.co2, 'kg'], ['CO2 je km', T.co2PerKm, 'g/km'],
+    ['Durchschnittsdrehzahl', T.rpmAvg, 'min⁻¹'], ['Höchstdrehzahl', T.rpmMax, 'min⁻¹'],
+    ['Maximaler Ladedruck', T.boostMax, 'bar'], ['Maximale absolute Motorlast', T.loadMax, '%'],
+    ['Maximale Kühlmitteltemperatur', T.coolantMax, '°C'],
+    ['Kühlmitteltemperatur beim Start', T.coolantStart, '°C'],
+    ['Warmlaufzeit auf 85 °C', T.warmupTime, 's'],
+    ['Zeitanteil über 4000 min⁻¹', T.timeHighRpm * 100, '%'],
+    ['Vollgasanteil', T.wotShare * 100, '%', T.wotSignal],
+    ['Schubanteil', T.coastShare * 100, '%'],
+    ['Höhenmeter bergauf', T.ascent, 'm'], ['Höhenmeter bergab', T.descent, 'm']
+  ];
+  p('<fahrt>');
+  K.forEach(([n, v, u, q]) => { if (isFinite(v)) p('  <kennzahl' + xattr({ name: n, wert: v, einheit: u, quelle: q }) + '/>'); });
+  p('  <stopps' + xattr({ anzahl: ds.events.stops.length }) + '/>');
+  p('</fahrt>');
+  p('');
+
+  /* ---- Messgrößen ---- */
+  p('<messgroessen hinweis="Ø ist zeitgewichtet. p05 und p95 sind robuster als Minimum und Maximum, die ein einzelner Ausreißer bestimmt.">');
+  Array.from(ds.metrics.values()).forEach(mm => {
+    const s = ds.stats[mm.id]; if (!s) return;
+    const herkunft = mm.derived ? 'berechnet'
+      : (mm.id === 'boost' && ds.boostDerived) || mm.id === 'power' || /^cons_(avg|10s|inst)$/.test(mm.id)
+        ? 'app-rechenwert' : 'gemessen';
+    p('  <messgroesse' + xattr({
+      id: mm.id, label: mm.label, einheit: mm.unit, herkunft: herkunft,
+      pid: mm.rawName, umgerechnet_aus: mm.converted ? mm.srcUnit : '',
+      n: s.n, abdeckung: round((ds.coverage[mm.id] || 0) * 100, 0),
+      min: s.min, p05: s.p05, median: s.median, mittel: s.meanW, p95: s.p95, max: s.max, std: s.std
+    }) + '/>');
+  });
+  p('</messgroessen>');
+  p('');
+
+  /* ---- Befunde ---- */
+  const STAT = { ok: 'unauffaellig', warn: 'grenzwertig', crit: 'auffaellig', unklar: 'nicht-bewertbar', missing: 'pid-fehlt' };
+  p('<befunde' + xattr({ unauffaellig: App.diag.tally.ok, grenzwertig: App.diag.tally.warn,
+    auffaellig: App.diag.tally.crit, nicht_bewertbar: App.diag.tally.unklar, pid_fehlt: App.diag.tally.missing }) + '>');
+  App.diag.results.forEach(r => {
+    p('  <befund' + xattr({
+      id: r.id, titel: r.title, gruppe: r.group, status: STAT[r.status] || r.status,
+      wert: isFinite(r.value) ? round(r.value, r.dec) : '', einheit: r.unit,
+      soll: r.ref, aussagekraft: r.confidence, herkunft: r.provenance,
+      sollwert_quelle: r.specDerived ? 'klassenbasiert' : (r.ref ? 'profil' : ''),
+      ohne_ampel: r.noLight ? 'ja' : ''
+    }) + '>');
+    if (r.text) p('    <bewertung>' + xtext(r.text) + '</bewertung>');
+    if (r.note) p('    <einschraenkung>' + xtext(r.note) + '</einschraenkung>');
+    if (r.missing) p('    <fehlende-messgroessen>' + xtext(r.missing.join(', ')) + '</fehlende-messgroessen>');
+    (r.extra || []).filter(Boolean).forEach(([k, v]) => p('    <detail' + xattr({ name: k, wert: v }) + '/>'));
+    (r.action || []).forEach(a => p('    <massnahme>' + xtext(a) + '</massnahme>'));
+    p('  </befund>');
+  });
+  p('</befunde>');
+  p('');
+
+  /* ---- Ereignisse ---- */
+  p('<ereignisse>');
+  ds.events.sprints.forEach(s => p('  <beschleunigung' + xattr({
+    von_kmh: s.from, bis_kmh: s.to, sekunden: round(s.dur, 2), zeitpunkt: xf(s.t0),
+    mittlere_beschleunigung_g: round(s.avgA / 9.80665, 2) }) + '/>'));
+  ds.events.wot.slice(0, 12).sort((a, b) => a.t0 - b.t0).forEach(w => p('  <volllastzug' + xattr({
+    zeitpunkt: xf(w.t0), dauer_s: round(w.dur, 1), drehzahl_von: round(w.rpm0, 0), drehzahl_bis: round(w.rpmMax, 0),
+    ladedruck_max_bar: round(w.boostMax, 2), leistung_max_ps: round(w.powerMax, 0),
+    zuendwinkel_min: round(w.timingMin, 1), ladeluft_max_c: round(w.cacMax, 0),
+    tempo_von: round(w.speed0, 0), tempo_bis: round(w.speed1, 0) }) + '/>'));
+  ds.events.knock.slice(0, 12).forEach(k => p('  <zuendwinkel-ruecknahme-unter-last' + xattr({
+    zeitpunkt: xf(k.t0), dauer_s: round(k.dur, 1), zuendwinkel_min: round(k.timingMin, 1),
+    drehzahl_max: round(k.rpmMax, 0) }) + '/>'));
+  ds.events.stops.slice(0, 12).forEach(s => p('  <stopp' + xattr({ zeitpunkt: xf(s.t0), dauer_s: round(s.dur, 0) }) + '/>'));
+  p('</ereignisse>');
+  p('');
+
+  /* ---- Betriebszustände und Gänge ---- */
+  p('<betriebszustaende hinweis="Zeitanteil der Fahrt je Zustand.">');
+  ds.phases.defs.forEach(ph => {
+    const t = ds.phases.time[ph.id];
+    if (t > 0) p('  <zustand' + xattr({ name: ph.label, sekunden: round(t, 0), anteil_prozent: round(t / ds.duration * 100, 1) }) + '/>');
+  });
+  p('</betriebszustaende>');
+  if (App.gears && App.gears.gears.length > 1) {
+    p('<gaenge' + xattr({ hinweis: 'Aus dem Verhältnis Drehzahl zu Geschwindigkeit geclustert, nicht aus einer Tabelle. Nummeriert nach Übersetzung, nicht nach Gangnummer.',
+      zugeordnete_punkte_prozent: round(App.gears.coverage * 100, 0) }) + '>');
+    App.gears.gears.forEach(g => p('  <stufe' + xattr({ bezeichnung: g.label,
+      kmh_je_1000_umdrehungen: round(g.kmhPer1000, 1), gesamtuebersetzung: g.ratio ? round(g.ratio, 2) : '',
+      genutzt_von_kmh: round(g.vMin, 0), genutzt_bis_kmh: round(g.vMax, 0),
+      max_drehzahl: round(g.rpmMax, 0), sekunden: round(g.time, 0) }) + '/>'));
+    p('</gaenge>');
+  }
+  p('');
+
+  /* ---- Verteilungen ---- */
+  if (D.hist) {
+    const wanted = ['rpm', 'speed_mix', 'load_abs', 'boost', 'timing', 'coolant', 'cac_mean', 'cons_calc'];
+    const av = wanted.filter(id => ds.G[id] && ds.stats[id]);
+    if (av.length) {
+      p('<verteilungen hinweis="Zeit in Sekunden je Werteklasse, gleichmäßig von min bis max aufgeteilt. Die Reihenfolge der Zahlen entspricht den Klassen von unten nach oben.">');
+      av.forEach(id => {
+        const st = ds.stats[id], mm = ds.metrics.get(id);
+        const h = histogram(ds.G[id], D.hist, st.min, st.max, null, ds.step);
+        if (!h) return;
+        p('  <verteilung' + xattr({ metrik: id, label: mm.label, einheit: mm.unit,
+          von: round(h.lo), bis: round(h.hi), klassen: h.bins, klassenbreite: round(h.w) }) + '>' +
+          Array.from(h.counts).map(v => round(v, 1)).join(' ') + '</verteilung>');
+      });
+      p('</verteilungen>');
+      p('');
+    }
+  }
+
+  /* ---- Zeitreihe ---- */
+  const cols = ['speed_mix', 'rpm', 'load_abs', 'boost', 'timing', 'fuel_rate', 'coolant', 'cac_mean',
+                'ltft_mean', 'pedal', 'accel', 'power'].filter(id => ds.G[id]);
+  if (cols.length) {
+    const every = Math.max(1, Math.round(D.step / ds.step));
+    const head = ['zeit_s'].concat(cols.map(id => id + '[' + (ds.metrics.get(id).unit || '-') + ']'));
+    const rows = [];
+    for (let i = 0; i < ds.N; i += every) {
+      const line = [round(ds.grid[i] - ds.t0, 1)];
+      let any = false;
+      for (const id of cols) {
+        const v = ds.G[id][i];
+        if (v === v) { line.push(round(v, ds.metrics.get(id).decimals)); any = true; }
+        else line.push('');
+      }
+      if (any) rows.push(line.join(';'));
+    }
+    p('<zeitreihe' + xattr({ intervall_s: D.step, zeilen: rows.length, trennzeichen: 'Semikolon',
+      hinweis: 'Zeit in Sekunden seit Aufzeichnungsbeginn. Leere Felder bedeuten: für diesen Zeitpunkt liegt kein Wert vor — nicht null.' }) + '>');
+    p(head.join(';'));
+    rows.forEach(r => p(r));
+    p('</zeitreihe>');
+    p('');
+  }
+
+  appendInspection(p);
+  p('</obd-fahrtanalyse>');
+  return L.join('\n');
+}
+
+/* Kaufcheck anhängen, wenn eine Besichtigung begonnen wurde */
+function appendInspection(p) {
+  if (typeof inspections !== 'function') return;
+  const list = inspections();
+  const id = store.get('activeInspection', null);
+  const insp = list.find(x => x.id === id) || list[0];
+  if (!insp) return;
+  const marks = Object.keys(insp.marks || {});
+  if (!marks.length && !insp.name) return;
+  const prof = App.profile;
+  const checks = checksFor(prof);
+  const sc = inspectionScore(insp, prof);
+  p('');
+  p('<kaufcheck' + xattr({ fahrzeug: insp.name, erstzulassung: insp.year, kilometerstand: insp.km,
+    preis_eur: insp.price, verkaeufer: insp.seller,
+    geprueft: sc.done, punkte_gesamt: sc.total, befunde: sc.bad, abbruchkriterien: sc.ko }) + '>');
+  p('  <hinweis>Stand einer Gebrauchtwagen-Besichtigung. „nicht geprueft“ bedeutet offen, nicht in Ordnung.</hinweis>');
+  checks.forEach(c => {
+    const mk = insp.marks[c.id];
+    if (!mk && !insp.notes[c.id]) return;
+    p('  <punkt' + xattr({ id: c.id, phase: c.phase, titel: c.title, schweregrad: c.severity,
+      ergebnis: mk === 'ok' ? 'in-ordnung' : mk === 'bad' ? 'befund' : mk === 'na' ? 'uebersprungen' : 'nicht-geprueft',
+      kosten: mk === 'bad' ? c.cost : '' }) + '>');
+    if (mk === 'bad') p('    <warnsignal>' + xtext(c.bad) + '</warnsignal>');
+    if (insp.notes[c.id]) p('    <notiz>' + xtext(insp.notes[c.id]) + '</notiz>');
+    p('  </punkt>');
+  });
+  p('</kaufcheck>');
+}
+/* ============================================================
    Anwendung: Zustand, Navigation, Sektionen
    ============================================================ */
 
@@ -5665,6 +6040,7 @@ const SECTIONS = [
   { id: 'fields',   label: 'Kennfelder',   tab: 'Kennfeld',  icon: 'grid',   sub: 'Betriebspunkte, Klopfbild, Gangerkennung', data: true },
   { id: 'diag',     label: 'Diagnose',     tab: 'Diagnose',  icon: 'stetho', sub: 'Messwerte gegen Werksangaben', data: true },
   { id: 'buy',      label: 'Kaufcheck',    tab: 'Kaufcheck', icon: 'clip',   sub: 'Gebrauchtwagen prüfen — Sichtprüfung, Probefahrt, Messprotokoll' },
+  { id: 'ai',       label: 'KI-Prompt',    tab: 'KI',        icon: 'ai',     sub: 'Auswertung als XML für ChatGPT, Claude und andere Sprachmodelle' },
   { id: 'data',     label: 'Datenqualität',tab: 'Daten',     icon: 'table',  sub: 'Abdeckung, Artefakte, Export', data: true },
   { id: 'settings', label: 'Einstellungen',tab: 'Optionen',  icon: 'cog',    sub: 'Fahrzeugprofil und Darstellung' }
 ];
@@ -6078,7 +6454,7 @@ BUILDERS.overview = function (page) {
     info: {
       read: 'Der Balken ist die gesamte Aufzeichnungsdauer. Jeder Abschnitt steht für einen Betriebszustand, seine Breite für dessen Zeitanteil. Schraffierte Bereiche sind Zeiträume ohne Geschwindigkeitsdaten — die zählen in keine geschwindigkeitsabhängige Kennzahl hinein.',
       good: 'Für eine aussagekräftige Diagnose braucht es Anteile in mehreren Zuständen: etwas Stillstand für den Leerlauf, längere Konstantfahrt für die Gemischkorrektur, mindestens einen Volllastzug.',
-      bad: 'Besteht die Fahrt fast nur aus Konstantfahrt, bleiben viele Prüfungen „nicht bewertbar" — nicht weil etwas defekt ist, sondern weil die passende Fahrsituation fehlte.'
+      bad: 'Besteht die Fahrt fast nur aus Konstantfahrt, bleiben viele Prüfungen „nicht bewertbar“ — nicht weil etwas defekt ist, sondern weil die passende Fahrsituation fehlte.'
     } }, phaseBar(ds)));
 
   /* Beschleunigungswerte */
@@ -6366,7 +6742,7 @@ const HIST_INFO = {
   boost: { good: 'Der Schwerpunkt liegt nahe null (Teillast), der rechte Ausläufer zeigt den erreichten Spitzenladedruck.',
            bad: 'Erreicht der rechte Rand den Werkswert nicht, obwohl Vollgas gefahren wurde: Riemen, Lader, Ladeluftstrecke oder Notlauf prüfen.' },
   timing: { good: 'Ein breiter Bereich mit viel Frühzündung zeigt, dass das Steuergerät den Zündwinkel freigibt.',
-            bad: 'Häuft sich die Verteilung nahe null oder darunter, arbeitet dauerhaft die Klopfregelung. Welche Last dabei anlag, zeigt erst das Klopfbild unter „Kennfelder".' },
+            bad: 'Häuft sich die Verteilung nahe null oder darunter, arbeitet dauerhaft die Klopfregelung. Welche Last dabei anlag, zeigt erst das Klopfbild unter „Kennfelder“.' },
   coolant: { good: 'Ein schmaler, hoher Balken im Betriebsbereich: das Thermostat regelt sauber.',
              bad: 'Eine breite Verteilung oder zwei Häufungen deuten auf ein hängendes Thermostat oder auf eine Aufzeichnung, die mitten im Warmlauf begann.' },
   cac_mean: { good: 'Der Schwerpunkt liegt nahe der Außentemperatur, ein kurzer Ausläufer nach rechts stammt von den Volllastphasen.',
@@ -6729,8 +7105,28 @@ BUILDERS.diag = function (page) {
   }
 
   page.appendChild(noteBox('info', 'Wie diese Befunde zu lesen sind',
-    'Jede Regel wertet nur ein klar umrissenes Fenster aus – etwa Volllast über 3000 min⁻¹ oder warmen Leerlauf ab fünf Sekunden. Fehlt dieses Fenster in der Fahrt, steht „nicht bewertbar" statt einer Ampel; das ist ehrlicher als ein Urteil auf dünner Datenbasis. Größen, die die App selbst rechnet statt misst (Ladedruck, Momentanleistung), bekommen bewusst keine Ampel: sie können ein Problem weder belegen noch ausschließen. Und der wichtigste Punkt: eine einzelne Fahrt ist eine Momentaufnahme. Aussagekraft entsteht erst im Vergleich mehrerer Aufzeichnungen desselben Fahrzeugs unter ähnlichen Bedingungen.'));
+    'Jede Regel wertet nur ein klar umrissenes Fenster aus – etwa Volllast über 3000 min⁻¹ oder warmen Leerlauf ab fünf Sekunden. Fehlt dieses Fenster in der Fahrt, steht „nicht bewertbar“ statt einer Ampel; das ist ehrlicher als ein Urteil auf dünner Datenbasis. Größen, die die App selbst rechnet statt misst (Ladedruck, Momentanleistung), bekommen bewusst keine Ampel: sie können ein Problem weder belegen noch ausschließen. Und der wichtigste Punkt: eine einzelne Fahrt ist eine Momentaufnahme. Aussagekraft entsteht erst im Vergleich mehrerer Aufzeichnungen desselben Fahrzeugs unter ähnlichen Bedingungen.'));
 };
+
+/* Profilzeile mit ausklappbarer Suche — für den Kaufcheck */
+function profileStrip(prof, after) {
+  const box = el('div', { hidden: true, style: { marginTop: '10px' } });
+  let built = false;
+  const toggle = el('button', { class: 'btn sm', onclick: () => {
+    if (!built) { box.appendChild(profileChooser(p => { selectProfile(p); if (after) after(); })); built = true; }
+    box.hidden = !box.hidden;
+    toggle.textContent = box.hidden ? 'Profil wechseln' : 'Auswahl schließen';
+    if (!box.hidden && box.firstChild && box.firstChild.focusSearch) box.firstChild.focusSearch();
+  } }, 'Profil wechseln');
+  return el('div', { style: { marginTop: '12px' } },
+    el('div', { class: 'psel' },
+      el('div', { class: 'psel-t' },
+        el('b', {}, prof ? prof.name : 'Kein Fahrzeugprofil'),
+        el('span', {}, prof ? (profileSpecLine(prof) || prof.engine || '')
+          : 'Ohne Profil werden alle allgemeinen Prüfpunkte gezeigt')),
+      prof ? confBadge(prof) : null, toggle),
+    box);
+}
 
 /* ---------- Fahrzeugprofil auswählen ---------- */
 function profileSpecLine(p) {
@@ -6759,15 +7155,19 @@ function selectProfile(p) {
   if (App.ds) recompute(); else go('settings', true);
 }
 
-function profilePickerCard() {
-  const P = App.profile;
+/* Such- und Auswahlliste für Fahrzeugprofile — überall verwendbar */
+function profileChooser(onPick, opts) {
+  opts = opts || {};
   const results = el('div', { class: 'plist' });
-  const search = el('input', { class: 'inp', type: 'search', placeholder: 'Marke, Modell, Motorkennbuchstabe, PS oder Baujahr …',
-    style: { flex: '1 1 220px' }, oninput: () => render() });
-  const filt = { fuel: '', aspiration: '' };
-  const seg = (key, opts) => el('div', { class: 'seg' }, opts.map(([v, l]) =>
+  const search = el('input', { class: 'inp', type: 'search',
+    placeholder: 'Marke, Modell, Motorkennbuchstabe, PS oder Baujahr …',
+    style: { flex: '1 1 200px' }, oninput: () => render() });
+  const filt = { fuel: opts.fuel || '', aspiration: '' };
+  const seg = (key, options) => el('div', { class: 'seg' }, options.map(([v, l]) =>
     el('button', { type: 'button', 'aria-pressed': filt[key] === v ? 'true' : 'false',
-      onclick: e => { filt[key] = v; Array.from(e.target.parentNode.children).forEach(b => b.setAttribute('aria-pressed', b === e.target ? 'true' : 'false')); render(); } }, l)));
+      onclick: e => { filt[key] = v;
+        Array.from(e.target.parentNode.children).forEach(b => b.setAttribute('aria-pressed', b === e.target ? 'true' : 'false'));
+        render(); } }, l)));
 
   function render() {
     const q = search.value.trim();
@@ -6781,19 +7181,14 @@ function profilePickerCard() {
     if (!list.length) {
       results.appendChild(el('div', { class: 'empty' },
         el('b', {}, 'Kein Profil gefunden'),
-        'Mit anderem Begriff suchen – oder unten ein eigenes Profil anlegen. Die Diagnose funktioniert auch mit einem allgemeinen Profil, die Sollbereiche sind dann nur weiter gefasst.'));
+        'Mit anderem Begriff suchen – oder ein eigenes Profil anlegen. Die Diagnose funktioniert auch mit einem allgemeinen Profil, die Sollbereiche sind dann nur weiter gefasst.'));
       return;
     }
     for (const item of list) {
-      if (item.brand && !item.id) {
-        results.appendChild(el('div', { class: 'plist-h' }, item.brand));
-        continue;
-      }
+      if (item.brand && !item.id) { results.appendChild(el('div', { class: 'plist-h' }, item.brand)); continue; }
       const sel = App.profile && App.profile.id === item.id;
-      results.appendChild(el('button', {
-        class: 'prow', type: 'button', 'aria-pressed': sel ? 'true' : 'false',
-        onclick: () => selectProfile(item)
-      },
+      results.appendChild(el('button', { class: 'prow', type: 'button', 'aria-pressed': sel ? 'true' : 'false',
+        onclick: () => onPick(item) },
         el('div', { class: 'prow-t' },
           el('b', {}, item.name),
           el('span', {}, profileSpecLine(item) || item.engine || '')),
@@ -6801,27 +7196,34 @@ function profilePickerCard() {
     }
   }
   render();
+  const node = el('div', { class: 'pchooser' },
+    el('div', { class: 'chiprow', style: { marginBottom: '10px', alignItems: 'center' } },
+      search,
+      seg('fuel', [['', 'Alle'], ['petrol', 'Benzin'], ['diesel', 'Diesel']]),
+      seg('aspiration', [['', 'Alle'], ['turbo', 'Turbo'], ['sauger', 'Sauger'], ['kompressor', 'Kompressor']])),
+    results);
+  node.focusSearch = () => search.focus();
+  return node;
+}
 
+function profilePickerCard() {
+  const P = App.profile;
   const auto = App.ds ? profileById(autoProfile(App.ds)) : null;
   return card('Fahrzeugprofil', {
     hint: 'bestimmt die Sollbereiche der Diagnose',
     info: {
-      read: 'Jedes Profil bringt die Werksangaben mit, gegen die gemessen wird. Was ein Profil nicht belegt hat, wird aus der Motorklasse ergänzt – solche Befunde tragen dann den Hinweis „Sollwert klassenbasiert".',
-      good: 'Ein Profil mit dem Vermerk „belegt" liefert die schärfste Diagnose. Notfalls reicht das passende allgemeine Profil: die Sollbereiche sind weiter gefasst, aber nichts wird erfunden.',
+      read: 'Jedes Profil bringt die Werksangaben mit, gegen die gemessen wird. Was ein Profil nicht belegt hat, wird aus der Motorklasse ergänzt – solche Befunde tragen dann den Hinweis „Sollwert klassenbasiert“.',
+      good: 'Ein Profil mit dem Vermerk „belegt“ liefert die schärfste Diagnose. Notfalls reicht das passende allgemeine Profil: die Sollbereiche sind weiter gefasst, aber nichts wird erfunden.',
       bad: 'Ein falsch gewähltes Profil erzeugt Fehlalarme. Im Zweifel lieber das allgemeine Profil der richtigen Motorklasse als ein konkretes Profil des falschen Motors.'
     },
-    foot: auto ? 'Automatisch vorgeschlagen wurde „' + auto.name + '" – erkannt an Zylinderbänken, Sensorbestückung, Lastniveau und Höchstdrehzahl.' : null
+    foot: auto ? 'Automatisch vorgeschlagen wurde „' + auto.name + '“ – erkannt an Zylinderbänken, Sensorbestückung, Lastniveau und Höchstdrehzahl.' : null
   },
     el('div', { class: 'psel' },
       el('div', { class: 'psel-t' },
         el('b', {}, P ? P.name : 'Kein Profil gewählt'),
-        el('span', {}, P ? (profileSpecLine(P) || P.engine || '') : '')),
+        el('span', {}, P ? (profileSpecLine(P) || P.engine || '') : 'Ohne Profil werden alle allgemeinen Punkte gezeigt')),
       P ? confBadge(P) : null),
-    el('div', { class: 'chiprow', style: { margin: '12px 0 10px', alignItems: 'center' } },
-      search,
-      seg('fuel', [['', 'Alle'], ['petrol', 'Benzin'], ['diesel', 'Diesel']]),
-      seg('aspiration', [['', 'Alle'], ['turbo', 'Turbo'], ['sauger', 'Sauger'], ['kompressor', 'Kompressor']])),
-    results,
+    el('div', { style: { marginTop: '12px' } }, profileChooser(selectProfile)),
     el('div', { class: 'chiprow', style: { marginTop: '12px' } },
       el('button', { class: 'btn', onclick: () => openProfileEditor(null) }, '+ Eigenes Profil anlegen'),
       App.profile && App.profile.custom
@@ -6920,7 +7322,7 @@ function openProfileEditor(existing) {
       el('span', { class: 'hint' }, 'nur die Bezeichnung ist Pflicht')),
     el('div', { class: 'card-b' },
       el('p', { style: { color: 'var(--text-2)', fontSize: '13px', lineHeight: '1.65', margin: '0 0 14px' } },
-        'Alles, was du hier leer lässt, wird aus der Motorklasse ergänzt – die entsprechenden Befunde tragen dann den Hinweis „Sollwert klassenbasiert". ' +
+        'Alles, was du hier leer lässt, wird aus der Motorklasse ergänzt – die entsprechenden Befunde tragen dann den Hinweis „Sollwert klassenbasiert“. ' +
         'Lieber wenige belegte Werte eintragen als viele geschätzte: ein falscher Sollwert erzeugt einen Fehlalarm, ein fehlender nur eine gröbere Bewertung.'),
       el('div', { class: 'chiprow', style: { marginBottom: '14px', alignItems: 'center' } },
         el('span', { class: 'dim', style: { fontSize: '12.5px' } }, 'Kraftstoff'),
@@ -6958,7 +7360,7 @@ function openProfileEditor(existing) {
         } }, existing ? 'Änderungen sichern' : 'Profil anlegen'),
         el('button', { class: 'btn', onclick: () => editor.remove() }, 'Abbrechen'),
         existing ? el('button', { class: 'btn', style: { marginLeft: 'auto', color: 'var(--crit)' },
-          onclick: () => { if (confirm('Profil „' + existing.name + '" löschen?')) {
+          onclick: () => { if (confirm('Profil „' + existing.name + '“ löschen?')) {
             deleteCustomProfile(existing.id);
             App.profile = defaultProfile(); store.set('profile', App.profile.id);
             if (App.ds) recompute(); else go('settings', true);
@@ -7021,7 +7423,7 @@ function ltftByLoadCard() {
 }
 
 /* --- Kaufcheck --- */
-/* Kostenspanne aus einem Text wie „400–900 EUR" ziehen */
+/* Kostenspanne aus einem Text wie „400–900 EUR“ ziehen */
 function parseCost(txt) {
   if (!txt) return null;
   const nums = String(txt).replace(/\./g, '').match(/\d+/g);
@@ -7068,11 +7470,7 @@ BUILDERS.buy = function (page) {
       fld('price', 'Preis (€)', '16900'),
       fld('vin', 'Fahrgestellnummer', 'WAUZZZ…'),
       fld('seller', 'Verkäufer', 'privat / Händler')),
-    el('div', { class: 'psel', style: { marginTop: '12px' } },
-      el('div', { class: 'psel-t' },
-        el('b', {}, prof ? prof.name : 'Kein Fahrzeugprofil'),
-        el('span', {}, prof ? (profileSpecLine(prof) || prof.engine || '') : 'Ohne Profil werden alle allgemeinen Punkte gezeigt')),
-      el('button', { class: 'btn sm', onclick: () => go('settings') }, 'Profil wechseln'))));
+    profileStrip(prof, () => rerender())));
 
   /* --- Fortschritt und Kostenbilanz --- */
   const sc = inspectionScore(insp, prof);
@@ -7137,9 +7535,9 @@ function buildChecklist(page, insp, prof, checks, persist, rerender) {
     tools: el('button', { class: 'chip', type: 'button', 'aria-pressed': koOnly ? 'true' : 'false',
       onclick: () => { store.set('buyKoOnly', !koOnly); rerender(); } }, 'nur Abbruchkriterien'),
     info: {
-      read: 'Jeder Punkt hat drei Zustände: offen, in Ordnung, Befund. „Übersprungen" bleibt bewusst als eigener Zustand erhalten – ein nicht geprüfter Punkt ist etwas anderes als ein geprüfter ohne Befund. Antippen des Titels klappt die Erklärung auf.',
+      read: 'Jeder Punkt hat drei Zustände: offen, in Ordnung, Befund. „Übersprungen“ bleibt bewusst als eigener Zustand erhalten – ein nicht geprüfter Punkt ist etwas anderes als ein geprüfter ohne Befund. Antippen des Titels klappt die Erklärung auf.',
       good: 'Arbeite die Phasen in der angebotenen Reihenfolge ab. Der Kaltstart ist der einzige Punkt, den es nur einmal gibt – wenn der Motor beim Eintreffen schon warm ist, ist diese Information für diesen Termin verloren.',
-      bad: 'Ein rot markierter Punkt mit der Kennzeichnung „Abbruchkriterium" ist kein Verhandlungspunkt. Bei „teuer" markierten Befunden summiert das Werkzeug die groben Reparaturkosten mit – das ist die Verhandlungsgrundlage.'
+      bad: 'Ein rot markierter Punkt mit der Kennzeichnung „Abbruchkriterium“ ist kein Verhandlungspunkt. Bei „teuer“ markierten Befunden summiert das Werkzeug die groben Reparaturkosten mit – das ist die Verhandlungsgrundlage.'
     }
   },
     phaseRow,
@@ -7303,6 +7701,99 @@ async function shareInspection(insp, prof) {
   catch (e) { if (e && e.name !== 'AbortError') exportInspection(insp, prof); }
 }
 
+/* --- KI-Prompt --- */
+BUILDERS.ai = function (page) {
+  const key = store.get('aiDetail', 'standard');
+  let xml = '';
+  const out = el('pre', { class: 'xmlbox' });
+  const meter = el('div', { class: 'chiprow', style: { alignItems: 'center' } });
+  const copyBtn = el('button', { class: 'btn primary big' }, icon('clip'), 'Prompt in die Zwischenablage kopieren');
+
+  function build(k) {
+    store.set('aiDetail', k);
+    xml = buildAiPrompt(k);
+    out.textContent = xml;
+    const kb = xml.length / 1024;
+    const tok = Math.round(xml.length / 3.6 / 100) * 100;
+    meter.innerHTML = '';
+    meter.appendChild(el('span', { class: 'badge ' + (tok > 120000 ? 'warn' : 'ok') },
+      fmt(kb, 0) + ' KB · etwa ' + fmt(tok, 0) + ' Token'));
+    meter.appendChild(el('span', { class: 'dim2', style: { fontSize: '12px' } },
+      tok > 120000 ? 'Das ist viel — bei knappem Kontextfenster eine kleinere Stufe wählen.'
+                   : 'Passt in das Kontextfenster gängiger Modelle.'));
+  }
+  build(key);
+
+  const seg = el('div', { class: 'seg' }, Object.keys(AI_DETAIL).map(k =>
+    el('button', { type: 'button', 'aria-pressed': k === key ? 'true' : 'false',
+      onclick: e => { Array.from(e.target.parentNode.children).forEach(b =>
+        b.setAttribute('aria-pressed', b === e.target ? 'true' : 'false')); build(k); } },
+      AI_DETAIL[k].label)));
+
+  page.appendChild(noteBox('info', 'Was das ist',
+    'Dieses Werkzeug rechnet die Fahrt aus, ordnet sie in Sollbereiche ein und sagt, wo die Datenlage für ein Urteil nicht reicht. ' +
+    'Was es nicht kann, ist mit dir über die Befunde zu sprechen. Genau dafür ist der Knopf unten: er legt die komplette Auswertung ' +
+    'als XML-Dokument in die Zwischenablage — mit Anleitung, Fahrzeugprofil, allen Kennzahlen, den Befunden und einer ' +
+    'heruntergerechneten Zeitreihe. Das fügst du bei ChatGPT, Claude, Gemini oder einem anderen Sprachmodell ein und stellst deine Fragen.'));
+
+  page.appendChild(card('Prompt erzeugen', {
+    hint: 'die Rohdatei bleibt außen vor — 28 MB passen in kein Kontextfenster',
+    tools: seg,
+    info: {
+      read: 'Die Stufe steuert, wie fein die Zeitreihe aufgelöst wird und ob die Werteverteilungen mitgehen. „Kompakt“ enthält Kennzahlen und Befunde mit einem Messpunkt alle 15 Sekunden, „Vollständig“ alle zwei Sekunden.',
+      good: 'Für die meisten Fragen reicht „Standard“. Wenn das Modell sich über die Länge beschwert oder abschneidet, eine Stufe zurück.',
+      bad: 'Mehr Detail ist nicht automatisch besser: eine sehr lange Zeitreihe verdrängt im Kontextfenster die Befunde, auf die es eigentlich ankommt.'
+    },
+    foot: AI_DETAIL[key] ? AI_DETAIL[key].hint : null
+  },
+    meter,
+    el('div', { class: 'chiprow', style: { marginTop: '12px' } },
+      copyBtn,
+      el('button', { class: 'btn', onclick: () => download(baseName() + '_ki-prompt.xml', 'application/xml', xml) },
+        icon('dl'), 'Als Datei'),
+      canShareFiles() ? el('button', { class: 'btn', onclick: async () => {
+        const f = new File([xml], baseName() + '_ki-prompt.xml', { type: 'application/xml' });
+        try { await navigator.share({ title: 'Fahrtauswertung als KI-Prompt', files: [f] }); }
+        catch (e) { if (e && e.name !== 'AbortError') download(f.name, 'application/xml', xml); }
+      } }, icon('share'), 'Teilen') : null)));
+
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(xml).then(() => {
+      copyBtn.innerHTML = '';
+      copyBtn.appendChild(icon('check'));
+      copyBtn.appendChild(document.createTextNode(' Kopiert — jetzt beim Sprachmodell einfügen'));
+      copyBtn.classList.add('done');
+      setTimeout(() => {
+        copyBtn.innerHTML = ''; copyBtn.classList.remove('done');
+        copyBtn.appendChild(icon('clip'));
+        copyBtn.appendChild(document.createTextNode(' Prompt in die Zwischenablage kopieren'));
+      }, 3200);
+    }).catch(() => {
+      const r = document.createRange(); r.selectNodeContents(out);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      alert('Der Browser hat das Kopieren abgelehnt. Der Text ist jetzt markiert – mit ⌘C beziehungsweise Strg+C kopieren.');
+    });
+  });
+
+  page.appendChild(card('So gehst du vor', {},
+    el('ol', { class: 'recipe' },
+      el('li', {}, el('div', {}, el('b', {}, 'Prompt kopieren'),
+        el('span', {}, 'Der Knopf oben legt das gesamte XML in die Zwischenablage.'))),
+      el('li', {}, el('div', {}, el('b', {}, 'Beim Sprachmodell einfügen'),
+        el('span', {}, 'ChatGPT, Claude, Gemini, Mistral – gleich welches. Einfügen und abschicken. Die Anleitung steckt im Dokument, du musst nichts dazuschreiben.'))),
+      el('li', {}, el('div', {}, el('b', {}, 'Nachfragen stellen'),
+        el('span', {}, 'Danach ganz normal weiterfragen: „Woran erkenne ich, ob es wirklich der Ladeluftkühler ist?“, „Was soll ich beim nächsten Log zusätzlich aufzeichnen?“, „Lohnt die Reparatur bei diesem Kilometerstand?“'))),
+      el('li', {}, el('div', {}, el('b', {}, 'Antworten kritisch lesen'),
+        el('span', {}, 'Im Dokument steht ausdrücklich, welche Werte gemessen und welche nur gerechnet sind und wo die Datenlage nicht reicht. Behauptet das Modell trotzdem etwas darüber hinaus, ist es geraten.')))),
+    el('p', { class: 'card-f', style: { padding: '12px 0 0', borderTop: 0 } },
+      'Datenschutz: das XML enthält keine Koordinaten und keine Fahrzeugidentifikationsnummer, aber Zeitstempel, Kilometerstand und – falls eingetragen – die Angaben aus dem Kaufcheck. Beim Einfügen in einen fremden Dienst verlassen diese Angaben dein Gerät.')));
+
+  page.appendChild(card('Vorschau', {
+    hint: 'so sieht das Dokument aus, das kopiert wird',
+    tools: el('span', { class: 'badge mute' }, 'XML')
+  }, out));
+};
+
 /* --- Datenqualität --- */
 BUILDERS.data = function (page) {
   const ds = App.ds, m = ds.meta;
@@ -7312,10 +7803,10 @@ BUILDERS.data = function (page) {
     kpi('Datenzeilen', fmt(m.rows, 0), '', m.skipped ? fmt(m.skipped, 0) + ' übersprungen' : 'alle verwertet'),
     kpi('Messreihen', fmt(m.seriesCount, 0), '',
         Array.from(ds.metrics.values()).filter(x => x.derived).length + ' Größen zusätzlich berechnet'),
-    kpi('Format', m.format === 'long' ? 'Long' : 'Wide', '', 'Trenner „' + m.delimiter + '" · Dezimal „' + m.decimal + '"'),
+    kpi('Format', m.format === 'long' ? 'Long' : 'Wide', '', 'Trenner „' + m.delimiter + '“ · Dezimal „' + m.decimal + '“'),
     kpi('Zeitbasis', { daysec: 'Tageszeit', epoch_s: 'Unix-Zeit', epoch_ms: 'Unix-Zeit (ms)', clock: 'Uhrzeit', date: 'Datum', relative: 'relativ' }[m.timeFormat] || m.timeFormat, '',
         fmtClock(ds.t0) + ' – ' + fmtClock(ds.t1)),
-    kpi('GPS-Punkte', fmt(m.gpsPoints, 0), '', m.gpsSource ? 'aus „' + m.gpsSource + '"' : 'aus den Datenzeilen'),
+    kpi('GPS-Punkte', fmt(m.gpsPoints, 0), '', m.gpsSource ? 'aus „' + m.gpsSource + '“' : 'aus den Datenzeilen'),
     kpi('Auswerteraster', fmt(ds.step * 1000, 0), 'ms', fmt(ds.N, 0) + ' Stützstellen')));
 
   ds.notices.forEach(n => page.appendChild(noteBox(n.level, n.title, n.text)));
@@ -7416,10 +7907,10 @@ BUILDERS.settings = function (page) {
   },
     el('p', { style: { color: 'var(--text-2)', fontSize: '13px', lineHeight: '1.65', margin: '0 0 14px' } },
       'In der Kurzbefehle-App einen neuen Kurzbefehl anlegen und diese fünf Aktionen in dieser Reihenfolge hinzufügen. ' +
-      'In den Kurzbefehl-Einstellungen „Bei Teilen anzeigen" aktivieren und als Eingabe „Dateien" wählen – dann taucht er im Teilen-Menü der Dateien-App auf.'),
+      'In den Kurzbefehl-Einstellungen „Bei Teilen anzeigen“ aktivieren und als Eingabe „Dateien“ wählen – dann taucht er im Teilen-Menü der Dateien-App auf.'),
     el('ol', { class: 'recipe' },
       el('li', {}, el('div', {}, el('b', {}, 'Datei auswählen'),
-        el('span', {}, 'Oder bei einem Teilen-Kurzbefehl: „Kurzbefehl-Eingabe erhalten". Damit landet die CSV im Ablauf.'))),
+        el('span', {}, 'Oder bei einem Teilen-Kurzbefehl: „Kurzbefehl-Eingabe erhalten“. Damit landet die CSV im Ablauf.'))),
       el('li', {}, el('div', {}, el('b', {}, 'Archiv erstellen'),
         el('span', {}, 'Packt die CSV als ZIP. Aus 28 MB werden rund 2 MB – ohne diesen Schritt liegen 28 MB Text in der Zwischenablage, was funktioniert, aber spürbar zäh ist.'))),
       el('li', {}, el('div', {}, el('b', {}, 'Base64 codieren'),
@@ -7443,14 +7934,14 @@ BUILDERS.settings = function (page) {
       'Hängt man ', el('code', {}, '?src=https://…/fahrt.csv'), ' an die Adresse an, holt die Seite die Datei selbst. ' +
       'Der Server, auf dem die Datei liegt, muss dafür ', el('code', {}, 'Access-Control-Allow-Origin'), ' senden – ein iCloud-Freigabelink reicht nicht, der liefert eine Vorschauseite statt der Datei.'),
     el('p', {}, el('b', { style: { color: 'var(--text-1)' } }, 'Direkt einfügen: '),
-      'Auf dem Startbildschirm gibt es ein Einfügefeld. Langes Tippen, „Einsetzen" – fertig. Am Rechner reicht ⌘V beziehungsweise Strg+V irgendwo auf der Seite.'),
+      'Auf dem Startbildschirm gibt es ein Einfügefeld. Langes Tippen, „Einsetzen“ – fertig. Am Rechner reicht ⌘V beziehungsweise Strg+V irgendwo auf der Seite.'),
     el('p', {}, el('b', { style: { color: 'var(--text-1)' } }, 'Gepackte Dateien: '),
       'Der Datei-Dialog nimmt auch ', el('code', {}, '.zip'), ' und ', el('code', {}, '.gz'),
       ' entgegen und entpackt sie im Browser. Braucht iOS 16.4 oder neuer.'))));
 
   page.appendChild(card('Über dieses Werkzeug', {},
     el('div', { style: { fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.7', display: 'grid', gap: '10px' } },
-      el('p', {}, 'Eine einzelne HTML-Datei ohne Server, ohne Framework, ohne Tracking. Die CSV wird im Browser gelesen und verlässt das Gerät nicht. Einzige Netzwerkverbindung sind die Kartenkacheln – wer auch das vermeiden will, stellt den Kartenstil auf „Ohne Karte".'),
+      el('p', {}, 'Eine einzelne HTML-Datei ohne Server, ohne Framework, ohne Tracking. Die CSV wird im Browser gelesen und verlässt das Gerät nicht. Einzige Netzwerkverbindung sind die Kartenkacheln – wer auch das vermeiden will, stellt den Kartenstil auf „Ohne Karte“.'),
       el('p', {}, 'Diagramme, Karte, Statistik und Regelwerk sind eigenimplementiert. Große Dateien werden stückweise verarbeitet, damit die Oberfläche reagierbar bleibt; die Messreihen liegen als typisierte Arrays im Speicher statt als Objektlisten.'),
       el('p', {}, 'Die Diagnose ersetzt keine Werkstatt. Sie ordnet Messwerte in dokumentierte Sollbereiche ein, benennt die wahrscheinlichsten Ursachen und sagt ausdrücklich, wenn die Datenlage für ein Urteil nicht reicht.'))));
 };

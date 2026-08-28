@@ -32,6 +32,17 @@ Geschwindigkeit, Ladelufttemperatur über Last und eine Korrelationsmatrix.
 Ursachenbeschreibung und konkreten Prüfschritten. Fünf Zustände statt drei: unauffällig,
 grenzwertig, auffällig, nicht bewertbar, PID fehlt.
 
+**KI-Prompt** – die komplette Auswertung als XML-Dokument für ChatGPT, Claude, Gemini oder ein
+anderes Sprachmodell. Ein Knopf legt es in die Zwischenablage, im Modell einfügen, fertig — die
+Anleitung steckt im Dokument. Enthalten sind Fahrzeugprofil mit Werksangaben, alle Kennzahlen,
+sämtliche Befunde mit ihren Sollbereichen, die erkannten Ereignisse und eine heruntergerechnete
+Zeitreihe. Drei Detailstufen von 45 bis 90 KB.
+
+Das Dokument sagt dem Modell ausdrücklich, wie es die Daten zu behandeln hat: welche Werte
+gemessen und welche nur gerechnet sind, dass „nicht bewertbar" keine Entwarnung ist, dass
+klassenbasierte Sollwerte weniger Gewicht tragen — und was sich aus einer OBD-Aufzeichnung
+grundsätzlich nicht beurteilen lässt.
+
 **Datenqualität** – zuerst wird gezeigt, was tatsächlich in der Datei steht: Abdeckung je
 Messgröße, erkannte Artefakte, Herkunft der GPS-Positionen. Export als CSV, JSON, GPX und
 als lesbarer Diagnosebericht.
@@ -164,7 +175,8 @@ statt eines Urteils auf dünner Datenbasis.
 | `src/28-ui.js` | UI-Bausteine |
 | `src/29-ingest.js` | Übergabewege: Zwischenablage, Adresse, ZIP- und gzip-Entpacken |
 | `src/30-buycheck.js` | Kaufcheck: Prüfpunkte, Messprotokoll, PID-Listen |
-| `src/31-app.js` | Zustand, Navigation und Sektionen |
+| `src/31-aiexport.js` | XML-Prompt für Sprachmodelle |
+| `src/32-app.js` | Zustand, Navigation und Sektionen |
 
 ## Hinweis
 

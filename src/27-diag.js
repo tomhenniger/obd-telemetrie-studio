@@ -360,7 +360,7 @@ const DIAG_RULES = [
       text: 'Bei Volllast werden ' + fmt(p95, 2) + ' bar Ladedruck erreicht (Spitze ' + fmt(mx, 2) + ' bar / ' + fmt(mx * 14.5038, 1) + ' psi)' +
             (G ? ', der Werksbereich liegt bei ' + G[0] + '–' + G[1] + ' bar' : '') + '. ' +
             (derived
-              ? 'Bewusst ohne Ampel: dieser Wert ist keine Messgröße. Die App rechnet ihn linear aus der Motorlast – er trägt keine eigene Information und ist im Absolutbetrag nicht kalibriert. Für eine belastbare Ladedruckdiagnose die PID „Intake Manifold Absolute Pressure" (0x0B) mitloggen; bis dahin ist die absolute Motorlast der verlässlichere Indikator.'
+              ? 'Bewusst ohne Ampel: dieser Wert ist keine Messgröße. Die App rechnet ihn linear aus der Motorlast – er trägt keine eigene Information und ist im Absolutbetrag nicht kalibriert. Für eine belastbare Ladedruckdiagnose die PID „Intake Manifold Absolute Pressure“ (0x0B) mitloggen; bis dahin ist die absolute Motorlast der verlässlichere Indikator.'
               : 'Ohne Ampel, weil die Absolutkalibrierung des Werts nicht überprüfbar ist.') };
   }
 },
@@ -550,7 +550,7 @@ const DIAG_RULES = [
               ['Angenommener spez. Verbrauch', '0,33–0,40 kg/kWh']],
       text: 'Aus dem Spitzen-Kraftstofffluss von ' + fmt(rate, 1) + ' L/h ergibt sich eine Leistung von ' + fmt(lo, 0) + '–' + fmt(hi, 0) + ' kW (' + fmt(lo * 1.35962, 0) + '–' + fmt(hi * 1.35962, 0) + ' PS)' +
             (ref ? ', Werk sind ' + fmt(ref, 0) + ' kW / ' + fmt(c.P.powerPS, 0) + ' PS' : '') + '. ' +
-            'Bewusst ohne Ampel und nur als Spanne: der Kraftstofffluss ist in dieser App selbst ein Rechenwert aus Luftmasse und Last, und der angenommene spezifische Verbrauch geht direkt linear ein. Die Abschätzung kann ein Leistungsdefizit weder belegen noch ausschließen. Der von der App gemeldete Momentanwert „Instant engine power" überschätzt systematisch und ist als Absolutwert unbrauchbar – nur sein Verlauf ist aussagekräftig.' };
+            'Bewusst ohne Ampel und nur als Spanne: der Kraftstofffluss ist in dieser App selbst ein Rechenwert aus Luftmasse und Last, und der angenommene spezifische Verbrauch geht direkt linear ein. Die Abschätzung kann ein Leistungsdefizit weder belegen noch ausschließen. Der von der App gemeldete Momentanwert „Instant engine power“ überschätzt systematisch und ist als Absolutwert unbrauchbar – nur sein Verlauf ist aussagekräftig.' };
   }
 },
 {

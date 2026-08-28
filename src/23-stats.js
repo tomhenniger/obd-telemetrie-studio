@@ -127,14 +127,14 @@ function buildDataset(parsed, profile) {
       notices.push({
         kind: 'unit', level: 'info',
         title: 'Ladedruck-Einheit korrigiert',
-        text: 'Der Ladedruck war als „bar" ausgezeichnet, erreicht aber ' + fmt(bs.max, 2) +
+        text: 'Der Ladedruck war als „bar“ ausgezeichnet, erreicht aber ' + fmt(bs.max, 2) +
               ' – physikalisch unmöglich. Die Werte sind offensichtlich psi und wurden nach bar umgerechnet (Spitze jetzt ' +
               fmt(bs.max / 14.503774, 2) + ' bar).'
       });
     }
   }
 
-  /* --- Ist der „Ladedruck" nur eine Linearabbildung der Motorlast? --- */
+  /* --- Ist der „Ladedruck“ nur eine Linearabbildung der Motorlast? --- */
   {
     const b = metrics.get('boost'), l = metrics.get('load_abs') || metrics.get('load_calc');
     if (b && l && b.n > 100 && Math.abs(b.n - l.n) < b.n * 0.05) {
@@ -153,7 +153,7 @@ function buildDataset(parsed, profile) {
           boostR2 = r * r;
           notices.push({ kind: 'derived', level: 'warn',
             title: 'Ladedruck ist ein Rechenwert, keine Messung',
-            text: 'Der Ladedruck folgt der Motorlast mit R² = ' + fmt(r * r, 4) + ' exakt linear – die App leitet ihn aus der Last ab, statt den Saugrohrdruck zu messen. Er trägt damit keine eigenständige Information und ist im Absolutbetrag nicht kalibriert. Für eine belastbare Ladedruckdiagnose die PID „Intake Manifold Absolute Pressure" (0x0B) mitloggen.' });
+            text: 'Der Ladedruck folgt der Motorlast mit R² = ' + fmt(r * r, 4) + ' exakt linear – die App leitet ihn aus der Last ab, statt den Saugrohrdruck zu messen. Er trägt damit keine eigenständige Information und ist im Absolutbetrag nicht kalibriert. Für eine belastbare Ladedruckdiagnose die PID „Intake Manifold Absolute Pressure“ (0x0B) mitloggen.' });
         }
       }
     }

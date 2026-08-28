@@ -124,3 +124,26 @@
   Hubraum, Trägerfahrzeuge und Baujahr; Teiltreffer statt leerer Liste, wenn nichts alle Begriffe trifft.
 - **Ottomotor-Regeln werden bei Dieselprofilen übersprungen** statt als fehlende PID gemeldet,
   mit Erklärung, welche Diesel-Messgrößen an ihre Stelle träten und warum sie im Standard-Export fehlen.
+
+## Neue Features (KI-Prompt)
+
+- **Neuer Bereich „KI-Prompt"**: legt die komplette Auswertung als XML-Dokument in die
+  Zwischenablage, zum Einfügen bei ChatGPT, Claude, Gemini und anderen Sprachmodellen.
+  Enthalten sind eine Anleitung für das Modell, das Fahrzeugprofil mit Werksangaben und deren
+  Herkunft, alle Kennzahlen und Messgrößenstatistiken, sämtliche Befunde mit Sollbereichen,
+  die erkannten Ereignisse, Betriebszustände, Gänge, Werteverteilungen und eine
+  heruntergerechnete Zeitreihe. Der Kaufcheck-Stand geht mit, sofern begonnen.
+- **Drei Detailstufen** (kompakt/standard/vollständig) steuern Zeitreihen-Auflösung und
+  Verteilungen; Größe und geschätzte Token-Zahl werden live angezeigt.
+- Das Dokument weist dem Modell ausdrücklich zu, wie es die Daten zu behandeln hat: Messung
+  gegen Rechenwert, „nicht bewertbar" ist keine Entwarnung, klassenbasierte Sollwerte tragen
+  weniger Gewicht, nichts erfinden — dazu eine Liste dessen, was aus einer OBD-Aufzeichnung
+  grundsätzlich nicht beurteilbar ist.
+- Ausgabe auch als Datei und über das native Teilen-Menü.
+
+## UI-Änderungen (Profilsuche)
+
+- Die Fahrzeugprofil-Suche ist jetzt ein wiederverwendbarer Baustein und steht auch im
+  Kaufcheck zur Verfügung: die Profilzeile klappt die Suchleiste mit Filtern direkt auf,
+  statt in die Einstellungen zu springen.
+- Deutsche Anführungszeichen durchgängig typografisch korrekt geschlossen.

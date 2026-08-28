@@ -15,7 +15,7 @@ function icon(name, cls) {
   return s;
 }
 
-/* Erklärfeld: „Wie lese ich das?" — als aufklappbares Feld statt schwebendem Fenster,
+/* Erklärfeld: „Wie lese ich das?“ — als aufklappbares Feld statt schwebendem Fenster,
    damit es auf dem Handy nicht über den Inhalt fällt. */
 function infoPanel(info) {
   if (!info) return null;

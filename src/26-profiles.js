@@ -7,7 +7,7 @@
 
 /* --- Klassenbasierte Rückfallwerte -------------------------------
    Greifen, wenn ein Profil ein Feld nicht mitbringt. Bewusst weit gefasst:
-   ein zu enger Sollbereich erzeugt Fehlalarme, ein zu weiter nur ein „unauffällig".
+   ein zu enger Sollbereich erzeugt Fehlalarme, ein zu weiter nur ein „unauffällig“.
    Die Bänder stammen aus den recherchierten Klassenprofilen; `loadWotGreen`
    ist auf die ABSOLUTE Motorlast bezogen, die beim aufgeladenen Motor
    bauartbedingt über 100 % liegt. */
@@ -349,7 +349,7 @@ function profileById(id) {
 
 /* --- Suche --------------------------------------------------------
    Sucht über Name, Marke, Familie, Motorkennbuchstaben, Trägerfahrzeuge und Baujahr.
-   Alle Teilbegriffe müssen treffen, damit „audi 2.0 tdi" sinnvoll filtert. */
+   Alle Teilbegriffe müssen treffen, damit „audi 2.0 tdi“ sinnvoll filtert. */
 function searchProfiles(query, filters) {
   filters = filters || {};
   const terms = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
@@ -384,7 +384,7 @@ function searchProfiles(query, filters) {
         best = Math.max(best, w + (i === 0 ? 4 : 0));
       }
       if (!best) {
-        // Baujahr-Suche: „2014" trifft jedes Profil, dessen Bauzeitraum das Jahr enthält
+        // Baujahr-Suche: „2014“ trifft jedes Profil, dessen Bauzeitraum das Jahr enthält
         const y = parseInt(t, 10);
         if (y > 1990 && y < 2035 && p.years && y >= p.years[0] && y <= p.years[1]) { score += 4; hits++; continue; }
         ok = false; continue;                // Begriff verfehlt – für den Notnagel weiterzählen

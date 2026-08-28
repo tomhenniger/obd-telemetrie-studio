@@ -20,7 +20,7 @@ async function decompress(bytes, format) {
 }
 
 /* Minimaler ZIP-Leser: liest das zentrale Verzeichnis und liefert den
-   größten enthaltenen Eintrag (Shortcuts „Archiv erstellen" packt genau eine Datei). */
+   größten enthaltenen Eintrag (Shortcuts „Archiv erstellen“ packt genau eine Datei). */
 function zipEntries(u8) {
   const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
   let eocd = -1;
@@ -123,7 +123,7 @@ async function readClipboard() {
   } catch (e) {
     if (e && e.message === '__timeout__')
       throw new Error('Die Abfrage der Zwischenablage kam nicht zurück – vermutlich wartet noch eine Erlaubnisabfrage des Browsers. ' +
-                      'Nimm stattdessen das Einfügefeld auf dem Startbildschirm: hineintippen, langes Tippen, „Einsetzen".');
+                      'Nimm stattdessen das Einfügefeld auf dem Startbildschirm: hineintippen, langes Tippen, „Einsetzen“.');
     throw new Error('Der Zugriff auf die Zwischenablage wurde abgelehnt oder abgebrochen. ' +
                     'Safari fragt beim Antippen einmal nach – ohne Bestätigung geht es nicht. ' +
                     'Alternativ das Einfügefeld auf dem Startbildschirm benutzen.');
@@ -138,7 +138,7 @@ async function fetchCsv(url, onProgress) {
   try { res = await fetch(url, { redirect: 'follow' }); }
   catch (e) {
     throw new Error('Die Adresse konnte nicht geladen werden. Meist blockiert der fremde Server den Zugriff aus dem Browser (fehlender CORS-Header). ' +
-                    'Die Datei muss von einem Server kommen, der „Access-Control-Allow-Origin" setzt.');
+                    'Die Datei muss von einem Server kommen, der „Access-Control-Allow-Origin“ setzt.');
   }
   if (!res.ok) throw new Error('Der Server hat mit ' + res.status + ' ' + res.statusText + ' geantwortet.');
   const total = +(res.headers.get('content-length') || 0);
