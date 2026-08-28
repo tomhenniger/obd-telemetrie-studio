@@ -730,7 +730,7 @@ function pearson(a, b) {
 
 
 /* ---------- Ganganalyse: Cluster in log(rpm/v) ---------- */
-function computeGears(ds, rollCircumM) {
+function computeGears(ds, rollCircumM, gbx, redline) {
   const { G, N, grid, step } = ds;
   const rpm = G.rpm, sp = G.speed_mix;
   if (!rpm || !sp) return null;
@@ -812,11 +812,13 @@ function computeGears(ds, rollCircumM) {
                  ratio: rollCircumM ? (60 * rollCircumM) / (1000 / kMed) : null });
   });
   gears.sort((a, b) => b.k - a.k);
-  gears.forEach((g, i) => { g.gear = i + 1; g.label = 'G' + (i + 1); });
-  const remap = {};
-  gears.forEach(g => remap[g.idx] = g.gear);
-  const spread = [];
-  for (let i = 1; i < gears.length; i++) spread.push(gears[i - 1].k / gears[i].k);
-  return { gears, assign, remap, coverage: assigned / Math.max(1, ks.length),
-           usable: ks.length, spread, hist: { h: hs, lo, w, NB } };
+  gears.forEach((g, i) => { g.gear = i + 1; g.label = 'S' + (i + 1); });
+  const res = { gears, assign, remap: {}, coverage: assigned / Math.max(1, ks.length),
+                usable: ks.length, spread: [], hist: { h: hs, lo, w, NB } };
+  /* Nummerierung: ohne Getriebeangabe nach Übersetzung (S1, S2 …), mit Angabe die
+     echten Gangnummern samt Auskunft darüber, welcher Gang nicht gefahren wurde. */
+  res.gearbox = labelGears(res, gbx, redline);
+  gears.forEach(g => res.remap[g.idx] = g.gear);
+  for (let i = 1; i < gears.length; i++) res.spread.push(gears[i - 1].k / gears[i].k);
+  return res;
 }

@@ -130,6 +130,10 @@ function resetToHero() {
   const err = $('#load-err'); if (err) err.remove();
 }
 
+function rollCircumNow() {
+  const own = store.get('rollCircum', null);
+  return own > 1.2 && own < 3 ? own : (App.profile && App.profile.specs.rollCircum) || 2.0;
+}
 function initDataset(ds) {
   // Alles aus der vorherigen Datei verwerfen. Ohne das bleiben die bereits gebauten
   // Seiten im DOM stehen und zeigen beim Sektionswechsel die Messreihen der alten Datei,
@@ -143,7 +147,8 @@ function initDataset(ds) {
   App.ds = ds;
   const pid = store.get('profile', null) || autoProfile(ds);
   App.profile = profileById(pid) || defaultProfile();
-  App.gears = computeGears(ds, App.profile.specs.rollCircum || store.get('rollCircum', 2.0));
+  App.gears = computeGears(ds, rollCircumNow(), resolveGearbox(App.profile, rollCircumNow()),
+                           resolveSpecs(App.profile).specs.redline);
   App.diag = runDiagnostics(ds, App.profile);
   App.range = [ds.t0, ds.t1];
   App.ts = ['rpm', 'speed_mix', 'boost'].filter(id => ds.G[id]);
@@ -169,7 +174,8 @@ function openShell(section) {
 
 function recompute() {
   if (!App.ds) return;
-  App.gears = computeGears(App.ds, App.profile.specs.rollCircum || store.get('rollCircum', 2.0));
+  App.gears = computeGears(App.ds, rollCircumNow(), resolveGearbox(App.profile, rollCircumNow()),
+                           resolveSpecs(App.profile).specs.redline);
   App.diag = runDiagnostics(App.ds, App.profile);
   go(App.current, true);
 }
@@ -651,7 +657,13 @@ BUILDERS.map = function (page) {
         el('b', { style: { color: m.id === App.mapMetric ? 'var(--accent)' : null } },
           fmt(v, m.decimals) + ' ' + m.unit)));
     });
-    if (gear) readout.appendChild(el('div', { class: 'mr-r' }, el('span', {}, 'Gang (erkannt)'), el('b', {}, 'G' + gear)));
+    if (gear) {
+      const go = App.gears.gears.find(x => x.gear === gear);
+      const named = App.gears.gearbox && (App.gears.gearbox.mode === 'table' || App.gears.gearbox.mode === 'count');
+      readout.appendChild(el('div', { class: 'mr-r' },
+        el('span', {}, named ? 'Gang' : 'Übersetzungsstufe'),
+        el('b', {}, (go && go.label) || ('S' + gear))));
+    }
   }
   map.onHover = t => { showAt(t); Chart.emitHover(t, null); };
   Chart.onHover('map', t => { if (readout.isConnected) showAt(t); });
@@ -924,26 +936,66 @@ BUILDERS.fields = function (page) {
     cc.chart.draw();
     page.appendChild(cc.node);
 
-    page.appendChild(card('Erkannte Übersetzungen', {
-      hint: 'aus ' + fmt(g.usable, 0) + ' Messpunkten geclustert'
-    }, el('div', { class: 'tblwrap' }, el('table', { class: 'tbl', style: { minWidth: '560px' } },
-      el('thead', {}, el('tr', {}, ['Stufe', 'km/h je 1000 min⁻¹', 'Gesamtübersetzung', 'genutzt bei', 'max. Drehzahl', 'Zeit'].map(h => el('th', {}, h)))),
-      el('tbody', {}, g.gears.map(x => el('tr', {},
-        el('td', {}, x.label),
-        el('td', { class: 'n' }, fmt(x.kmhPer1000, 1)),
-        el('td', { class: 'n' }, x.ratio ? fmt(x.ratio, 2) : '–'),
-        el('td', { class: 'n' }, fmt(x.vMin, 0) + '–' + fmt(x.vMax, 0) + ' km/h'),
-        el('td', { class: 'n' }, fmt(x.rpmMax, 0)),
-        el('td', { class: 'n' }, fmtDur(x.time)))))),
+    const gi = g.gearbox || { mode: 'none' };
+    const named = gi.mode === 'table' || gi.mode === 'count';
+    if (gi.mode === 'mismatch')
+      page.appendChild(noteBox('warn', 'Das hinterlegte Getriebe passt nicht zur Messung',
+        'Die gemessenen Übersetzungen weichen um bis zu ' + fmt((gi.worst || 0) * 100, 1) + ' % von ' + gi.label +
+        ' ab. Weichen alle gleichmäßig ab, stimmt meist der Abrollumfang oder der Achsantrieb nicht — beides ' +
+        'unter Einstellungen. Bis dahin wird nach Übersetzung nummeriert.'));
+    if (gi.mode === 'too-many')
+      page.appendChild(noteBox('warn', 'Mehr Übersetzungen gemessen als angegebene Gänge',
+        'Angegeben sind ' + gi.gears + ' Gänge, gemessen wurden ' + gi.measured + ' verschiedene Übersetzungen. ' +
+        'Entweder stimmt die Angabe nicht, oder die Erkennung hat eine Stufe erfunden — die Stufensprünge unten ' +
+        'zeigen, was wahrscheinlicher ist. Bis dahin wird nach Übersetzung nummeriert.'));
+    // Zeilen für nicht gefahrene Gänge einschieben, damit die Tabelle die Lücke zeigt
+    const rows = g.gears.map(x => ({ m: x, gear: x.gear }));
+    (gi.missing || []).forEach(t => rows.push({ m: null, gear: t.gear, ref: t }));
+    rows.sort((a, b) => a.gear - b.gear);
+    page.appendChild(card(named ? 'Gänge' : 'Erkannte Übersetzungen', {
+      hint: 'aus ' + fmt(g.usable, 0) + ' Messpunkten geclustert' +
+            (named ? ' · Gangnummern aus ' + gi.label : '')
+    }, el('div', { class: 'tblwrap' }, el('table', { class: 'tbl', style: { minWidth: '600px' } },
+      el('thead', {}, el('tr', {}, [named ? 'Gang' : 'Stufe', 'km/h je 1000 min⁻¹',
+        gi.mode === 'table' ? 'Soll' : 'Gesamtübersetzung', 'genutzt bei', 'max. Drehzahl', 'Zeit'].map(h => el('th', {}, h)))),
+      el('tbody', {}, rows.map(r => r.m ? el('tr', {},
+        el('td', {}, r.m.label),
+        el('td', { class: 'n' }, fmt(r.m.kmhPer1000, 1)),
+        el('td', { class: 'n' }, gi.mode === 'table'
+          ? (isFinite(r.m.refKmhPer1000) ? fmt(r.m.refKmhPer1000, 1) +
+              (isFinite(r.m.dev) ? ' (' + (r.m.dev >= 0 ? '+' : '') + fmt(r.m.dev * 100, 1) + ' %)' : '') : '–')
+          : (r.m.ratio ? fmt(r.m.ratio, 2) : '–')),
+        el('td', { class: 'n' }, fmt(r.m.vMin, 0) + '–' + fmt(r.m.vMax, 0) + ' km/h'),
+        el('td', { class: 'n' }, fmt(r.m.rpmMax, 0)),
+        el('td', { class: 'n' }, fmtDur(r.m.time)))
+        : el('tr', { style: { opacity: '.5' } },
+        el('td', {}, 'G' + r.gear),
+        el('td', { class: 'n' }, r.ref ? fmt(r.ref.kmhPer1000, 1) : '–'),
+        el('td', { class: 'n' }, r.ref ? fmt(r.ref.kmhPer1000, 1) : '–'),
+        el('td', { colspan: '3', class: 'dim' }, 'in dieser Fahrt nicht gefahren – keine Messung möglich'))))),
       g.spread.length ? el('p', { class: 'card-f', style: { padding: '10px 0 0', borderTop: 0 } },
         'Stufensprünge: ' + g.spread.map(x => fmt(x, 3)).join(' · ') +
         '. Zugrunde gelegter Abrollumfang: ' + fmt(App.profile.specs.rollCircum || store.get('rollCircum', 2.0), 3) +
         ' m (' + (App.profile.specs.tyre || 'in den Einstellungen änderbar') + ').') : null),
       el('p', { class: 'card-f dim2', style: { padding: '8px 0 0', borderTop: 0, fontSize: '12px' } },
-        'Erkannt werden ' + g.gears.length + ' Übersetzungen. Dass ein Getriebe mehr Gänge hat, ist kein Befund: ' +
-        'eine Übersetzung taucht nur auf, wenn sie in dieser Fahrt lange genug bei geschlossenem Kraftschluss ' +
-        'gehalten wurde. Der höchste Gang fehlt meist, weil er auf der gefahrenen Strecke nicht gebraucht wurde; ' +
-        'der niedrigste, weil beim Anfahren die Kupplung schleift und dabei gar kein festes Verhältnis vorliegt. ' +
+        (named
+          ? 'Gemessen wurden ' + g.gears.length + ' von ' + gi.gears + ' Gängen' +
+            ((gi.missing || []).length
+              ? ', nicht gefahren ' + (gi.missing.length === 1 ? 'wurde Gang ' : 'wurden die Gänge ') +
+                gi.missing.map(t => t.gear).join(', ') + '. '
+              : '. ') +
+            (gi.mode === 'count'
+              ? (gi.suggested
+                  ? 'Welche Gangnummern das sind, ist geschätzt: ohne Werksübersetzungen lässt sich das nicht aus den Daten ablesen. Unter Einstellungen lässt sich der erste gemessene Gang von Hand setzen oder das Getriebe hinterlegen. '
+                  : 'Die Gangnummern stammen aus deiner Angabe, nicht aus den Daten. ')
+              : 'Die Zuordnung stammt aus dem Vergleich mit den hinterlegten Werksübersetzungen' +
+                (isFinite(gi.worst) ? ' (größte Abweichung ' + fmt(gi.worst * 100, 1) + ' %)' : '') + '. ')
+          : 'Erkannt werden ' + g.gears.length + ' Übersetzungen, nummeriert von kurz nach lang – das sind Stufen, ' +
+            'keine Gangnummern. Unter Einstellungen lässt sich das Getriebe angeben, dann stehen hier echte ' +
+            'Gangnummern und es ist ersichtlich, welcher Gang nicht gefahren wurde. ') +
+        'Eine Übersetzung taucht nur auf, wenn sie lange genug bei geschlossenem Kraftschluss gehalten wurde. ' +
+        'Der höchste Gang fehlt meist, weil er auf der Strecke nicht gebraucht wurde; der niedrigste, weil beim ' +
+        'Anfahren die Kupplung schleift und dabei gar kein festes Verhältnis vorliegt. ' +
         (g.spread.every((x, i) => i === 0 || x <= g.spread[i - 1] + 0.02)
           ? 'Die Stufensprünge werden hier von Stufe zu Stufe kleiner – so sieht eine echte Getriebeabstufung aus, das spricht dafür, dass alle erkannten Stufen echt sind.'
           : 'Achtung: die Stufensprünge werden nicht durchgehend kleiner. Bei einer echten Getriebeabstufung tun sie das – hier könnte eine Stufe fehlen oder eine erfunden sein.'))));
@@ -1954,10 +2006,157 @@ BUILDERS.data = function (page) {
       canShareFiles() ? el('button', { class: 'btn primary', onclick: shareReport }, icon('share'), 'Bericht teilen') : null)));
 };
 
+
+/* --- Getriebe: Gangnummern statt Nummerierung nach Übersetzung --- */
+function gearboxCard() {
+  const wrap = el('div', {});
+  const render = () => {
+    wrap.innerHTML = '';
+    const s = gearboxSetting() || { mode: '' };
+    const rc = rollCircumNow();
+
+    const modeSel = el('select', { class: 'sel', onchange: e => {
+      const m = e.target.value;
+      if (!m) setGearboxSetting(null);
+      else if (m === 'catalog') setGearboxSetting({ mode: 'catalog', id: s.id || '' });
+      else if (m === 'manual') setGearboxSetting({ mode: 'manual', gears: s.gears || 6, ratios: s.ratios || [], final: s.final || 0 });
+      else setGearboxSetting({ mode: 'count', gears: s.gears || 6, firstGear: s.firstGear || 0 });
+      render(); recompute();
+    } }, GEARBOX_MODES.map(m => el('option', { value: m.id, selected: m.id === s.mode ? true : null }, m.label)));
+    wrap.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center', marginBottom: '10px' } },
+      el('span', { class: 'dim', style: { fontSize: '12.5px' } }, 'Angabe'), modeSel));
+
+    if (s.mode === 'catalog') {
+      if (!GEARBOXES.length) {
+        wrap.appendChild(noteBox('warn', 'Noch kein Getriebe im Katalog',
+          'Für dieses Werkzeug sind noch keine Werksübersetzungen hinterlegt. Trag sie über „Übersetzungen selbst eintragen" ein – die Zahlen stehen in den Fahrzeugpapieren, im Reparaturleitfaden oder im Selbststudienprogramm des Herstellers.'));
+      } else {
+        const q = el('input', { class: 'inp', type: 'search', placeholder: 'Getriebe suchen – Kennung, Name oder Fahrzeug …', style: { width: '100%', marginBottom: '8px' } });
+        const list = el('div', { class: 'plist' });
+        const paint = () => {
+          const t = q.value.trim().toLowerCase();
+          const hits = GEARBOXES.filter(g => !t ||
+            (g.kennung + ' ' + g.name + ' ' + (g.models || '') + ' ' + (g.brand || '')).toLowerCase().indexOf(t) >= 0);
+          list.innerHTML = '';
+          if (!hits.length) { list.appendChild(el('p', { class: 'dim' }, 'Nichts gefunden.')); return; }
+          hits.slice(0, 40).forEach(g => list.appendChild(el('button', {
+            class: 'prow', type: 'button', 'aria-pressed': g.id === s.id ? 'true' : 'false',
+            onclick: () => { setGearboxSetting({ mode: 'catalog', id: g.id, final: s.final || 0 }); render(); recompute(); } },
+            el('div', { class: 'prow-t' },
+              el('b', {}, g.kennung + ' · ' + g.name),
+              el('span', {}, g.gears + ' Gänge · ' + (g.models || ''))),
+            el('span', { class: 'badge ' + (g.confidence === 'hoch' ? 'ok' : 'mute') },
+              'Datenlage ' + (g.confidence || 'unbekannt')))));
+          if (hits.length > 40) list.appendChild(el('p', { class: 'dim' }, 'und ' + (hits.length - 40) + ' weitere – Suche eingrenzen.'));
+        };
+        q.addEventListener('input', paint); paint();
+        wrap.appendChild(q); wrap.appendChild(list);
+        const gb = gearboxById(s.id);
+        if (gb) wrap.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center', marginTop: '10px' } },
+          el('span', { class: 'dim', style: { fontSize: '12.5px' } }, 'Achsantrieb abweichend'),
+          el('input', { class: 'inp', type: 'number', step: '0.001', style: { width: '110px' },
+            placeholder: String(gb.final || ''), value: s.final > 0 ? String(s.final) : '',
+            onchange: e => { const v = parseFloat(e.target.value);
+              setGearboxSetting(Object.assign({}, s, { final: v > 0 ? v : 0 })); render(); recompute(); } }),
+          el('span', { class: 'dim', style: { fontSize: '12px' } },
+            'nur nötig, wenn dein Fahrzeug einen anderen als ' + fmt(gb.final, 3) + ' hat')));
+      }
+    }
+
+    if (s.mode === 'manual') {
+      const nGears = Math.max(2, Math.min(10, s.gears | 0 || 6));
+      const ratios = (s.ratios || []).slice(0, nGears);
+      const save = patch => { setGearboxSetting(Object.assign({ mode: 'manual' }, s, patch)); render(); recompute(); };
+      wrap.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center', marginBottom: '10px' } },
+        el('span', { class: 'dim', style: { fontSize: '12.5px' } }, 'Anzahl Gänge'),
+        el('input', { class: 'inp', type: 'number', min: '2', max: '10', value: String(nGears), style: { width: '80px' },
+          onchange: e => save({ gears: Math.max(2, Math.min(10, parseInt(e.target.value, 10) || 6)) }) }),
+        el('span', { class: 'dim', style: { fontSize: '12.5px', marginLeft: '10px' } }, 'Achsantrieb'),
+        el('input', { class: 'inp', type: 'number', step: '0.001', value: s.final > 0 ? String(s.final) : '', style: { width: '110px' },
+          placeholder: 'z. B. 4.176',
+          onchange: e => save({ final: parseFloat(e.target.value) || 0 }) })));
+      const rows = el('div', { class: 'chiprow', style: { flexWrap: 'wrap' } });
+      for (let i = 0; i < nGears; i++) rows.appendChild(el('label', { class: 'chip', style: { display: 'inline-flex', gap: '6px', alignItems: 'center' } },
+        el('span', {}, (i + 1) + '.'),
+        el('input', { class: 'inp', type: 'number', step: '0.001', style: { width: '86px' },
+          value: ratios[i] > 0 ? String(ratios[i]) : '',
+          onchange: e => { const r = ratios.slice(); r[i] = parseFloat(e.target.value) || 0; save({ ratios: r }); } })));
+      wrap.appendChild(rows);
+      wrap.appendChild(el('p', { class: 'dim2', style: { fontSize: '12px', marginTop: '8px' } },
+        'Getriebeübersetzungen, nicht Gesamtübersetzungen – der Achsantrieb wird separat verrechnet. ' +
+        'Doppelkupplungsgetriebe haben oft zwei Achsantriebe, einen je Teilgetriebe. Ist das bei dir so, ' +
+        'trag den der ungeraden Gänge oben ein und den zweiten hier:'));
+      wrap.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center' } },
+        el('span', { class: 'dim', style: { fontSize: '12.5px' } }, 'Zweiter Achsantrieb (gerade Gänge)'),
+        el('input', { class: 'inp', type: 'number', step: '0.001', style: { width: '110px' },
+          value: s.final2 > 0 ? String(s.final2) : '',
+          onchange: e => { const v = parseFloat(e.target.value) || 0;
+            save({ final2: v, final2Gears: v > 0 ? [2, 4, 6, 8, 10] : null }); } })));
+    }
+
+    if (s.mode === 'count') {
+      const nGears = Math.max(2, Math.min(10, s.gears | 0 || 6));
+      const meas = App.gears ? App.gears.gears.length : 0;
+      const maxOff = Math.max(1, nGears - meas + 1);
+      const info = App.gears && App.gears.gearbox;
+      const cur = s.firstGear > 0 ? s.firstGear : (info && info.firstGear) || 1;
+      wrap.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center' } },
+        el('span', { class: 'dim', style: { fontSize: '12.5px' } }, 'Anzahl Gänge'),
+        el('input', { class: 'inp', type: 'number', min: '2', max: '10', value: String(nGears), style: { width: '80px' },
+          onchange: e => { setGearboxSetting({ mode: 'count', gears: Math.max(2, Math.min(10, parseInt(e.target.value, 10) || 6)), firstGear: s.firstGear || 0 }); render(); recompute(); } }),
+        meas ? el('span', { class: 'dim', style: { fontSize: '12.5px', marginLeft: '10px' } }, 'Der kürzeste gemessene Gang ist Gang') : null,
+        meas ? el('select', { class: 'sel', onchange: e => {
+          setGearboxSetting({ mode: 'count', gears: nGears, firstGear: parseInt(e.target.value, 10) || 0 }); render(); recompute(); } },
+          [el('option', { value: '0', selected: !(s.firstGear > 0) ? true : null }, 'automatisch schätzen')].concat(
+            Array.from({ length: maxOff }, (_, i) => el('option', { value: String(i + 1), selected: s.firstGear === i + 1 ? true : null }, String(i + 1))))) : null));
+      if (meas) wrap.appendChild(el('p', { class: 'dim2', style: { fontSize: '12px', marginTop: '8px' } },
+        'Gemessen wurden ' + meas + ' Übersetzungen. Welche Gangnummern das sind, lässt sich ohne Werksübersetzungen nicht ' +
+        'aus den Daten ablesen – die automatische Schätzung geht davon aus, dass ein erster Gang am Drehzahlbegrenzer ' +
+        'etwa 45–75 km/h erreicht. Aktuell angenommen: Gang ' + cur + ' bis ' + (cur + meas - 1) + '.'));
+    }
+
+    /* Gegenüberstellung Soll gegen gemessen */
+    const gbx = resolveGearbox(App.profile, rc);
+    const info = App.gears && App.gears.gearbox;
+    if (gbx && gbx.table && App.gears) {
+      const byGear = {}; App.gears.gears.forEach(g => { if (g.gear) byGear[g.gear] = g; });
+      const mismatch = info && info.mode === 'mismatch';
+      if (mismatch) wrap.appendChild(noteBox('warn', 'Die gewählten Übersetzungen passen nicht zur Messung',
+        'Die gemessenen Übersetzungen weichen um bis zu ' + fmt((info.worst || 0) * 100, 1) + ' % von den hinterlegten ab. ' +
+        'Entweder ist das ein anderes Getriebe, ein anderer Achsantrieb, oder der eingestellte Abrollumfang (' + fmt(rc, 3) + ' m) ' +
+        'passt nicht zur montierten Reifengröße. Bis das stimmt, wird nach Übersetzung nummeriert.'));
+      wrap.appendChild(el('div', { class: 'tblwrap', style: { marginTop: '12px' } },
+        el('table', { class: 'tbl', style: { minWidth: '520px' } },
+          el('thead', {}, el('tr', {}, ['Gang', 'Übersetzung', 'Soll km/h je 1000', 'gemessen', 'Abweichung'].map(h => el('th', {}, h)))),
+          el('tbody', {}, gbx.table.map(t => {
+            const g = byGear[t.gear];
+            return el('tr', { style: g ? null : { opacity: '.55' } },
+              el('td', {}, 'G' + t.gear),
+              el('td', { class: 'n' }, fmt(t.ratio, 3) + ' × ' + fmt(t.final, 3)),
+              el('td', { class: 'n' }, fmt(t.kmhPer1000, 1)),
+              el('td', { class: 'n' }, g ? fmt(g.kmhPer1000, 1) : 'nicht gefahren'),
+              el('td', { class: 'n' }, g && isFinite(g.dev) ? (g.dev >= 0 ? '+' : '') + fmt(g.dev * 100, 1) + ' %' : '–'));
+          })))));
+    }
+    wrap.appendChild(el('p', { class: 'card-f dim2', style: { padding: '10px 0 0', borderTop: 0, fontSize: '12px' } },
+      'Das Getriebe steht bewusst nicht im Motorprofil: denselben Motor gibt es mit Handschalter, Wandler und ' +
+      'Doppelkupplung, und derselbe Getriebetyp läuft je Modell mit verschiedenen Achsantrieben. Die Zuordnung ' +
+      'hängt zusätzlich am Abrollumfang – steht der falsch, verschiebt sich alles gleichmäßig.'));
+  };
+  render();
+  return card('Getriebe und Gangnummern', {
+    hint: 'entscheidet, ob die Gangtabelle echte Gangnummern zeigt',
+    info: { read: 'Ohne Angabe nummeriert das Werkzeug die gemessenen Übersetzungen von kurz nach lang als S1, S2, … – das sind Stufen, keine Gangnummern. Mit Werksübersetzungen werden daraus echte Gangnummern, und es steht dabei, welcher Gang in dieser Fahrt nicht gefahren wurde.',
+            good: 'Weichen gemessene und hinterlegte Übersetzung um weniger als etwa 2 % ab, passen Getriebe, Achsantrieb und Reifengröße zusammen.',
+            bad: 'Eine gleichmäßige Abweichung in allen Gängen deutet auf einen falschen Abrollumfang oder Achsantrieb – nicht auf einen Getriebeschaden. Weicht nur ein einzelner Gang ab, lohnt der zweite Blick.' }
+  }, wrap);
+}
+
 /* --- Einstellungen --- */
 BUILDERS.settings = function (page) {
   const ds = App.ds;
   page.appendChild(profilePickerCard());
+  page.appendChild(gearboxCard());
 
   const themeSeg = el('div', { class: 'seg' },
     ['dark', 'light'].map(t => el('button', { type: 'button', 'aria-pressed': (store.get('theme', 'dark') === t) ? 'true' : 'false',

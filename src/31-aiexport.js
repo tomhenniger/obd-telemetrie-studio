@@ -385,9 +385,26 @@ function buildAiPrompt(detailKey) {
       hinweis: 'Nicht in den Anteilen oben enthalten – hier ließ sich kein Betriebszustand bestimmen.' }) + '/>');
   p('</betriebszustaende>');
   if (App.gears && App.gears.gears.length > 1) {
-    p('<gaenge' + xattr({ hinweis: 'Aus dem Verhältnis Drehzahl zu Geschwindigkeit geclustert, nicht aus einer Tabelle. Nummeriert nach Übersetzung, nicht nach Gangnummer.',
+    const gbi = App.gears.gearbox || { mode: 'none' };
+    const gnamed = gbi.mode === 'table' || gbi.mode === 'count';
+    p('<gaenge' + xattr({
+      hinweis: 'Die Übersetzungen sind aus dem Verhältnis Drehzahl zu Geschwindigkeit gemessen, nicht aus einer Tabelle übernommen. ' +
+        (gnamed
+          ? (gbi.mode === 'table'
+              ? 'Die Gangnummern stammen aus dem Abgleich mit hinterlegten Werksübersetzungen (' + gbi.label + ').'
+              : 'Die Gangnummern beruhen auf der Angabe „' + gbi.label + '“' +
+                (gbi.suggested ? ' und einer Schätzung, welcher Gang der kürzeste gemessene ist — sie können um eine Stufe verschoben sein.' : ' des Nutzers.'))
+          : 'Die Bezeichnungen S1, S2 … sind nach Übersetzung von kurz nach lang vergeben und sind KEINE Gangnummern — es ist nicht bekannt, wie viele Gänge das Getriebe hat.') +
+        ' Ein Gang erscheint nur, wenn er in dieser Fahrt bei geschlossenem Kraftschluss gehalten wurde; nicht gefahrene Gänge fehlen und sind kein Befund.',
+      getriebe: gnamed ? gbi.label : '',
+      gaenge_gesamt: gnamed ? gbi.gears : '',
+      nicht_gefahren: gnamed && gbi.missing && gbi.missing.length ? gbi.missing.map(t => t.gear).join(', ') : '',
+      groesste_abweichung_prozent: gbi.mode === 'table' && isFinite(gbi.worst) ? round(gbi.worst * 100, 1) : '',
       zugeordnete_punkte_prozent: round(App.gears.coverage * 100, 0) }) + '>');
     App.gears.gears.forEach(g => p('  <stufe' + xattr({ bezeichnung: g.label,
+      gang: gnamed ? g.gear : '',
+      soll_kmh_je_1000: isFinite(g.refKmhPer1000) ? round(g.refKmhPer1000, 1) : '',
+      abweichung_prozent: isFinite(g.dev) ? round(g.dev * 100, 1) : '',
       kmh_je_1000_umdrehungen: round(g.kmhPer1000, 1), gesamtuebersetzung: g.ratio ? round(g.ratio, 2) : '',
       genutzt_von_kmh: round(g.vMin, 0), genutzt_bis_kmh: round(g.vMax, 0),
       max_drehzahl: round(g.rpmMax, 0), sekunden: round(g.time, 0) }) + '/>'));

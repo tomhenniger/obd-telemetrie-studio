@@ -19,6 +19,7 @@ OUT=index.html
   cat src/24-chart.js
   cat src/25-map.js
   cat src/26-profiles.js
+  cat src/26b-gearbox.js
   cat src/27-diag.js
   cat src/28-ui.js
   cat src/29-ingest.js
