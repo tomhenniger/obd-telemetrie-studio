@@ -3146,10 +3146,10 @@ function resolveSpecs(p) {
 const BUILTIN_PROFILES = [
 {
   id: 'audi_s5_b85_cgwc',
-  name: 'Audi S5 B8.5 · 3.0 TFSI Kompressor · 333 PS',
+  name: 'Audi 3.0 TFSI Kompressor EA837 · 333 PS',
   short: 'S5 B8.5 CGWC',
-  brand: 'Audi', family: 'EA837 3.0 TFSI', engineCode: ['CGWC', 'CREC'],
-  years: [2011, 2017], models: 'A4/S4 B8.5, A5/S5 B8.5, A6 C7, A7 C7',
+  brand: 'Audi', family: 'EA837 3.0 TFSI', engineCode: ['CAKA', 'CCBA', 'CGWC', 'CREC', 'CTWA'],
+  years: [2008, 2017], models: 'S4 B8/B8.5, A5/S5 8T/8F, A6 C7, A7 C7, A8 D4, Q7 4L/4M, VW Touareg II',
   confidence: 'hoch',
   engine: 'V6 90°, 24V DOHC, Roots-Kompressor Eaton TVS 1320',
   aspiration: 'kompressor', fuel: 'petrol',
@@ -3355,7 +3355,6 @@ const BUILTIN_PROFILES = [
 {"id":"vag_ea888_g4_20tsi_320","name":"VAG 2.0 TSI EA888 Gen 4 · 320 PS","brand":"VW/Audi","family":"EA888 Gen 4","engineCode":["DNFG"],"years":[2020,2024],"models":"Golf VIII R, Tiguan II R, Arteon R, Audi TTS FV","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"compression":9.3,"powerPS":320,"powerKW":235,"powerRpm":[5200,6600],"torqueNm":420,"torqueRpm":[2100,5550],"injection":"Direkt- und Saugrohreinspritzung","massKg":1476,"consWLTP":7.8,"banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Ottopartikelfilter","s":"Beladung, Differenzdruck und Regenerationszähler auslesen","km":"ab ca. 60.000 km"},{"t":"Ladedruckregelung","s":"Fehler Ladedruckregelgrenze deutet auf Steller oder Leckage","km":"ab ca. 100.000 km"},{"t":"Klopfregelung unter Volllast","s":"Höchste Serienlast des Vierzylinders: Zündwinkelrücknahme je Zylinder beobachten","km":"—"},{"t":"Tuning und Antriebsstrang","s":"Sehr häufig getunt: Ladedruck-Istwerte, DSG-Adaptionen und Haldex-Servicehistorie prüfen","km":"—"}]},
 {"id":"vag_ea837_30tfsi_kompressor_300","name":"Audi 3.0 TFSI Kompressor · 300 PS","brand":"Audi","family":"EA837 3.0 TFSI Kompressor","engineCode":["CGWB"],"years":[2010, 2012],"models":"A6 C7, A7 C7","fuel":"petrol","aspiration":"kompressor","confidence":"hoch","specs":{"displacement":2995,"bore":84.5,"stroke":89,"compression":10.3,"powerPS":300,"powerKW":220,"powerRpm":[5250,6500],"torqueNm":440,"torqueRpm":[2900,4500],"injection":"Benzin-Direkteinspritzung","massKg":1740,"consNEDC":8.2,"co2NEDC":190,"banks":2,"timingDrive":"Kette"},"weakSpots":[{"t":"Schraubenkompressor im Innen-V","s":"Ladedruck-Ist bleibt schon bei niedriger Drehzahl unter Soll, jaulendes Nebengeräusch; Riemen- und Spannerzustand prüfen","km":"ab ca. 120.000 km"},{"t":"Verkokte Einlassventile","s":"Reine Direkteinspritzung: Aussetzerzähler je Zylinder, Langzeitadaption Bank 1/Bank 2 driftet auseinander","km":"ab ca. 80.000 km"},{"t":"Steuerkette an der Motorrückseite","s":"Kaltstart-Rasseln, P0016/P0017, Verstellwinkel beider Bänke prüfen; Erneuerung sehr aufwendig","km":"ab ca. 150.000 km"},{"t":"Wassergekühlter Ladeluftkühler im V","s":"Kühlmittelverlust ohne äussere Leckage, auffällige Ladelufttemperaturen","km":"ab ca. 120.000 km"}]},
 {"id":"vag_ea837_30tfsi_kompressor_310","name":"Audi 3.0 TFSI Kompressor · 310 PS","brand":"Audi","family":"EA837 3.0 TFSI Kompressor","engineCode":["CGWD", "CGXB"],"years":[2012, 2014],"models":"A6 C7, A7 C7","fuel":"petrol","aspiration":"kompressor","confidence":"hoch","specs":{"displacement":2995,"bore":84.5,"stroke":89,"compression":10.3,"powerPS":310,"powerKW":228,"powerRpm":[5500,6500],"torqueNm":440,"torqueRpm":[2900,4500],"injection":"Benzin-Direkteinspritzung","massKg":1865,"consNEDC":8.2,"co2NEDC":190,"banks":2,"timingDrive":"Kette"},"weakSpots":[{"t":"Schraubenkompressor im Innen-V","s":"Ladedruck-Ist bleibt unter Soll, jaulendes Nebengeräusch; Riemen und Spanner prüfen","km":"ab ca. 120.000 km"},{"t":"Verkokte Einlassventile","s":"Aussetzerzähler je Zylinder, Langzeitadaption Bank 1 und Bank 2 vergleichen","km":"ab ca. 80.000 km"},{"t":"Steuerkette an der Motorrückseite","s":"Kaltstart-Rasseln, P0016/P0017, Verstellwinkel beider Bänke; sehr teure Instandsetzung","km":"ab ca. 150.000 km"},{"t":"Wassergekühlter Ladeluftkühler im V","s":"Schleichender Kühlmittelverlust und hohe Ladelufttemperaturen","km":"ab ca. 120.000 km"}]},
-{"id":"vag_ea837_30tfsi_kompressor_333","name":"Audi 3.0 TFSI Kompressor · 333 PS","brand":"Audi/VW","family":"EA837 3.0 TFSI Kompressor","engineCode":["CAKA", "CCBA", "CGWC", "CREC", "CTWA"],"years":[2008, 2017],"models":"S4 B8/B8.5, A5/S5 8T/8F, A6 C7, A7 C7, A8 D4, Q7 4L/4M, VW Touareg II","fuel":"petrol","aspiration":"kompressor","confidence":"hoch","specs":{"displacement":2995,"bore":84.5,"stroke":89,"compression":10.3,"powerPS":333,"powerKW":245,"powerRpm":[5500,7000],"torqueNm":440,"torqueRpm":[2900,5300],"injection":"Benzin-Direkteinspritzung","massKg":1650,"consNEDC":9.7,"co2NEDC":225,"banks":2,"timingDrive":"Kette"},"weakSpots":[{"t":"Schraubenkompressor im Innen-V","s":"Ladedruck-Ist bereits bei niedriger Drehzahl unter Soll, jaulendes Nebengeräusch; Riemen, Spanner und Laderlagerung prüfen","km":"ab ca. 120.000 km"},{"t":"Verkokte Einlassventile","s":"Aussetzerzähler einzelner Zylinder, auseinanderdriftende Langzeitadaption Bank 1/Bank 2","km":"ab ca. 80.000 km"},{"t":"Steuerkette an der Motorrückseite","s":"Kaltstart-Rasseln, P0016/P0017, Verstellwinkel beider Bänke; Instandsetzung nur mit Motorausbau","km":"ab ca. 150.000 km"},{"t":"Wassergekühlter Ladeluftkühler im V","s":"Schleichender Kühlmittelverlust ohne äussere Spur ist ein Warnzeichen","km":"ab ca. 120.000 km"}]},
 {"id":"vag_ea839_30tfsi_354","name":"Audi 3.0 TFSI EA839 · 354 PS","brand":"Audi","family":"EA839","engineCode":["CWGD"],"years":[2016,2019],"models":"S4 B9, S5 F5, SQ5 FY","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":2995,"bore":84.5,"stroke":89,"compression":11.2,"powerPS":354,"powerKW":260,"powerRpm":[5400,6400],"torqueNm":500,"torqueRpm":[1370,4500],"injection":"Benzin-Direkteinspritzung","massKg":1630,"consNEDC":7.3,"co2NEDC":166,"banks":2,"timingDrive":"Kette"},"weakSpots":[{"t":"Turbolader im Innen-V","s":"Ladedruck Soll/Ist-Abweichung, Fehler Ladedruckregelgrenze; Zugänglichkeit sehr schlecht, Reparatur teuer","km":"ab ca. 100.000 km"},{"t":"Kettentrieb über Ausgleichswelle","s":"Kurbelwelle treibt über Zahnräder die Ausgleichswelle, diese per Ketten die Nockenwellen: Kaltstart-Rasseln, P0016/P0017, Verstellwinkel beider Bänke","km":"ab ca. 150.000 km"},{"t":"Verkokte Einlassventile","s":"Reine Direkteinspritzung: Aussetzerzähler je Zylinder, Langzeitadaption Bank 1 und Bank 2 vergleichen","km":"ab ca. 80.000 km"},{"t":"Hohe Verdichtung 11,2:1 mit Aufladung","s":"Klopfregelung je Zylinder beobachten; dauerhafte Zündwinkelrücknahme deutet auf Kraftstoff oder Ladelufttemperatur","km":"—"}]},
 {"id":"vag_ea188_14tdi_pd_80","name":"VAG 1.4 TDI PD 3-Zyl. · 80 PS","brand":"VW/Seat/Skoda","family":"EA188 PD","engineCode":["BMS","BNV"],"years":[2005,2009],"models":"Polo 9N3, Fabia II, Ibiza 6L/6J, Roomster","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1422,"bore":79.5,"stroke":95.5,"compression":19.5,"powerPS":80,"powerKW":59,"powerRpm":[4000,4000],"torqueNm":195,"torqueRpm":[1800,1800],"fuelSpec":"Diesel EN 590, min. 49 CN","injection":"Pumpe-Düse, bis 2050 bar","banks":1,"timingDrive":"Zahnriemen","egr":true},"weakSpots":[{"t":"Ausgleichswellen-/Ölpumpenkette","s":"Kaltstart-Rasseln aus dem Steuertrieb; Öldruckfehler im Speicher, Kettengeräusch im Leerlauf nach dem Start","km":"ab ca. 150.000 km"},{"t":"AGR-Ventil versottet","s":"Luftmasse-Istwert bei Volllast deutlich unter Soll, AGR-Regelabweichung, russiger Ansaugkanal","km":"ab ca. 120.000 km"},{"t":"PD-Element / Ventildeckel undicht","s":"Ölfeuchter Ventildeckelrand, Dieselgeruch im Öl, steigender Ölstand am Peilstab","km":"ab ca. 150.000 km"},{"t":"Zahnriemen und Wasserpumpe","s":"Wechselnachweis verlangen; Kühlmittelspuren an der Riemenabdeckung","km":"intervallabhängig"}]},
 {"id":"vag_ea188_19tdi_pd_90_bru","name":"VAG 1.9 TDI PD · 90 PS (BRU, 210 Nm)","brand":"VW/Audi/Seat/Skoda","family":"EA188 PD","engineCode":["BRU"],"years":[2004,2010],"models":"Golf V, Golf Plus, Touran I, Caddy III, Octavia II, Leon 1P","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1896,"bore":79.5,"stroke":95.5,"compression":19,"powerPS":90,"powerKW":66,"powerRpm":[3750,3750],"torqueNm":210,"torqueRpm":[1800,2500],"fuelSpec":"Diesel EN 590, min. 49 CN","injection":"Pumpe-Düse, bis 2050 bar","consNEDC":5,"co2NEDC":132,"banks":1,"timingDrive":"Zahnriemen","egr":true},"weakSpots":[{"t":"VTG-Lader verkokt","s":"Ladedruck-Istwert erreicht Soll bei Volllast nicht (> 200 mbar Abweichung), Notlauf; Verstellhebel schwergängig","km":"ab ca. 150.000 km"},{"t":"AGR-Ventil und Ansaugbrücke versottet","s":"Luftmasse bei 3000/min Volllast unter Soll, AGR-Regelabweichung, schwarze Krusten im Krümmer","km":"ab ca. 150.000 km"},{"t":"Tandempumpe undicht","s":"Öl-/Dieselspur an der Stirnseite des Zylinderkopfs, im Extremfall Diesel im Motoröl","km":"ab ca. 130.000 km"},{"t":"Zahnriemen und Wasserpumpe","s":"Riemenzustand und Wechseldatum prüfen; Kühlmittelspuren an der Abdeckung","km":"intervallabhängig"}]},
@@ -3919,6 +3918,7 @@ const BUILTIN_PROFILES = [
 
 /* Ältere gespeicherte Auswahl auf die neuen Kennungen abbilden */
 const LEGACY_PROFILE_IDS = {
+  vag_ea837_30tfsi_kompressor_333: 'audi_s5_b85_cgwc',   // zusammengeführt
   generic_turbo: 'fallback_benzin_turbo_gross',
   generic_kompressor: 'fallback_benzin_kompressor',
   generic_na: 'fallback_benzin_sauger',
@@ -3939,9 +3939,70 @@ function deleteCustomProfile(id) {
   store.set('customProfiles', customProfiles().filter(x => x.id !== id));
 }
 
+/* Sicherung gegen Doppeleinträge: zwei Profile gelten als derselbe Motor, wenn
+   Kraftstoff, Aufladung, Hubraum, Leistung und Drehmoment übereinstimmen UND sie
+   sich mindestens einen Motorkennbuchstaben teilen. Dann bleibt der reichere von
+   beiden stehen — sonst stünde derselbe Motor zweimal in der Auswahl.
+   Unterschiedliche Leistungsstufen mit gleichem Kennbuchstaben (bei BMW und
+   Mercedes die Regel) bleiben ausdrücklich getrennt. */
+function modelTokens(str) {
+  return String(str || '').toLowerCase()
+    .split(/[,;/]+/).map(t => t.replace(/\b(hybrid|kombi|avant|sportback|limousine|variant|coupé|coupe|cabrio)\b/g, '').trim())
+    .filter(t => t.length > 1);
+}
+function modelsOverlap(a, b) {
+  const ta = modelTokens(a), tb = modelTokens(b);
+  if (!ta.length || !tb.length) return true;     // ohne Angabe nicht blockieren
+  return ta.some(x => tb.some(y => x === y || x.indexOf(y) >= 0 || y.indexOf(x) >= 0));
+}
+function dedupeProfiles(list) {
+  const byKey = new Map();
+  const out = [];
+  for (const p of list) {
+    const sp = p.specs || {};
+    if (p.custom || p.generic || !sp.powerPS || !sp.displacement) { out.push(p); continue; }
+    const key = [p.fuel, p.aspiration, sp.displacement, sp.powerPS, sp.torqueNm].join('|');
+    const codes = (p.engineCode || []).map(c => String(c).toUpperCase().trim());
+    const prevList = byKey.get(key);
+    let merged = false;
+    if (prevList) {
+      for (const prev of prevList) {
+        const pc = (prev.p.engineCode || []).map(c => String(c).toUpperCase().trim());
+        if (!codes.length || !pc.length || !codes.some(c => pc.indexOf(c) >= 0)) continue;
+        // Zusätzlich müssen sich die Trägerfahrzeuge überschneiden. Sonst wären etwa
+        // die beiden Toyota-Hybridgenerationen zusammengefasst, die denselben
+        // Verbrenner in verschiedenen Autos und mit verschiedener Systemleistung haben.
+        if (!modelsOverlap(p.models, prev.p.models)) continue;
+        // Derselbe Motor: den mit mehr hinterlegten Sollwerten behalten
+        const richer = Object.keys(sp).length > Object.keys(prev.p.specs || {}).length ? p : prev.p;
+        const other  = richer === p ? prev.p : p;
+        const codeUnion = pc.concat(codes).filter((c, i, a) => a.indexOf(c) === i);
+        out[prev.i] = Object.assign({}, richer, {
+          engineCode: codeUnion,
+          years: [Math.min((richer.years || [9999])[0], (other.years || [9999])[0]),
+                  Math.max((richer.years || [0, 0])[1] || 0, (other.years || [0, 0])[1] || 0)],
+          models: (richer.models || other.models)
+        });
+        prev.p = out[prev.i];
+        merged = true;
+        break;
+      }
+    }
+    if (!merged) {
+      out.push(p);
+      const entry = { p, i: out.length - 1 };
+      if (prevList) prevList.push(entry); else byKey.set(key, [entry]);
+    }
+  }
+  return out;
+}
+
 /* Der vollständige Katalog: mitgelieferte plus eigene Profile. */
+let _profileCache = null;
 function allProfiles() {
-  return BUILTIN_PROFILES.concat(customProfiles().map(p => Object.assign({ custom: true }, p)));
+  const custom = customProfiles().map(p => Object.assign({ custom: true }, p));
+  if (!_profileCache) _profileCache = dedupeProfiles(BUILTIN_PROFILES);
+  return _profileCache.concat(custom);
 }
 function profileById(id) {
   if (!id) return null;

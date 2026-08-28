@@ -190,3 +190,17 @@
   Motorcode. Dazu CDNC, CPMA und CADA beim EA888 Gen2 211 PS sowie mehrere EA288-Varianten.
 - Falsche Zuordnungen korrigiert: der SQ5 8R gehört nicht in das 333-PS-Profil, er läuft mit
   CTUD/CTXA und 313 PS. CTUA wurde nicht ergänzt, weil es in keiner Quelle auffindbar war.
+
+## Bugfixes (Profil-Duplikat)
+
+- **Der 3.0 TFSI Kompressor mit 333 PS stand zweimal in der Auswahl.** Beim Nachtragen der
+  Motorkennbuchstaben entstand eine Überschneidung zwischen dem handgebauten Profil und dem
+  Katalogeintrag. Beide sind derselbe Motor und wurden zusammengeführt: die reicheren Sollwerte
+  aus dem einen, die breitere Abdeckung an Motorcodes, Baujahren und Trägerfahrzeugen aus dem
+  anderen. Die alte Kennung bleibt auffindbar, gespeicherte Auswahlen brechen nicht.
+- **Sicherung gegen künftige Doppeleinträge**: zwei Profile werden beim Laden zusammengeführt,
+  wenn Kraftstoff, Aufladung, Hubraum, Leistung und Drehmoment übereinstimmen, sie sich
+  mindestens einen Motorkennbuchstaben teilen UND sich ihre Trägerfahrzeuge überschneiden.
+  Alle drei Bedingungen sind nötig: Hersteller wie BMW und Mercedes vergeben denselben
+  Kennbuchstaben über mehrere Leistungsstufen, und zwei Toyota-Hybridgenerationen teilen sich
+  denselben Verbrenner bei unterschiedlicher Systemleistung — beides bleibt getrennt.
