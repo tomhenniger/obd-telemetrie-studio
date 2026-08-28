@@ -71,8 +71,14 @@ function base64ToBytes(str) {
 }
 function looksBase64(s) {
   if (s.length < 64) return false;
-  const head = s.slice(0, 4096).replace(/\s+/g, '');
-  return /^[A-Za-z0-9+/_-]+={0,2}$/.test(head);
+  // Nur Zeilenumbrüche dürfen weg: base64 wird zeilenweise umbrochen, enthält aber
+  // niemals Tabs, Semikolons oder Kommas. Ohne diese Einschränkung wird jede
+  // Tab-getrennte CSV aus rein alphanumerischen Zellen als base64 fehlgedeutet.
+  const head = s.slice(0, 4096).replace(/[\r\n]+/g, '');
+  if (/[\t;,. ]/.test(head)) return false;
+  if (!/^[A-Za-z0-9+/_-]+={0,2}$/.test(head)) return false;
+  const body = s.replace(/[\r\n]+/g, '');
+  return body.length % 4 === 0 || /=$/.test(body);
 }
 
 /* Der gemeinsame Eingang: nimmt Bytes oder Text und liefert CSV-Text zurück. */

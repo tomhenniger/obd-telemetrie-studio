@@ -679,17 +679,30 @@ function computeGears(ds, rollCircumM) {
   }
   if (ks.length < 120) return null;
   const logs = ks.map(Math.log);
-  let lo = Infinity, hi = -Infinity;
-  for (const x of logs) { if (x < lo) lo = x; if (x > hi) hi = x; }
+  // Spanne auf Perzentile stutzen. Anfahrschlupf und Kupplungsschleifen erzeugen einzelne
+  // Punkte mit sehr hoher Drehzahl je km/h; ungestutzt verbrauchen die ein Fünftel des
+  // Histogramms für ein halbes Promille der Messpunkte und verschmieren die echten Gänge.
+  const sortK = ks.slice().sort((a, b) => a - b);
+  const qk = p => sortK[Math.min(sortK.length - 1, Math.max(0, Math.floor(p * (sortK.length - 1))))];
+  const lo = Math.log(qk(0.002) * 0.97), hi = Math.log(qk(0.998) * 1.03);
   const NB = 320, w = (hi - lo) / NB;
   const h = new Float64Array(NB);
-  for (const x of logs) h[Math.min(NB - 1, Math.max(0, Math.floor((x - lo) / w)))]++;
+  for (const x of logs) { const b = Math.floor((x - lo) / w); if (b >= 0 && b < NB) h[b]++; }
   const hs = smooth(h, 5);
   const total = ks.length;
+  // Ein Gang, der nur zwanzig Sekunden lang benutzt wurde, erreicht nie die Punktdichte
+  // einer Reisegeschwindigkeit – und niedrige Gänge streuen zusätzlich breiter, weil die
+  // Geschwindigkeit in ganzen km/h gemeldet wird. Deshalb entscheidet die Prominenz des
+  // Gipfels, nicht seine Höhe: wie tief fällt die Dichte, bevor sie wieder ansteigt.
   const peaks = [];
   for (let i = 2; i < NB - 2; i++) {
-    if (hs[i] >= hs[i-1] && hs[i] >= hs[i+1] && hs[i] > hs[i-2] && hs[i] > hs[i+2] &&
-        hs[i] / total > 0.0035) peaks.push({ bin: i, val: hs[i], k: Math.exp(lo + (i + .5) * w) });
+    if (!(hs[i] >= hs[i-1] && hs[i] >= hs[i+1] && hs[i] > hs[i-2] && hs[i] > hs[i+2])) continue;
+    if (hs[i] / total < 0.001) continue;              // reines Rauschen aussortieren
+    let l = i; while (l > 0 && hs[l-1] <= hs[l]) l--;
+    let r = i; while (r < NB - 1 && hs[r+1] <= hs[r]) r++;
+    const prom = hs[i] > 0 ? (hs[i] - Math.max(hs[l], hs[r])) / hs[i] : 0;
+    if (prom < 0.7) continue;
+    peaks.push({ bin: i, val: hs[i], k: Math.exp(lo + (i + .5) * w), prom });
   }
   // dicht beieinander liegende Peaks verschmelzen (< 6 % Abstand)
   peaks.sort((a, b) => a.k - b.k);
@@ -704,10 +717,20 @@ function computeGears(ds, rollCircumM) {
   const groups = merged.map(() => []);
   const assign = new Int8Array(N).fill(-1);
   let assigned = 0;
+  // Die Toleranz je Cluster richtet sich nach dem Abstand zum Nachbarn. Eine feste Grenze
+  // von 4,5 % lässt beim ersten Gang – der wegen der km/h-Quantisierung ±15 % streut – den
+  // Großteil der Punkte unzugeordnet, obwohl der nächste Gang 40 % entfernt liegt.
+  const mlog = merged.map(m => Math.log(m.k));
+  const tol = mlog.map((x, g) => {
+    let gap = Infinity;
+    for (let o = 0; o < mlog.length; o++) if (o !== g) gap = Math.min(gap, Math.abs(mlog[o] - x));
+    return Math.max(0.044, Math.min(0.25, 0.45 * gap));
+  });
   for (let j = 0; j < ks.length; j++) {
+    const x = logs[j];
     let best = -1, bd = Infinity;
-    for (let g = 0; g < merged.length; g++) { const d = Math.abs(ks[j] - merged[g].k) / merged[g].k; if (d < bd) { bd = d; best = g; } }
-    if (bd < 0.045) { groups[best].push({ k: ks[j], i: idxs[j] }); assign[idxs[j]] = best; assigned++; }
+    for (let g = 0; g < mlog.length; g++) { const d = Math.abs(x - mlog[g]); if (d < bd) { bd = d; best = g; } }
+    if (best >= 0 && bd < tol[best]) { groups[best].push({ k: ks[j], i: idxs[j] }); assign[idxs[j]] = best; assigned++; }
   }
   const gears = [];
   groups.forEach((g, gi) => {

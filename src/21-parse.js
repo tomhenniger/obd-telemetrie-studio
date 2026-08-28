@@ -92,22 +92,26 @@ function detectDecimalComma(samples) {
 }
 
 function makeNumParser(decimalComma) {
+  const fin = v => (v === v && v > -Infinity && v < Infinity) ? v : NaN;
   if (!decimalComma) {
     return function (s) {
       if (!s) return NaN;
       const v = +s;
-      if (v === v) return v;                       // schnellster Pfad
+      if (v === v) return fin(v);                  // schnellster Pfad
+      // Ein einzelnes Komma ist auch im Punkt-Modus ein Dezimalkomma. Es einfach zu
+      // entfernen macht aus 14,7 die Zahl 147 – ein stiller Faktor 10 quer durch die Datei.
+      if (/^\s*-?\d+,\d+\s*$/.test(s)) return fin(+s.trim().replace(',', '.'));
       const m = s.replace(/[^\d.eE+-]/g, '');
-      return m ? +m : NaN;
+      return m ? fin(+m) : NaN;
     };
   }
   return function (s) {
     if (!s) return NaN;
     const t = s.replace(/\./g, '').replace(',', '.');
     const v = +t;
-    if (v === v) return v;
+    if (v === v) return fin(v);
     const m = t.replace(/[^\d.eE+-]/g, '');
-    return m ? +m : NaN;
+    return m ? fin(+m) : NaN;
   };
 }
 
@@ -115,15 +119,20 @@ function makeNumParser(decimalComma) {
    hh:mm:ss[.ms], ISO-8601, dd.mm.yyyy hh:mm:ss                                */
 function makeTimeParser(samples, num) {
   const s0 = (samples.find(s => s && s.trim()) || '').trim();
+  // Zeitstempel tragen praktisch immer einen Punkt als Dezimaltrenner, auch in Dateien
+  // mit Dezimalkomma bei den Messwerten. Enthält die Probe keine Kommas, punktweise lesen.
+  const anyComma = samples.some(x => typeof x === 'string' && x.indexOf(',') >= 0);
+  if (!anyComma) num = makeNumParser(false);
   const asNum = num(s0);
 
   if (asNum === asNum && !/[:T\/]/.test(s0)) {
     if (asNum > 1e12) return { kind: 'epoch_ms', parse: s => num(s) / 1000, epoch: true };
     if (asNum > 1e9)  return { kind: 'epoch_s',  parse: s => num(s),        epoch: true };
-    return { kind: asNum >= 0 && asNum < 86400 * 1.2 ? 'daysec' : 'relative', parse: num, epoch: false };
+    return { kind: asNum >= 0 && asNum < 86400 * 1.2 ? 'daysec' : 'relative', parse: num, epoch: false,
+             wrap: asNum >= 0 && asNum < 86400 * 1.2 };
   }
   if (/^\d{1,2}:\d{2}(:\d{2})?([.,]\d+)?$/.test(s0)) {
-    return { kind: 'clock', epoch: false, parse: s => {
+    return { kind: 'clock', epoch: false, wrap: true, parse: s => {
       const p = String(s).trim().split(':');
       if (p.length < 2) return NaN;
       return (+p[0]) * 3600 + (+p[1]) * 60 + (p[2] ? +String(p[2]).replace(',', '.') : 0);
@@ -131,6 +140,14 @@ function makeTimeParser(samples, num) {
   }
   return { kind: 'date', epoch: true, parse: s => {
     s = String(s).trim();
+    // Erst das deutsche Format prüfen: Date.parse liest "03.04.2026" bei Tag <= 12
+    // als 4. März, bei Tag > 12 greift der Fallback – in einer Datei zwei Kalender.
+    const de = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})[ T]+(\d{1,2}):(\d{2})(?::(\d{2})([.,]\d+)?)?/);
+    if (de) {
+      let y = +de[3]; if (y < 100) y += 2000;
+      return Date.UTC(y, +de[2] - 1, +de[1], +de[4], +de[5], +(de[6] || 0)) / 1000 +
+             (de[7] ? +de[7].replace(',', '.') : 0);
+    }
     let d = Date.parse(s);
     if (d === d) return d / 1000;
     const m = s.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})[ T]+(\d{1,2}):(\d{2})(?::(\d{2})([.,]\d+)?)?/);
@@ -208,7 +225,14 @@ async function parseCSV(text, onProgress) {
   const getSeries = (name, unit) => {
     let s = series.get(name);
     if (!s) { s = { name, unit: unit || '', t: [], v: [] }; series.set(name, s); }
+    // Zwei Spalten "Speed (km/h)" und "Speed (mph)" tragen denselben Basisnamen. Ohne
+    // Trennung entstuende eine einzige Serie, die zwischen beiden Einheiten hin- und herspringt.
     else if (!s.unit && unit) s.unit = unit;
+    else if (unit && s.unit && s.unit !== unit) {
+      const key = name + ' [' + unit + ']';
+      s = series.get(key);
+      if (!s) { s = { name: key, unit, t: [], v: [] }; series.set(key, s); }
+    }
     return s;
   };
 
@@ -228,6 +252,11 @@ async function parseCSV(text, onProgress) {
   const total = text.length;
   let pos = nl + 1;
   const f = new Array(64);
+  let prevN = 0;
+  /* Sekunden seit Mitternacht und Uhrzeiten springen um 0 Uhr auf null zurück. Ohne
+     Entfaltung sortiert die Nachbearbeitung die Zeit nach Mitternacht VOR die davor und
+     macht aus einer Zehn-Minuten-Fahrt eine von 24 Stunden. */
+  let tPrev = NaN, tOff = 0;
   let chunkStart = pos, lastYield = performance.now();
 
   while (pos < total) {
@@ -239,7 +268,16 @@ async function parseCSV(text, onProgress) {
     if (lineEnd > pos) {
       const line = text.slice(pos, lineEnd);
       const n = splitLine(line, delim, f);
-      const t = timeFmt.parse(f[idx.time]);
+      // splitLine beschreibt nur die ersten n Felder. Ohne Leeren traegt eine kurze Zeile
+      // die Werte der Vorzeile weiter und erfindet Messwerte und GPS-Punkte.
+      for (let c = n; c < prevN; c++) f[c] = undefined;
+      prevN = n;
+      let t = timeFmt.parse(f[idx.time]);
+      if (t === t && timeFmt.wrap) {
+        if (tPrev === tPrev && t + tOff < tPrev - 43200) tOff += 86400;
+        t += tOff;
+        if (!(tPrev === tPrev) || t > tPrev) tPrev = t;
+      }
       if (t === t) {
         if (t < tMin) tMin = t;
         if (t > tMax) tMax = t;
@@ -320,11 +358,23 @@ async function parseCSV(text, onProgress) {
   }
   gpsSources.sort((a, b) => b.points - a.points);
   const G = bestSrc !== null ? gpsBySrc.get(bestSrc) : null;
-  const gpsOut = G && G.t.length ? {
-    t: Float64Array.from(G.t), lat: Float64Array.from(G.lat), lon: Float64Array.from(G.lon),
-    alt: G.alt.length === G.t.length ? Float64Array.from(G.alt) : null,
-    n: G.t.length, source: bestSrc === '\u0000row' ? null : bestSrc
-  } : null;
+  let gpsOut = null;
+  if (G && G.t.length) {
+    const gn = G.t.length;
+    let gSorted = true;
+    for (let i = 1; i < gn; i++) if (G.t[i] < G.t[i - 1]) { gSorted = false; break; }
+    // bisect und alle dt-Rechnungen setzen eine aufsteigende Zeitachse voraus
+    const ord = gSorted ? null : Array.from({ length: gn }, (_, i) => i).sort((a, b) => G.t[a] - G.t[b]);
+    const pick = arr => {
+      if (!arr || arr.length !== gn) return null;
+      if (!ord) return Float64Array.from(arr);
+      const o = new Float64Array(gn);
+      for (let i = 0; i < gn; i++) o[i] = arr[ord[i]];
+      return o;
+    };
+    gpsOut = { t: pick(G.t), lat: pick(G.lat), lon: pick(G.lon), alt: pick(G.alt),
+               n: gn, source: bestSrc === '\u0000row' ? null : bestSrc };
+  }
 
   return {
     series: out, gps: gpsOut,

@@ -14,9 +14,10 @@ const UNIT_CANON = {
   'bar': 'bar', 'psi': 'psi', 'kpa': 'kPa', 'hpa': 'hPa', 'mbar': 'hPa', 'pa': 'Pa', 'mmhg': 'mmHg', 'inhg': 'inHg',
   'l/100km': 'L/100km', 'l/100 km': 'L/100km', 'mpg': 'mpg', 'mpg(us)': 'mpg', 'mpg(uk)': 'mpg_uk',
   'km/l': 'km/L', 'l/h': 'L/h', 'l': 'L', 'ml': 'mL', 'gal': 'gal',
-  'hp': 'PS', 'ps': 'PS', 'bhp': 'hp_mech', 'kw': 'kW', 'w': 'W',
+  'hp': 'hp_mech', 'bhp': 'hp_mech', 'ps': 'PS', 'pk': 'PS', 'cv': 'PS', 'kw': 'kW', 'w': 'W',
   'nm': 'Nm', 'lb-ft': 'lbft', 'ftlb': 'lbft',
-  'g/s': 'g/s', 'kg/h': 'kg/h', 'g': 'g', 'm/s²': 'm/s²', 'm/s2': 'm/s²',
+  'g/s': 'g/s', 'kg/h': 'kg/h', 'g/h': 'g/h', 'lb/min': 'lb/min',
+  'mpa': 'MPa', 'g': 'g', 'm/s²': 'm/s²', 'm/s2': 'm/s²',
   'v': 'V', 'mv': 'mV', 'a': 'A',
   'km': 'km', 'mi': 'mi', 'm': 'm', 'ft': 'ft',
   '°': '°', 'deg': '°', 'grad': '°', '° kw': '°KW', '°kw': '°KW',
@@ -36,7 +37,7 @@ const CONVERT = {
   'bar':     { 'psi': v => v / 14.503774, 'kPa': v => v / 100, 'hPa': v => v / 1000,
                'Pa': v => v / 1e5, 'mmHg': v => v / 750.062, 'inHg': v => v / 29.5300 },
   'kPa':     { 'bar': v => v * 100, 'psi': v => v * 6.894757, 'hPa': v => v / 10, 'Pa': v => v / 1000,
-               'mmHg': v => v * 0.133322, 'inHg': v => v * 3.386389 },
+               'MPa': v => v * 1000, 'mmHg': v => v * 0.133322, 'inHg': v => v * 3.386389 },
   'PS':      { 'kW': v => v / 0.7354988, 'W': v => v / 735.4988, 'hp_mech': v => v * 1.013870 },
   'kW':      { 'PS': v => v * 0.7354988, 'hp_mech': v => v * 0.7456999, 'W': v => v / 1000 },
   'Nm':      { 'lbft': v => v * 1.355818 },
@@ -47,7 +48,9 @@ const CONVERT = {
   'm/s²':    { 'g': v => v * 9.80665 },
   'V':       { 'mV': v => v / 1000 },
   'L':       { 'mL': v => v / 1000, 'gal': v => v * 3.785412 },
-  'L/h':     { 'gal/h': v => v * 3.785412, 'cc/min': v => v * 0.06 }
+  'L/h':     { 'gal/h': v => v * 3.785412, 'cc/min': v => v * 0.06 },
+  'g/s':     { 'kg/h': v => v / 3.6, 'g/h': v => v / 3600, 'lb/min': v => v * 7.559873 },
+  'λ':       { 'AFR': v => v / 14.7 }
 };
 function convertTo(target, from, v) {
   from = canonUnit(from); target = canonUnit(target);
@@ -94,7 +97,9 @@ const METRICS = [
 
   /* --- Aufladung --- */
   { id:'boost', label:'Ladedruck', short:'Ladedruck', u:'bar', d:2, g:'boost', p:10, c:'#42a5f5', pressure:true,
-    a:[/^calculated\s*boost/, /^boost(\s*pressure)?$/, /^ladedruck$/, /^turbo\s*boost/, /boost\s*pressure/] },
+    a:[/^calculated\s*boost/, /^boost(\s*pressure)?$/, /^ladedruck$/, /^turbo\s*boost/,
+       // Soll-Namen ausschliessen, sonst gewinnt "Boost pressure desired" ueber die Samplezahl
+       /^(?!.*(desired|target|commanded|soll|specified|request))\S.*boost\s*pressure/i] },
   { id:'boost_target', label:'Ladedruck Soll', u:'bar', d:2, g:'boost', p:8, c:'#90caf9', pressure:true,
     a:[/boost.*(desired|target|commanded|soll)/, /(desired|commanded).*boost/] },
   { id:'map', label:'Saugrohrdruck (absolut)', short:'MAP', u:'kPa', d:0, g:'boost', p:9, c:'#5c6bc0',
@@ -140,7 +145,8 @@ const METRICS = [
   { id:'stft_b2', label:'Kurzzeit-Gemischkorrektur Bank 2', short:'STFT B2', u:'%', d:2, g:'fuel', p:10, c:'#9e9d24',
     a:[/^short\s*term\s*fuel\s*%?\s*trim.*bank\s*2/, /^stft.*(b2|bank\s*2)/, /kurzzeit.*bank\s*2/] },
   { id:'lambda', label:'Lambda', u:'λ', d:3, g:'fuel', p:8,
-    a:[/^lambda/, /equivalence\s*ratio/, /^afr\s*ratio/] },
+    // "AFR" ist das 14,7-fache von Lambda. Ohne Umrechnung stuende hier λ = 14,7 bei Sollgemisch.
+    a:[/^lambda/, /equivalence\s*ratio/, /^afr(\s*ratio)?$/, /air[\s-]*fuel\s*ratio/] },
   { id:'o2_b1s1', label:'O₂-Sonde B1S1', u:'V', d:3, g:'fuel', p:6,
     a:[/o2.*b1.*s1/, /oxygen.*bank\s*1.*sensor\s*1/, /lambdasonde.*1.*1/] },
   { id:'o2_b2s1', label:'O₂-Sonde B2S1', u:'V', d:3, g:'fuel', p:6,
@@ -150,7 +156,8 @@ const METRICS = [
   { id:'fuel_level', label:'Tankfüllstand', u:'%', d:0, g:'fuel', p:6,
     a:[/fuel\s*(tank\s*)?level/, /tankfüllstand/, /tankinhalt/] },
   { id:'egr', label:'AGR-Rate', u:'%', d:1, g:'fuel', p:5,
-    a:[/^(commanded\s*)?egr/, /^agr/, /exhaust\s*gas\s*recirc/] },
+    a:[/^(commanded\s*)?egr(?!\s*(error|fehler|deviation))/, /^agr(?!\s*fehler)/,
+       /^exhaust\s*gas\s*recirc(?!.*error)/] },
 
   /* --- Verbrauch --- */
   { id:'fuel_rate', label:'Momentaner Kraftstofffluss', short:'Fluss', u:'L/h', d:2, g:'cons', p:10, c:'#8d6e63',
@@ -272,8 +279,7 @@ function buildMetric(def, s, rawName) {
     t: s.t, v, n: s.n, converted: needConv,
     // hp -> PS ist keine Umrechnung, aber eine Umdeutung: die Zahl bleibt, die Bedeutung
     // aendert sich. Wer das nicht ausweist, laesst den Leser mit einer stillen Annahme allein.
-    renamed: !!(srcUnit && !needConv && String(s.unit || '').trim() &&
-                String(s.unit).trim() !== canonUnit(def.u)),
+    renamed: !!(srcUnit && !needConv && String(s.unit || '').trim() && srcUnit !== canonUnit(def.u)),
     group: def.g, decimals: def.d, color: def.c || null, agg: def.agg || 'inst'
   };
 }

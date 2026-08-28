@@ -1021,22 +1021,26 @@ function detectDecimalComma(samples) {
 }
 
 function makeNumParser(decimalComma) {
+  const fin = v => (v === v && v > -Infinity && v < Infinity) ? v : NaN;
   if (!decimalComma) {
     return function (s) {
       if (!s) return NaN;
       const v = +s;
-      if (v === v) return v;                       // schnellster Pfad
+      if (v === v) return fin(v);                  // schnellster Pfad
+      // Ein einzelnes Komma ist auch im Punkt-Modus ein Dezimalkomma. Es einfach zu
+      // entfernen macht aus 14,7 die Zahl 147 – ein stiller Faktor 10 quer durch die Datei.
+      if (/^\s*-?\d+,\d+\s*$/.test(s)) return fin(+s.trim().replace(',', '.'));
       const m = s.replace(/[^\d.eE+-]/g, '');
-      return m ? +m : NaN;
+      return m ? fin(+m) : NaN;
     };
   }
   return function (s) {
     if (!s) return NaN;
     const t = s.replace(/\./g, '').replace(',', '.');
     const v = +t;
-    if (v === v) return v;
+    if (v === v) return fin(v);
     const m = t.replace(/[^\d.eE+-]/g, '');
-    return m ? +m : NaN;
+    return m ? fin(+m) : NaN;
   };
 }
 
@@ -1044,15 +1048,20 @@ function makeNumParser(decimalComma) {
    hh:mm:ss[.ms], ISO-8601, dd.mm.yyyy hh:mm:ss                                */
 function makeTimeParser(samples, num) {
   const s0 = (samples.find(s => s && s.trim()) || '').trim();
+  // Zeitstempel tragen praktisch immer einen Punkt als Dezimaltrenner, auch in Dateien
+  // mit Dezimalkomma bei den Messwerten. Enthält die Probe keine Kommas, punktweise lesen.
+  const anyComma = samples.some(x => typeof x === 'string' && x.indexOf(',') >= 0);
+  if (!anyComma) num = makeNumParser(false);
   const asNum = num(s0);
 
   if (asNum === asNum && !/[:T\/]/.test(s0)) {
     if (asNum > 1e12) return { kind: 'epoch_ms', parse: s => num(s) / 1000, epoch: true };
     if (asNum > 1e9)  return { kind: 'epoch_s',  parse: s => num(s),        epoch: true };
-    return { kind: asNum >= 0 && asNum < 86400 * 1.2 ? 'daysec' : 'relative', parse: num, epoch: false };
+    return { kind: asNum >= 0 && asNum < 86400 * 1.2 ? 'daysec' : 'relative', parse: num, epoch: false,
+             wrap: asNum >= 0 && asNum < 86400 * 1.2 };
   }
   if (/^\d{1,2}:\d{2}(:\d{2})?([.,]\d+)?$/.test(s0)) {
-    return { kind: 'clock', epoch: false, parse: s => {
+    return { kind: 'clock', epoch: false, wrap: true, parse: s => {
       const p = String(s).trim().split(':');
       if (p.length < 2) return NaN;
       return (+p[0]) * 3600 + (+p[1]) * 60 + (p[2] ? +String(p[2]).replace(',', '.') : 0);
@@ -1060,6 +1069,14 @@ function makeTimeParser(samples, num) {
   }
   return { kind: 'date', epoch: true, parse: s => {
     s = String(s).trim();
+    // Erst das deutsche Format prüfen: Date.parse liest "03.04.2026" bei Tag <= 12
+    // als 4. März, bei Tag > 12 greift der Fallback – in einer Datei zwei Kalender.
+    const de = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})[ T]+(\d{1,2}):(\d{2})(?::(\d{2})([.,]\d+)?)?/);
+    if (de) {
+      let y = +de[3]; if (y < 100) y += 2000;
+      return Date.UTC(y, +de[2] - 1, +de[1], +de[4], +de[5], +(de[6] || 0)) / 1000 +
+             (de[7] ? +de[7].replace(',', '.') : 0);
+    }
     let d = Date.parse(s);
     if (d === d) return d / 1000;
     const m = s.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})[ T]+(\d{1,2}):(\d{2})(?::(\d{2})([.,]\d+)?)?/);
@@ -1137,7 +1154,14 @@ async function parseCSV(text, onProgress) {
   const getSeries = (name, unit) => {
     let s = series.get(name);
     if (!s) { s = { name, unit: unit || '', t: [], v: [] }; series.set(name, s); }
+    // Zwei Spalten "Speed (km/h)" und "Speed (mph)" tragen denselben Basisnamen. Ohne
+    // Trennung entstuende eine einzige Serie, die zwischen beiden Einheiten hin- und herspringt.
     else if (!s.unit && unit) s.unit = unit;
+    else if (unit && s.unit && s.unit !== unit) {
+      const key = name + ' [' + unit + ']';
+      s = series.get(key);
+      if (!s) { s = { name: key, unit, t: [], v: [] }; series.set(key, s); }
+    }
     return s;
   };
 
@@ -1157,6 +1181,11 @@ async function parseCSV(text, onProgress) {
   const total = text.length;
   let pos = nl + 1;
   const f = new Array(64);
+  let prevN = 0;
+  /* Sekunden seit Mitternacht und Uhrzeiten springen um 0 Uhr auf null zurück. Ohne
+     Entfaltung sortiert die Nachbearbeitung die Zeit nach Mitternacht VOR die davor und
+     macht aus einer Zehn-Minuten-Fahrt eine von 24 Stunden. */
+  let tPrev = NaN, tOff = 0;
   let chunkStart = pos, lastYield = performance.now();
 
   while (pos < total) {
@@ -1168,7 +1197,16 @@ async function parseCSV(text, onProgress) {
     if (lineEnd > pos) {
       const line = text.slice(pos, lineEnd);
       const n = splitLine(line, delim, f);
-      const t = timeFmt.parse(f[idx.time]);
+      // splitLine beschreibt nur die ersten n Felder. Ohne Leeren traegt eine kurze Zeile
+      // die Werte der Vorzeile weiter und erfindet Messwerte und GPS-Punkte.
+      for (let c = n; c < prevN; c++) f[c] = undefined;
+      prevN = n;
+      let t = timeFmt.parse(f[idx.time]);
+      if (t === t && timeFmt.wrap) {
+        if (tPrev === tPrev && t + tOff < tPrev - 43200) tOff += 86400;
+        t += tOff;
+        if (!(tPrev === tPrev) || t > tPrev) tPrev = t;
+      }
       if (t === t) {
         if (t < tMin) tMin = t;
         if (t > tMax) tMax = t;
@@ -1249,11 +1287,23 @@ async function parseCSV(text, onProgress) {
   }
   gpsSources.sort((a, b) => b.points - a.points);
   const G = bestSrc !== null ? gpsBySrc.get(bestSrc) : null;
-  const gpsOut = G && G.t.length ? {
-    t: Float64Array.from(G.t), lat: Float64Array.from(G.lat), lon: Float64Array.from(G.lon),
-    alt: G.alt.length === G.t.length ? Float64Array.from(G.alt) : null,
-    n: G.t.length, source: bestSrc === '\u0000row' ? null : bestSrc
-  } : null;
+  let gpsOut = null;
+  if (G && G.t.length) {
+    const gn = G.t.length;
+    let gSorted = true;
+    for (let i = 1; i < gn; i++) if (G.t[i] < G.t[i - 1]) { gSorted = false; break; }
+    // bisect und alle dt-Rechnungen setzen eine aufsteigende Zeitachse voraus
+    const ord = gSorted ? null : Array.from({ length: gn }, (_, i) => i).sort((a, b) => G.t[a] - G.t[b]);
+    const pick = arr => {
+      if (!arr || arr.length !== gn) return null;
+      if (!ord) return Float64Array.from(arr);
+      const o = new Float64Array(gn);
+      for (let i = 0; i < gn; i++) o[i] = arr[ord[i]];
+      return o;
+    };
+    gpsOut = { t: pick(G.t), lat: pick(G.lat), lon: pick(G.lon), alt: pick(G.alt),
+               n: gn, source: bestSrc === '\u0000row' ? null : bestSrc };
+  }
 
   return {
     series: out, gps: gpsOut,
@@ -1289,9 +1339,10 @@ const UNIT_CANON = {
   'bar': 'bar', 'psi': 'psi', 'kpa': 'kPa', 'hpa': 'hPa', 'mbar': 'hPa', 'pa': 'Pa', 'mmhg': 'mmHg', 'inhg': 'inHg',
   'l/100km': 'L/100km', 'l/100 km': 'L/100km', 'mpg': 'mpg', 'mpg(us)': 'mpg', 'mpg(uk)': 'mpg_uk',
   'km/l': 'km/L', 'l/h': 'L/h', 'l': 'L', 'ml': 'mL', 'gal': 'gal',
-  'hp': 'PS', 'ps': 'PS', 'bhp': 'hp_mech', 'kw': 'kW', 'w': 'W',
+  'hp': 'hp_mech', 'bhp': 'hp_mech', 'ps': 'PS', 'pk': 'PS', 'cv': 'PS', 'kw': 'kW', 'w': 'W',
   'nm': 'Nm', 'lb-ft': 'lbft', 'ftlb': 'lbft',
-  'g/s': 'g/s', 'kg/h': 'kg/h', 'g': 'g', 'm/s²': 'm/s²', 'm/s2': 'm/s²',
+  'g/s': 'g/s', 'kg/h': 'kg/h', 'g/h': 'g/h', 'lb/min': 'lb/min',
+  'mpa': 'MPa', 'g': 'g', 'm/s²': 'm/s²', 'm/s2': 'm/s²',
   'v': 'V', 'mv': 'mV', 'a': 'A',
   'km': 'km', 'mi': 'mi', 'm': 'm', 'ft': 'ft',
   '°': '°', 'deg': '°', 'grad': '°', '° kw': '°KW', '°kw': '°KW',
@@ -1311,7 +1362,7 @@ const CONVERT = {
   'bar':     { 'psi': v => v / 14.503774, 'kPa': v => v / 100, 'hPa': v => v / 1000,
                'Pa': v => v / 1e5, 'mmHg': v => v / 750.062, 'inHg': v => v / 29.5300 },
   'kPa':     { 'bar': v => v * 100, 'psi': v => v * 6.894757, 'hPa': v => v / 10, 'Pa': v => v / 1000,
-               'mmHg': v => v * 0.133322, 'inHg': v => v * 3.386389 },
+               'MPa': v => v * 1000, 'mmHg': v => v * 0.133322, 'inHg': v => v * 3.386389 },
   'PS':      { 'kW': v => v / 0.7354988, 'W': v => v / 735.4988, 'hp_mech': v => v * 1.013870 },
   'kW':      { 'PS': v => v * 0.7354988, 'hp_mech': v => v * 0.7456999, 'W': v => v / 1000 },
   'Nm':      { 'lbft': v => v * 1.355818 },
@@ -1322,7 +1373,9 @@ const CONVERT = {
   'm/s²':    { 'g': v => v * 9.80665 },
   'V':       { 'mV': v => v / 1000 },
   'L':       { 'mL': v => v / 1000, 'gal': v => v * 3.785412 },
-  'L/h':     { 'gal/h': v => v * 3.785412, 'cc/min': v => v * 0.06 }
+  'L/h':     { 'gal/h': v => v * 3.785412, 'cc/min': v => v * 0.06 },
+  'g/s':     { 'kg/h': v => v / 3.6, 'g/h': v => v / 3600, 'lb/min': v => v * 7.559873 },
+  'λ':       { 'AFR': v => v / 14.7 }
 };
 function convertTo(target, from, v) {
   from = canonUnit(from); target = canonUnit(target);
@@ -1369,7 +1422,9 @@ const METRICS = [
 
   /* --- Aufladung --- */
   { id:'boost', label:'Ladedruck', short:'Ladedruck', u:'bar', d:2, g:'boost', p:10, c:'#42a5f5', pressure:true,
-    a:[/^calculated\s*boost/, /^boost(\s*pressure)?$/, /^ladedruck$/, /^turbo\s*boost/, /boost\s*pressure/] },
+    a:[/^calculated\s*boost/, /^boost(\s*pressure)?$/, /^ladedruck$/, /^turbo\s*boost/,
+       // Soll-Namen ausschliessen, sonst gewinnt "Boost pressure desired" ueber die Samplezahl
+       /^(?!.*(desired|target|commanded|soll|specified|request))\S.*boost\s*pressure/i] },
   { id:'boost_target', label:'Ladedruck Soll', u:'bar', d:2, g:'boost', p:8, c:'#90caf9', pressure:true,
     a:[/boost.*(desired|target|commanded|soll)/, /(desired|commanded).*boost/] },
   { id:'map', label:'Saugrohrdruck (absolut)', short:'MAP', u:'kPa', d:0, g:'boost', p:9, c:'#5c6bc0',
@@ -1415,7 +1470,8 @@ const METRICS = [
   { id:'stft_b2', label:'Kurzzeit-Gemischkorrektur Bank 2', short:'STFT B2', u:'%', d:2, g:'fuel', p:10, c:'#9e9d24',
     a:[/^short\s*term\s*fuel\s*%?\s*trim.*bank\s*2/, /^stft.*(b2|bank\s*2)/, /kurzzeit.*bank\s*2/] },
   { id:'lambda', label:'Lambda', u:'λ', d:3, g:'fuel', p:8,
-    a:[/^lambda/, /equivalence\s*ratio/, /^afr\s*ratio/] },
+    // "AFR" ist das 14,7-fache von Lambda. Ohne Umrechnung stuende hier λ = 14,7 bei Sollgemisch.
+    a:[/^lambda/, /equivalence\s*ratio/, /^afr(\s*ratio)?$/, /air[\s-]*fuel\s*ratio/] },
   { id:'o2_b1s1', label:'O₂-Sonde B1S1', u:'V', d:3, g:'fuel', p:6,
     a:[/o2.*b1.*s1/, /oxygen.*bank\s*1.*sensor\s*1/, /lambdasonde.*1.*1/] },
   { id:'o2_b2s1', label:'O₂-Sonde B2S1', u:'V', d:3, g:'fuel', p:6,
@@ -1425,7 +1481,8 @@ const METRICS = [
   { id:'fuel_level', label:'Tankfüllstand', u:'%', d:0, g:'fuel', p:6,
     a:[/fuel\s*(tank\s*)?level/, /tankfüllstand/, /tankinhalt/] },
   { id:'egr', label:'AGR-Rate', u:'%', d:1, g:'fuel', p:5,
-    a:[/^(commanded\s*)?egr/, /^agr/, /exhaust\s*gas\s*recirc/] },
+    a:[/^(commanded\s*)?egr(?!\s*(error|fehler|deviation))/, /^agr(?!\s*fehler)/,
+       /^exhaust\s*gas\s*recirc(?!.*error)/] },
 
   /* --- Verbrauch --- */
   { id:'fuel_rate', label:'Momentaner Kraftstofffluss', short:'Fluss', u:'L/h', d:2, g:'cons', p:10, c:'#8d6e63',
@@ -1547,8 +1604,7 @@ function buildMetric(def, s, rawName) {
     t: s.t, v, n: s.n, converted: needConv,
     // hp -> PS ist keine Umrechnung, aber eine Umdeutung: die Zahl bleibt, die Bedeutung
     // aendert sich. Wer das nicht ausweist, laesst den Leser mit einer stillen Annahme allein.
-    renamed: !!(srcUnit && !needConv && String(s.unit || '').trim() &&
-                String(s.unit).trim() !== canonUnit(def.u)),
+    renamed: !!(srcUnit && !needConv && String(s.unit || '').trim() && srcUnit !== canonUnit(def.u)),
     group: def.g, decimals: def.d, color: def.c || null, agg: def.agg || 'inst'
   };
 }
@@ -2244,17 +2300,30 @@ function computeGears(ds, rollCircumM) {
   }
   if (ks.length < 120) return null;
   const logs = ks.map(Math.log);
-  let lo = Infinity, hi = -Infinity;
-  for (const x of logs) { if (x < lo) lo = x; if (x > hi) hi = x; }
+  // Spanne auf Perzentile stutzen. Anfahrschlupf und Kupplungsschleifen erzeugen einzelne
+  // Punkte mit sehr hoher Drehzahl je km/h; ungestutzt verbrauchen die ein Fünftel des
+  // Histogramms für ein halbes Promille der Messpunkte und verschmieren die echten Gänge.
+  const sortK = ks.slice().sort((a, b) => a - b);
+  const qk = p => sortK[Math.min(sortK.length - 1, Math.max(0, Math.floor(p * (sortK.length - 1))))];
+  const lo = Math.log(qk(0.002) * 0.97), hi = Math.log(qk(0.998) * 1.03);
   const NB = 320, w = (hi - lo) / NB;
   const h = new Float64Array(NB);
-  for (const x of logs) h[Math.min(NB - 1, Math.max(0, Math.floor((x - lo) / w)))]++;
+  for (const x of logs) { const b = Math.floor((x - lo) / w); if (b >= 0 && b < NB) h[b]++; }
   const hs = smooth(h, 5);
   const total = ks.length;
+  // Ein Gang, der nur zwanzig Sekunden lang benutzt wurde, erreicht nie die Punktdichte
+  // einer Reisegeschwindigkeit – und niedrige Gänge streuen zusätzlich breiter, weil die
+  // Geschwindigkeit in ganzen km/h gemeldet wird. Deshalb entscheidet die Prominenz des
+  // Gipfels, nicht seine Höhe: wie tief fällt die Dichte, bevor sie wieder ansteigt.
   const peaks = [];
   for (let i = 2; i < NB - 2; i++) {
-    if (hs[i] >= hs[i-1] && hs[i] >= hs[i+1] && hs[i] > hs[i-2] && hs[i] > hs[i+2] &&
-        hs[i] / total > 0.0035) peaks.push({ bin: i, val: hs[i], k: Math.exp(lo + (i + .5) * w) });
+    if (!(hs[i] >= hs[i-1] && hs[i] >= hs[i+1] && hs[i] > hs[i-2] && hs[i] > hs[i+2])) continue;
+    if (hs[i] / total < 0.001) continue;              // reines Rauschen aussortieren
+    let l = i; while (l > 0 && hs[l-1] <= hs[l]) l--;
+    let r = i; while (r < NB - 1 && hs[r+1] <= hs[r]) r++;
+    const prom = hs[i] > 0 ? (hs[i] - Math.max(hs[l], hs[r])) / hs[i] : 0;
+    if (prom < 0.7) continue;
+    peaks.push({ bin: i, val: hs[i], k: Math.exp(lo + (i + .5) * w), prom });
   }
   // dicht beieinander liegende Peaks verschmelzen (< 6 % Abstand)
   peaks.sort((a, b) => a.k - b.k);
@@ -2269,10 +2338,20 @@ function computeGears(ds, rollCircumM) {
   const groups = merged.map(() => []);
   const assign = new Int8Array(N).fill(-1);
   let assigned = 0;
+  // Die Toleranz je Cluster richtet sich nach dem Abstand zum Nachbarn. Eine feste Grenze
+  // von 4,5 % lässt beim ersten Gang – der wegen der km/h-Quantisierung ±15 % streut – den
+  // Großteil der Punkte unzugeordnet, obwohl der nächste Gang 40 % entfernt liegt.
+  const mlog = merged.map(m => Math.log(m.k));
+  const tol = mlog.map((x, g) => {
+    let gap = Infinity;
+    for (let o = 0; o < mlog.length; o++) if (o !== g) gap = Math.min(gap, Math.abs(mlog[o] - x));
+    return Math.max(0.044, Math.min(0.25, 0.45 * gap));
+  });
   for (let j = 0; j < ks.length; j++) {
+    const x = logs[j];
     let best = -1, bd = Infinity;
-    for (let g = 0; g < merged.length; g++) { const d = Math.abs(ks[j] - merged[g].k) / merged[g].k; if (d < bd) { bd = d; best = g; } }
-    if (bd < 0.045) { groups[best].push({ k: ks[j], i: idxs[j] }); assign[idxs[j]] = best; assigned++; }
+    for (let g = 0; g < mlog.length; g++) { const d = Math.abs(x - mlog[g]); if (d < bd) { bd = d; best = g; } }
+    if (best >= 0 && bd < tol[best]) { groups[best].push({ k: ks[j], i: idxs[j] }); assign[idxs[j]] = best; assigned++; }
   }
   const gears = [];
   groups.forEach((g, gi) => {
@@ -2856,11 +2935,16 @@ class TrackMap {
     c.addEventListener('pointermove', e => {
       if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
       if (pts.size === 2) {
+        drag = null;                                   // zwei Finger sind kein Ziehen
         const [a, b] = [...pts.values()];
         const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
         if (this._pinch) {
           const f = d / this._pinch;
-          if (Math.abs(Math.log2(f)) > 0.02) { this.zoomBy(Math.log2(f)); this._pinch = d; }
+          if (Math.abs(Math.log2(f)) > 0.02) {
+            const r = c.getBoundingClientRect();
+            this.zoomBy(Math.log2(f), (a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top);
+            this._pinch = d;
+          }
         } else this._pinch = d;
         return;
       }
@@ -2880,14 +2964,33 @@ class TrackMap {
         this.marker = null;
         this.hoverAt(e.clientX - r.left, e.clientY - r.top);
       }
-      pts.delete(e.pointerId); if (pts.size < 2) this._pinch = null; if (!pts.size) drag = null;
+      pts.delete(e.pointerId);
+      if (pts.size < 2) this._pinch = null;
+      if (!pts.size) drag = null;
+      else if (pts.size === 1) {                       // Ziehen am verbliebenen Finger neu ansetzen
+        const [q] = [...pts.values()];
+        drag = { x: q[0], y: q[1], moved: true };
+      }
     };
     c.addEventListener('pointerup', up);
     c.addEventListener('pointercancel', up);
     c.addEventListener('pointerleave', () => { if (this.hoverIdx !== null) { this.hoverIdx = null; this.draw(); if (this.onHover) this.onHover(null); } });
     c.addEventListener('wheel', e => { e.preventDefault();
+      // deltaMode: 0 = Pixel (Trackpad), 1 = Zeilen (klassisches Mausrad), 2 = Seiten
+      const unit = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? this.h || 400 : 1;
+      let px = e.deltaY * unit;
+      if (e.ctrlKey) px *= 3;                          // Trackpad-Kneifgeste meldet kleinere Werte
+      this._wheelAcc = (this._wheelAcc || 0) + px;
       const r = c.getBoundingClientRect();
-      this.zoomBy(e.deltaY > 0 ? -0.5 : 0.5, e.clientX - r.left, e.clientY - r.top);
+      this._wheelAt = [e.clientX - r.left, e.clientY - r.top];
+      if (this._wheelTimer) return;
+      // Ereignisse eines Wischers zusammenfassen und einmal pro Bild anwenden
+      this._wheelTimer = requestAnimationFrame(() => {
+        this._wheelTimer = null;
+        const dz = clamp(-this._wheelAcc / 180, -0.7, 0.7);
+        this._wheelAcc = 0;
+        if (Math.abs(dz) > 0.001) this.zoomBy(dz, this._wheelAt[0], this._wheelAt[1]);
+      });
     }, { passive: false });
     c.addEventListener('dblclick', () => this.fit());
   }
@@ -5117,8 +5220,14 @@ function base64ToBytes(str) {
 }
 function looksBase64(s) {
   if (s.length < 64) return false;
-  const head = s.slice(0, 4096).replace(/\s+/g, '');
-  return /^[A-Za-z0-9+/_-]+={0,2}$/.test(head);
+  // Nur Zeilenumbrüche dürfen weg: base64 wird zeilenweise umbrochen, enthält aber
+  // niemals Tabs, Semikolons oder Kommas. Ohne diese Einschränkung wird jede
+  // Tab-getrennte CSV aus rein alphanumerischen Zellen als base64 fehlgedeutet.
+  const head = s.slice(0, 4096).replace(/[\r\n]+/g, '');
+  if (/[\t;,. ]/.test(head)) return false;
+  if (!/^[A-Za-z0-9+/_-]+={0,2}$/.test(head)) return false;
+  const body = s.replace(/[\r\n]+/g, '');
+  return body.length % 4 === 0 || /=$/.test(body);
 }
 
 /* Der gemeinsame Eingang: nimmt Bytes oder Text und liefert CSV-Text zurück. */
@@ -8348,7 +8457,15 @@ BUILDERS.fields = function (page) {
       g.spread.length ? el('p', { class: 'card-f', style: { padding: '10px 0 0', borderTop: 0 } },
         'Stufensprünge: ' + g.spread.map(x => fmt(x, 3)).join(' · ') +
         '. Zugrunde gelegter Abrollumfang: ' + fmt(App.profile.specs.rollCircum || store.get('rollCircum', 2.0), 3) +
-        ' m (' + (App.profile.specs.tyre || 'in den Einstellungen änderbar') + ').') : null)));
+        ' m (' + (App.profile.specs.tyre || 'in den Einstellungen änderbar') + ').') : null),
+      el('p', { class: 'card-f dim2', style: { padding: '8px 0 0', borderTop: 0, fontSize: '12px' } },
+        'Erkannt werden ' + g.gears.length + ' Übersetzungen. Dass ein Getriebe mehr Gänge hat, ist kein Befund: ' +
+        'eine Übersetzung taucht nur auf, wenn sie in dieser Fahrt lange genug bei geschlossenem Kraftschluss ' +
+        'gehalten wurde. Der höchste Gang fehlt meist, weil er auf der gefahrenen Strecke nicht gebraucht wurde; ' +
+        'der niedrigste, weil beim Anfahren die Kupplung schleift und dabei gar kein festes Verhältnis vorliegt. ' +
+        (g.spread.every((x, i) => i === 0 || x <= g.spread[i - 1] + 0.02)
+          ? 'Die Stufensprünge werden hier von Stufe zu Stufe kleiner – so sieht eine echte Getriebeabstufung aus, das spricht dafür, dass alle erkannten Stufen echt sind.'
+          : 'Achtung: die Stufensprünge werden nicht durchgehend kleiner. Bei einer echten Getriebeabstufung tun sie das – hier könnte eine Stufe fehlen oder eine erfunden sein.'))));
   }
 
   /* Geschwindigkeit × Verbrauch */

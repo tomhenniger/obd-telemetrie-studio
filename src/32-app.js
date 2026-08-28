@@ -921,7 +921,15 @@ BUILDERS.fields = function (page) {
       g.spread.length ? el('p', { class: 'card-f', style: { padding: '10px 0 0', borderTop: 0 } },
         'Stufensprünge: ' + g.spread.map(x => fmt(x, 3)).join(' · ') +
         '. Zugrunde gelegter Abrollumfang: ' + fmt(App.profile.specs.rollCircum || store.get('rollCircum', 2.0), 3) +
-        ' m (' + (App.profile.specs.tyre || 'in den Einstellungen änderbar') + ').') : null)));
+        ' m (' + (App.profile.specs.tyre || 'in den Einstellungen änderbar') + ').') : null),
+      el('p', { class: 'card-f dim2', style: { padding: '8px 0 0', borderTop: 0, fontSize: '12px' } },
+        'Erkannt werden ' + g.gears.length + ' Übersetzungen. Dass ein Getriebe mehr Gänge hat, ist kein Befund: ' +
+        'eine Übersetzung taucht nur auf, wenn sie in dieser Fahrt lange genug bei geschlossenem Kraftschluss ' +
+        'gehalten wurde. Der höchste Gang fehlt meist, weil er auf der gefahrenen Strecke nicht gebraucht wurde; ' +
+        'der niedrigste, weil beim Anfahren die Kupplung schleift und dabei gar kein festes Verhältnis vorliegt. ' +
+        (g.spread.every((x, i) => i === 0 || x <= g.spread[i - 1] + 0.02)
+          ? 'Die Stufensprünge werden hier von Stufe zu Stufe kleiner – so sieht eine echte Getriebeabstufung aus, das spricht dafür, dass alle erkannten Stufen echt sind.'
+          : 'Achtung: die Stufensprünge werden nicht durchgehend kleiner. Bei einer echten Getriebeabstufung tun sie das – hier könnte eine Stufe fehlen oder eine erfunden sein.'))));
   }
 
   /* Geschwindigkeit × Verbrauch */

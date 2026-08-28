@@ -66,11 +66,16 @@ class TrackMap {
     c.addEventListener('pointermove', e => {
       if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
       if (pts.size === 2) {
+        drag = null;                                   // zwei Finger sind kein Ziehen
         const [a, b] = [...pts.values()];
         const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
         if (this._pinch) {
           const f = d / this._pinch;
-          if (Math.abs(Math.log2(f)) > 0.02) { this.zoomBy(Math.log2(f)); this._pinch = d; }
+          if (Math.abs(Math.log2(f)) > 0.02) {
+            const r = c.getBoundingClientRect();
+            this.zoomBy(Math.log2(f), (a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top);
+            this._pinch = d;
+          }
         } else this._pinch = d;
         return;
       }
@@ -90,14 +95,33 @@ class TrackMap {
         this.marker = null;
         this.hoverAt(e.clientX - r.left, e.clientY - r.top);
       }
-      pts.delete(e.pointerId); if (pts.size < 2) this._pinch = null; if (!pts.size) drag = null;
+      pts.delete(e.pointerId);
+      if (pts.size < 2) this._pinch = null;
+      if (!pts.size) drag = null;
+      else if (pts.size === 1) {                       // Ziehen am verbliebenen Finger neu ansetzen
+        const [q] = [...pts.values()];
+        drag = { x: q[0], y: q[1], moved: true };
+      }
     };
     c.addEventListener('pointerup', up);
     c.addEventListener('pointercancel', up);
     c.addEventListener('pointerleave', () => { if (this.hoverIdx !== null) { this.hoverIdx = null; this.draw(); if (this.onHover) this.onHover(null); } });
     c.addEventListener('wheel', e => { e.preventDefault();
+      // deltaMode: 0 = Pixel (Trackpad), 1 = Zeilen (klassisches Mausrad), 2 = Seiten
+      const unit = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? this.h || 400 : 1;
+      let px = e.deltaY * unit;
+      if (e.ctrlKey) px *= 3;                          // Trackpad-Kneifgeste meldet kleinere Werte
+      this._wheelAcc = (this._wheelAcc || 0) + px;
       const r = c.getBoundingClientRect();
-      this.zoomBy(e.deltaY > 0 ? -0.5 : 0.5, e.clientX - r.left, e.clientY - r.top);
+      this._wheelAt = [e.clientX - r.left, e.clientY - r.top];
+      if (this._wheelTimer) return;
+      // Ereignisse eines Wischers zusammenfassen und einmal pro Bild anwenden
+      this._wheelTimer = requestAnimationFrame(() => {
+        this._wheelTimer = null;
+        const dz = clamp(-this._wheelAcc / 180, -0.7, 0.7);
+        this._wheelAcc = 0;
+        if (Math.abs(dz) > 0.001) this.zoomBy(dz, this._wheelAt[0], this._wheelAt[1]);
+      });
     }, { passive: false });
     c.addEventListener('dblclick', () => this.fit());
   }
