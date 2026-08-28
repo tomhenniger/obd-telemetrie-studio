@@ -195,7 +195,10 @@ function buildDataset(parsed, profile) {
     const sm = smooth(track.segSpeed, 5);
     for (let i = 0; i < N; i++) {
       const k = bisect(track.t, grid[i]);
-      trackSpeed[i] = (k >= 0 && grid[i] - track.t[k] < 8) ? sm[Math.min(k + 1, track.n - 1)] : NaN;
+      // benutzt wird die Segmentgeschwindigkeit k->k+1; beide Enden muessen nah am Rasterpunkt liegen,
+      // sonst traegt ein spaeterer Fix seine Geschwindigkeit rueckwaerts in eine Luecke hinein
+      const kk = k >= 0 ? Math.min(k + 1, track.n - 1) : -1;
+      trackSpeed[i] = (k >= 0 && grid[i] - track.t[k] < 8 && track.t[kk] - grid[i] < 8) ? sm[kk] : NaN;
     }
   }
   for (let i = 0; i < N; i++) {
@@ -229,7 +232,7 @@ function buildDataset(parsed, profile) {
     addDerived('cac_delta', 'Ladelufttemperatur Δ Bank 1↔2', 'ΔLLK B1/B2', 'K', 1, 'calc', '#f06292',
       mk(i => G.cac_b1[i] - G.cac_b2[i]),
       'Differenz zwischen beiden Ladeluftkühler-Sensoren. Große Abweichungen deuten auf ungleiche Kühlung oder einen driftenden Sensor.');
-    addDerived('cac_mean', 'Ladelufttemperatur ⌀ beider Bänke', '⌀ LLK', '°C', 0, 'calc', '#4db6ac',
+    addDerived('cac_mean', 'Ladelufttemperatur ⌀ beider Bänke', '⌀ LLK', '°C', 1, 'calc', '#4db6ac',
       mk(i => (G.cac_b1[i] + G.cac_b2[i]) / 2));
   }
   const iatRef = G.ambient || G.iat;
@@ -361,20 +364,29 @@ function computeTrip(ds) {
   T.coolantMax = stats.coolant ? stats.coolant.max : NaN;
 
   /* Zeitanteile */
-  const share = (arr, pred) => {
+  // `valid` grenzt die Grundgesamtheit ein und gilt fuer Zaehler UND Nenner. Ohne das landen
+  // Bedingungen wie "nur in Bewegung" allein im Praedikat und der Anteil faellt zu klein aus.
+  const share = (arr, pred, valid) => {
     if (!arr) return NaN;
     let a = 0, b = 0;
-    for (let i = 0; i < N; i++) if (arr[i] === arr[i]) { b += step; if (pred(arr[i], i)) a += step; }
+    for (let i = 0; i < N; i++) {
+      if (!(arr[i] === arr[i])) continue;
+      if (valid && !valid(arr[i], i)) continue;
+      b += step; if (pred(arr[i], i)) a += step;
+    }
     return b > 0 ? a / b : NaN;
   };
+  const inMotion = (v, i) => sp && sp[i] > 5;
   T.timeHighRpm = share(G.rpm, v => v > 4000);
   T.timeOver3k   = share(G.rpm, v => v > 3000);
   const wot = wotSignal(ds);
   T.wotShare = wot ? share(wot.arr, v => v >= wot.thr) : NaN;
   T.wotSignal = wot ? wot.label : null;
   T.coastShare = G.fuel_rate && G.rpm
-    ? share(G.fuel_rate, (v, i) => v < coastThreshold(ds) && G.rpm[i] > 1000 && sp && sp[i] > 5) : NaN;
-  T.brakeShare = G.accel ? share(G.accel, v => v < -0.08) : NaN;
+    ? share(G.fuel_rate, (v, i) => v < coastThreshold(ds) && G.rpm[i] > 1000,
+            (v, i) => inMotion(v, i) && G.rpm[i] === G.rpm[i]) : NaN;
+  T.coastBezug = 'Zeit in Bewegung mit Motordaten';
+  T.brakeShare = G.accel ? share(G.accel, v => v < -0.08, inMotion) : NaN;
 
   /* Höhenmeter */
   if (track && track.alt && track.n > 5) {
@@ -469,14 +481,30 @@ function computeEvents(ds) {
 
   /* Stopps */
   if (sp) {
+    const raw = [];
     let i = 0;
     while (i < N) {
       if (sp[i] === sp[i] && sp[i] <= 1.5) {
         let j = i; while (j + 1 < N && sp[j + 1] === sp[j + 1] && sp[j + 1] <= 1.5) j++;
-        const dur = (j - i + 1) * step;
-        if (dur >= 3) ev.stops.push({ i0: i, i1: j, t0: grid[i], dur });
+        raw.push({ i0: i, i1: j });
         i = j + 1;
       } else i++;
+    }
+    // Ein Quantisierungssprung auf 2 km/h fuer eine Sekunde macht aus einem Halt keine zwei.
+    const merged = [];
+    for (const s of raw) {
+      const p = merged[merged.length - 1];
+      if (p) {
+        const gap = (s.i0 - p.i1 - 1) * step;
+        let peak = 0;
+        for (let k = p.i1 + 1; k < s.i0; k++) if (sp[k] === sp[k] && sp[k] > peak) peak = sp[k];
+        if (gap < 3 && peak < 5) { p.i1 = s.i1; continue; }
+      }
+      merged.push({ i0: s.i0, i1: s.i1 });
+    }
+    for (const s of merged) {
+      const dur = (s.i1 - s.i0 + 1) * step;
+      if (dur >= 3) ev.stops.push({ i0: s.i0, i1: s.i1, t0: grid[s.i0], dur });
     }
   }
 
@@ -494,8 +522,10 @@ function computeEvents(ds) {
           seg.rpm0 = G.rpm ? G.rpm[i] : NaN;
           seg.rpmMax = -Infinity; seg.boostMax = -Infinity; seg.powerMax = -Infinity;
           seg.timingMin = Infinity; seg.speed0 = sp ? sp[i] : NaN; seg.speed1 = sp ? sp[j] : NaN;
+          seg.rpm1 = G.rpm ? G.rpm[j] : NaN; seg.speedMax = -Infinity;
           seg.cacMax = -Infinity;
           for (let k = i; k <= j; k++) {
+            if (sp && sp[k] > seg.speedMax) seg.speedMax = sp[k];
             if (G.rpm && G.rpm[k] > seg.rpmMax) seg.rpmMax = G.rpm[k];
             if (G.boost && G.boost[k] > seg.boostMax) seg.boostMax = G.boost[k];
             if (G.power && G.power[k] > seg.powerMax) seg.powerMax = G.power[k];
@@ -540,8 +570,10 @@ function computeEvents(ds) {
           const dur = tB - tA;
           const avgA = ((to - from) / 3.6) / dur;          // m/s²
           if (dur > 0.5 && worst < 1.5 && avgA > 1.1 && (!best || dur < best.dur))
-            best = { from, to, dur, t0: tA, i0: i, i1: j, avgA, plateau: worst };
-          i = j;
+            best = { from, to, dur, t0: tA, i0: i, i1: j, avgA, plateau: worst,
+                     rolling: from > 0 };
+          // kein Sprung auf j: ein verworfener Kandidat verschluckt sonst alle Startpunkte
+          // bis zu seinem Ende – darunter den schnellsten Zug der Fahrt
         }
       }
       if (best) ev.sprints.push(best);

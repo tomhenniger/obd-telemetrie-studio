@@ -220,3 +220,47 @@
 - **Neue Karte „Datengüte des Profilkatalogs“** in den Einstellungen: gemessene Abdeckung je Feld
   über alle 231 Profile, getrennt nach Stammdaten und Sollwerten, mit Balken und Erklärung, was
   ein fehlender Wert für die Diagnose bedeutet.
+
+## Bugfixes (XML-Export, externe Prüfung)
+
+Ein externer KI-Agent hat den XML-Export auseinandergenommen und Widersprüche gemeldet, die im UI
+nicht sichtbar waren. Alle Punkte wurden gegen die Rohdatei nachgerechnet und bestätigt.
+
+- **Betriebszustände summierten sich auf 52 %**: Die Anteile wurden gegen die Gesamtdauer gerechnet,
+  vergeben werden sie aber nur für Rasterpunkte mit bekannter Geschwindigkeit. Jetzt Bezug auf
+  `knownTime`, mit `bezug_s` am Element und einer eigenen Zeile für die Zeit ohne Tempodaten.
+- **Schubanteil um Faktor 2 zu klein**: `share()` verlangte im Zähler zusätzlich „in Bewegung“,
+  im Nenner nicht. Die Funktion nimmt jetzt ein Gültigkeitsprädikat, das für beide gilt.
+- **Beschleunigungsmessung verschluckte den schnellsten Zug**: Ein am Plateaufilter gescheiterter
+  Kandidat schob den Startzeiger trotzdem weiter. 50→100 km/h jetzt 4,51 s statt 4,81 s. Zusätzlich
+  wird `art="rollend"` ausgewiesen, damit die Zeit nicht gegen eine 0–100-Werksangabe gelesen wird.
+- **Volllastzug mischte Maximum und Endwert**: `drehzahl_bis` war die Höchstdrehzahl, `tempo_bis`
+  das Endtempo — zusammen ergab das eine Übersetzung, die es nicht gibt. Jetzt `_von`, `_bis` und
+  `_max` getrennt für beide Größen.
+- **Ein Halt wurde doppelt gezählt**: Ein Quantisierungssprung auf 2 km/h für 0,8 s trennte einen
+  51-Sekunden-Stopp in zwei. Benachbarte Stopp-Segmente werden jetzt zusammengefasst.
+- **Zeitreihe zeigte Tempo für die ersten Sekunden, das es nicht gab**: 103 GPS-Fixes tragen
+  denselben Startzeitstempel, der nächste echte Fix liegt 124 s später. Geprüft wird jetzt das
+  Alter beider Enden des benutzten Segments.
+- **`sollwert_quelle="profil"` war bei 15 von 21 Befunden unwahr**: Werkstatt-Faustwerte wurden wie
+  Werksangaben ausgezeichnet. Dritter Wert `regelwerk` eingeführt, im UI als Badge sichtbar.
+- **Maskenwerte ohne Bedingung**: „maximal 56 °C“ (nur warm) stand neben „max 58“ derselben Größe.
+  Maskenbasierte Befunde tragen jetzt `bedingung`, „Bewertete Zeit“ und den Gesamtwert daneben.
+- **Neuer Status `ohne-belastbare-messgroesse`**: „nicht bewertbar“ hieß laut Anleitung „die
+  Fahrsituation kam nicht vor“, wurde aber auch für „die Messgröße taugt nicht“ benutzt — mit Wert
+  und Sollwert daneben, aus denen der Leser das Urteil selbst zog. Rohwert wandert ins Detail.
+- **Kleinere Korrekturen**: `cac_mean` wird mit einer Nachkommastelle ausgegeben (der Mittelwert
+  zweier ganzzahliger Sensoren ist stets ein Vielfaches von 0,5, jede zweite Zeile war um 0,5 K
+  verschoben); `hp → PS` wird als Umbenennung ausgewiesen; `aussagekraft` entfällt, wo nichts
+  bewertet wurde; alle vorkommenden Attribute sind in der Anleitung definiert.
+- **Textaussagen an die Datenlage angepasst**: kein Urteil mehr über den Kühlerlüfter (keine
+  Messgröße), kein „Median“ über eine einzelne Stichprobe, keine Aussage über die Tachokalibrierung
+  (verglichen wird der Steuergerätewert), und die Motorlast beim Pedalmaximum wird im Sekundenfenster
+  gemessen statt aus zwei unabhängigen globalen Maxima behauptet.
+
+## UI-Änderungen (Nachvollziehbarkeit)
+
+- Befunde zeigen jetzt Badges für `Bedingung` und `Sollwert aus Regelwerk` sowie einen Hinweis,
+  auf welche Fahrsituation der Wert eingegrenzt ist. Damit steht im UI dasselbe wie im XML.
+- „Aussagekraft“ wird bei nicht bewerteten Befunden ausgeblendet — dort beschrieb sie das Gewicht
+  der Regel und wurde als Belastbarkeit des Ergebnisses gelesen.

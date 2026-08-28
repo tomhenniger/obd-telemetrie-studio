@@ -1545,6 +1545,10 @@ function buildMetric(def, s, rawName) {
     id: def.id, def, label: def.label, short: def.short || def.label,
     unit: canonUnit(def.u), srcUnit: s.unit, rawName,
     t: s.t, v, n: s.n, converted: needConv,
+    // hp -> PS ist keine Umrechnung, aber eine Umdeutung: die Zahl bleibt, die Bedeutung
+    // aendert sich. Wer das nicht ausweist, laesst den Leser mit einer stillen Annahme allein.
+    renamed: !!(srcUnit && !needConv && String(s.unit || '').trim() &&
+                String(s.unit).trim() !== canonUnit(def.u)),
     group: def.g, decimals: def.d, color: def.c || null, agg: def.agg || 'inst'
   };
 }
@@ -1756,7 +1760,10 @@ function buildDataset(parsed, profile) {
     const sm = smooth(track.segSpeed, 5);
     for (let i = 0; i < N; i++) {
       const k = bisect(track.t, grid[i]);
-      trackSpeed[i] = (k >= 0 && grid[i] - track.t[k] < 8) ? sm[Math.min(k + 1, track.n - 1)] : NaN;
+      // benutzt wird die Segmentgeschwindigkeit k->k+1; beide Enden muessen nah am Rasterpunkt liegen,
+      // sonst traegt ein spaeterer Fix seine Geschwindigkeit rueckwaerts in eine Luecke hinein
+      const kk = k >= 0 ? Math.min(k + 1, track.n - 1) : -1;
+      trackSpeed[i] = (k >= 0 && grid[i] - track.t[k] < 8 && track.t[kk] - grid[i] < 8) ? sm[kk] : NaN;
     }
   }
   for (let i = 0; i < N; i++) {
@@ -1790,7 +1797,7 @@ function buildDataset(parsed, profile) {
     addDerived('cac_delta', 'Ladelufttemperatur Δ Bank 1↔2', 'ΔLLK B1/B2', 'K', 1, 'calc', '#f06292',
       mk(i => G.cac_b1[i] - G.cac_b2[i]),
       'Differenz zwischen beiden Ladeluftkühler-Sensoren. Große Abweichungen deuten auf ungleiche Kühlung oder einen driftenden Sensor.');
-    addDerived('cac_mean', 'Ladelufttemperatur ⌀ beider Bänke', '⌀ LLK', '°C', 0, 'calc', '#4db6ac',
+    addDerived('cac_mean', 'Ladelufttemperatur ⌀ beider Bänke', '⌀ LLK', '°C', 1, 'calc', '#4db6ac',
       mk(i => (G.cac_b1[i] + G.cac_b2[i]) / 2));
   }
   const iatRef = G.ambient || G.iat;
@@ -1922,20 +1929,29 @@ function computeTrip(ds) {
   T.coolantMax = stats.coolant ? stats.coolant.max : NaN;
 
   /* Zeitanteile */
-  const share = (arr, pred) => {
+  // `valid` grenzt die Grundgesamtheit ein und gilt fuer Zaehler UND Nenner. Ohne das landen
+  // Bedingungen wie "nur in Bewegung" allein im Praedikat und der Anteil faellt zu klein aus.
+  const share = (arr, pred, valid) => {
     if (!arr) return NaN;
     let a = 0, b = 0;
-    for (let i = 0; i < N; i++) if (arr[i] === arr[i]) { b += step; if (pred(arr[i], i)) a += step; }
+    for (let i = 0; i < N; i++) {
+      if (!(arr[i] === arr[i])) continue;
+      if (valid && !valid(arr[i], i)) continue;
+      b += step; if (pred(arr[i], i)) a += step;
+    }
     return b > 0 ? a / b : NaN;
   };
+  const inMotion = (v, i) => sp && sp[i] > 5;
   T.timeHighRpm = share(G.rpm, v => v > 4000);
   T.timeOver3k   = share(G.rpm, v => v > 3000);
   const wot = wotSignal(ds);
   T.wotShare = wot ? share(wot.arr, v => v >= wot.thr) : NaN;
   T.wotSignal = wot ? wot.label : null;
   T.coastShare = G.fuel_rate && G.rpm
-    ? share(G.fuel_rate, (v, i) => v < coastThreshold(ds) && G.rpm[i] > 1000 && sp && sp[i] > 5) : NaN;
-  T.brakeShare = G.accel ? share(G.accel, v => v < -0.08) : NaN;
+    ? share(G.fuel_rate, (v, i) => v < coastThreshold(ds) && G.rpm[i] > 1000,
+            (v, i) => inMotion(v, i) && G.rpm[i] === G.rpm[i]) : NaN;
+  T.coastBezug = 'Zeit in Bewegung mit Motordaten';
+  T.brakeShare = G.accel ? share(G.accel, v => v < -0.08, inMotion) : NaN;
 
   /* Höhenmeter */
   if (track && track.alt && track.n > 5) {
@@ -2030,14 +2046,30 @@ function computeEvents(ds) {
 
   /* Stopps */
   if (sp) {
+    const raw = [];
     let i = 0;
     while (i < N) {
       if (sp[i] === sp[i] && sp[i] <= 1.5) {
         let j = i; while (j + 1 < N && sp[j + 1] === sp[j + 1] && sp[j + 1] <= 1.5) j++;
-        const dur = (j - i + 1) * step;
-        if (dur >= 3) ev.stops.push({ i0: i, i1: j, t0: grid[i], dur });
+        raw.push({ i0: i, i1: j });
         i = j + 1;
       } else i++;
+    }
+    // Ein Quantisierungssprung auf 2 km/h fuer eine Sekunde macht aus einem Halt keine zwei.
+    const merged = [];
+    for (const s of raw) {
+      const p = merged[merged.length - 1];
+      if (p) {
+        const gap = (s.i0 - p.i1 - 1) * step;
+        let peak = 0;
+        for (let k = p.i1 + 1; k < s.i0; k++) if (sp[k] === sp[k] && sp[k] > peak) peak = sp[k];
+        if (gap < 3 && peak < 5) { p.i1 = s.i1; continue; }
+      }
+      merged.push({ i0: s.i0, i1: s.i1 });
+    }
+    for (const s of merged) {
+      const dur = (s.i1 - s.i0 + 1) * step;
+      if (dur >= 3) ev.stops.push({ i0: s.i0, i1: s.i1, t0: grid[s.i0], dur });
     }
   }
 
@@ -2055,8 +2087,10 @@ function computeEvents(ds) {
           seg.rpm0 = G.rpm ? G.rpm[i] : NaN;
           seg.rpmMax = -Infinity; seg.boostMax = -Infinity; seg.powerMax = -Infinity;
           seg.timingMin = Infinity; seg.speed0 = sp ? sp[i] : NaN; seg.speed1 = sp ? sp[j] : NaN;
+          seg.rpm1 = G.rpm ? G.rpm[j] : NaN; seg.speedMax = -Infinity;
           seg.cacMax = -Infinity;
           for (let k = i; k <= j; k++) {
+            if (sp && sp[k] > seg.speedMax) seg.speedMax = sp[k];
             if (G.rpm && G.rpm[k] > seg.rpmMax) seg.rpmMax = G.rpm[k];
             if (G.boost && G.boost[k] > seg.boostMax) seg.boostMax = G.boost[k];
             if (G.power && G.power[k] > seg.powerMax) seg.powerMax = G.power[k];
@@ -2101,8 +2135,10 @@ function computeEvents(ds) {
           const dur = tB - tA;
           const avgA = ((to - from) / 3.6) / dur;          // m/s²
           if (dur > 0.5 && worst < 1.5 && avgA > 1.1 && (!best || dur < best.dur))
-            best = { from, to, dur, t0: tA, i0: i, i1: j, avgA, plateau: worst };
-          i = j;
+            best = { from, to, dur, t0: tA, i0: i, i1: j, avgA, plateau: worst,
+                     rolling: from > 0 };
+          // kein Sprung auf j: ein verworfener Kandidat verschluckt sonst alle Startpunkte
+          // bis zu seinem Ende – darunter den schnellsten Zug der Fahrt
         }
       }
       if (best) ev.sprints.push(best);
@@ -4234,9 +4270,11 @@ const DIAG_RULES = [
     return {
       status: st, value: med, unit: '°C', dec: 0,
       ref: P[0] + '–' + P[1] + ' °C', refLo: P[0], refHi: P[1],
-      extra: [['Maximum', fmt(mx, 0) + ' °C'], ['Minimum (warm)', fmt(mn, 0) + ' °C'], ['Bewertete Zeit', fmtDur(d)]],
+      cond: 'Kühlmittel ≥ 80 °C und Motor läuft',
+      // kein "Minimum (warm)": das ist die Maskengrenze, keine Beobachtung
+      extra: [['Maximum', fmt(mx, 0) + ' °C'], ['Bewertete Zeit', fmtDur(d)]],
       text: st === S.OK
-        ? 'Die Kühlmitteltemperatur hält im warmen Betrieb ein stabiles Plateau von ' + fmt(med, 0) + ' °C. Kennfeldthermostat, Wasserpumpe und Kühlerlüfter arbeiten unauffällig.'
+        ? 'Die Kühlmitteltemperatur hält im warmen Betrieb ein stabiles Plateau von ' + fmt(med, 0) + ' °C. Kennfeldthermostat und Wasserpumpe arbeiten unauffällig. Über den Kühlerlüfter sagt die Aufzeichnung nichts – dafür fehlt die Messgröße.'
         : med < P[0]
           ? 'Der Motor bleibt mit ' + fmt(med, 0) + ' °C unter dem Sollplateau. Typische Ursache: Thermostat hängt offen oder falsches Thermostat verbaut. Folge: mehr Verbrauch, stärkere Ventilverkokung, Ölverdünnung.'
           : 'Die Kühlmitteltemperatur liegt mit ' + fmt(med, 0) + ' °C über dem Sollband (Spitze ' + fmt(mx, 0) + ' °C). Kühlmittelstand, Entlüftung, Wasserpumpe und Lüfterlauf prüfen.',
@@ -4271,12 +4309,21 @@ const DIAG_RULES = [
   requires: ['cac_mean'], confidence: 'hoch', provenance: 'gemessen',
   run(c) {
     const m = c.masks.warm;
+    const d = c.dur(m);
     const mx = c.agg('cac_mean', m, 'max'), med = c.agg('cac_mean', m, 'median');
+    // Der Gesamtmaximalwert steht anderswo im Dokument. Ohne ihn hier liest sich "maximal"
+    // zweimal mit verschiedenen Zahlen und der Leser muss einen Fehler annehmen.
+    const mxAll = c.stats.cac_mean ? c.stats.cac_mean.max : NaN;
+    const colder = isFinite(mxAll) && mxAll > mx + 0.4;
     const st = band(mx, 65, 80, true);
     return { status: st, value: mx, unit: '°C', dec: 0, ref: '≤ 65 °C', refLo: 20, refHi: 65,
-      extra: [['Median', fmt(med, 0) + ' °C']],
+      cond: 'Kühlmittel ≥ 80 °C',
+      extra: [['Median', fmt(med, 0) + ' °C'], ['Bewertete Zeit', fmtDur(d)],
+              colder ? ['Maximum über die ganze Aufzeichnung', fmt(mxAll, 0) + ' °C (vor Erreichen der Betriebstemperatur)'] : null],
       text: st === S.OK
-        ? 'Die Ladeluft bleibt mit maximal ' + fmt(mx, 0) + ' °C klar unterhalb der Klopfgrenze. Der Ladeluftkühlkreis arbeitet.'
+        ? 'Die Ladeluft bleibt im warmen Betrieb mit maximal ' + fmt(mx, 0) + ' °C klar unterhalb der Klopfgrenze'
+          + (colder ? ' (über die ganze Aufzeichnung, also inklusive Warmlaufphase, bis ' + fmt(mxAll, 0) + ' °C)' : '')
+          + '. Der Ladeluftkühlkreis arbeitet.'
         : 'Die Ladeluft erreicht ' + fmt(mx, 0) + ' °C. Ab etwa 65 °C beginnt das Steuergerät Zündwinkel und Ladedruck zurückzunehmen – die Leistung sinkt, bevor etwas kaputtgeht.',
       action: st === S.OK ? null : ['Niedertemperatur-Kreis entlüften', 'Zusatz-Kühlmittelpumpe per Stellglieddiagnose prüfen', 'NT-Kühler vorne auf Verschmutzung kontrollieren'] };
   }
@@ -4304,6 +4351,7 @@ const DIAG_RULES = [
   run(c) {
     const m = c.combine(c.masks.warm, c.mask(i => { const l = c.V('load_abs') || c.V('load_calc'); return l && l[i] > (c.loadIsAbs ? 100 : 60); }));
     const use = c.dur(m) > 20 ? m : c.masks.warm;
+    const useLoad = c.dur(m) > 20;
     const d = c.V('cac_delta');
     let mx = 0, sum = 0, cnt = 0;
     for (let i = 0; i < c.N; i++) { if (!use[i] || !(d[i] === d[i])) continue; const a = Math.abs(d[i]); if (a > mx) mx = a; sum += a; cnt++; }
@@ -4311,7 +4359,8 @@ const DIAG_RULES = [
     const mean = sum / cnt;
     const st = band(mean, 3, 6, true);
     return { status: st, value: mean, unit: 'K', dec: 2, ref: '≤ 3,0 K', refLo: 0, refHi: 3,
-      extra: [['Maximale Abweichung', fmt(mx, 1) + ' K']],
+      cond: useLoad ? 'Kühlmittel ≥ 80 °C und hohe Last' : 'Kühlmittel ≥ 80 °C',
+      extra: [['Maximale Abweichung', fmt(mx, 1) + ' K'], ['Bewertete Zeit', fmtDur(c.dur(use))]],
       text: st === S.OK
         ? 'Beide Ladeluftkühler-Pakete arbeiten mit im Mittel ' + fmt(mean, 2) + ' K Abweichung praktisch identisch. Ein einseitig zugesetztes oder innen undichtes Kühlerpaket ist damit sehr unwahrscheinlich.'
         : 'Die beiden Bänke weichen im Mittel um ' + fmt(mean, 2) + ' K voneinander ab (Spitze ' + fmt(mx, 1) + ' K). Das deutet auf ein einseitig zugesetztes Kühlerpaket, einen Luftpolster im NT-Kreis oder einen driftenden Sensor hin.',
@@ -4346,13 +4395,20 @@ const DIAG_RULES = [
     const med = quantileSorted(sorted, .5);
     const best = drops.reduce((a, b) => b.drop > a.drop ? b : a);
     const st = med >= 8 ? S.OK : med >= 3 ? S.WARN : S.CRIT;
+    // Ein "Median" aus einem einzigen Zug ist eine Einzelmessung. Sagen, was es ist.
+    const few = drops.length < 3;
+    const wie = drops.length === 1 ? 'im einzigen auswertbaren Zug'
+              : few ? 'in den ' + drops.length + ' auswertbaren Zügen' : 'im Median';
     return { status: st, value: med, unit: 'K', dec: 1, ref: '≥ 8 K in 60 s', refLo: 8, refHi: 40,
+      confidence: few ? 'niedrig' : 'mittel',
+      note: few ? 'Nur ' + drops.length + ' auswertbare' + (drops.length === 1 ? 'r Zug' : ' Züge')
+                  + ' – die Zahl beschreibt diese Messung, nicht das typische Verhalten des Fahrzeugs.' : null,
       extra: [['Ausgewertete Züge', String(drops.length)],
               ['Bester Zug', fmt(best.drop, 1) + ' K (' + fmt(best.peak, 0) + ' → ' + fmt(best.after, 0) + ' °C)'],
               ['Erwärmung dabei', '+' + fmt(best.peak - best.before, 0) + ' K']],
       text: st === S.OK
-        ? 'Nach einem Volllastzug fällt die Ladelufttemperatur binnen einer Minute im Median um ' + fmt(med, 1) + ' K. Der Niedertemperatur-Kreis transportiert die Wärme ab – die Zusatzwasserpumpe fördert.'
-        : 'Nach Volllast fällt die Ladelufttemperatur nur um ' + fmt(med, 1) + ' K je Minute. Eine schwache Rückkühlung ist die klassische Signatur einer nicht mehr fördernden Zusatz-Wasserpumpe im Ladeluftkreis – vorausgesetzt, beide Bänke verhalten sich dabei gleich.',
+        ? 'Nach einem Volllastzug fällt die Ladelufttemperatur binnen einer Minute ' + wie + ' um ' + fmt(med, 1) + ' K. Der Niedertemperatur-Kreis transportiert die Wärme ab – die Zusatzwasserpumpe fördert.'
+        : 'Nach Volllast fällt die Ladelufttemperatur ' + wie + ' nur um ' + fmt(med, 1) + ' K je Minute. Eine schwache Rückkühlung ist die klassische Signatur einer nicht mehr fördernden Zusatz-Wasserpumpe im Ladeluftkreis – vorausgesetzt, beide Bänke verhalten sich dabei gleich.',
       action: st === S.OK ? null : ['Zusatz-Wasserpumpe (V188/V178) stellgliedtesten', 'Niedertemperatur-Kreis auf Luftpolster prüfen', 'Messung bei über 30 °C Außentemperatur wiederholen'] };
   }
 },
@@ -4575,7 +4631,7 @@ const DIAG_RULES = [
   }
 },
 {
-  id: 'speed_cross', group: 'Motor', title: 'Tachoabgleich OBD gegen GPS',
+  id: 'speed_cross', group: 'Motor', title: 'Geschwindigkeitssignal OBD gegen GPS',
   requires: ['speed', 'speed_gps'], confidence: 'mittel', provenance: 'abgeleitet',
   run(c) {
     const a = c.V('speed'), b = c.V('speed_gps');
@@ -4587,7 +4643,7 @@ const DIAG_RULES = [
     return { status: st, value: dev, unit: '%', dec: 2, ref: '±4 %', refLo: -4, refHi: 4,
       extra: [['⌀ OBD', fmt(sa / n, 1) + ' km/h'], ['⌀ GPS', fmt(sb / n, 1) + ' km/h']],
       text: st === S.OK
-        ? 'OBD- und GPS-Geschwindigkeit weichen nur um ' + fmt(dev, 2) + ' % voneinander ab. Radumfang und Tachokalibrierung passen zusammen.'
+        ? 'OBD- und GPS-Geschwindigkeit weichen nur um ' + fmt(dev, 2) + ' % voneinander ab. Der Radumfang passt zur codierten Übersetzung. Über die Tachoanzeige sagt das nichts: verglichen wird der Steuergerätewert (PID 0x0D), die Anzeige im Kombiinstrument muss gesetzlich nach oben abweichen.'
         : 'OBD-Geschwindigkeit weicht um ' + fmt(dev, 2) + ' % vom GPS ab. Bei dauerhaft mehr als 8 % lohnt der Blick auf Reifengröße und die codierte Achsübersetzung.' };
   }
 },
@@ -4669,13 +4725,28 @@ const DIAG_RULES = [
   run(c) {
     const pMax = c.stats.pedal.max, pIdle = c.stats.pedal.p05;
     const lMax = c.stats.load_abs.max;
+    // Last im Fenster um das Pedalmaximum – sonst behauptet der Text eine Gleichzeitigkeit,
+    // die aus zwei unabhaengigen globalen Maxima gar nicht folgt
+    const pArr = c.V('pedal'), lArr = c.V('load_abs');
+    let pi = -1, pv = -Infinity;
+    for (let i = 0; i < c.N; i++) if (pArr[i] === pArr[i] && pArr[i] > pv) { pv = pArr[i]; pi = i; }
+    const w = Math.max(1, Math.round(1 / c.step));
+    let lNear = -Infinity, li = -1;
+    for (let i = Math.max(0, pi - w); i <= Math.min(c.N - 1, pi + w); i++)
+      if (lArr[i] === lArr[i] && lArr[i] > lNear) { lNear = lArr[i]; li = i; }
+    let lmi = -1, lmv = -Infinity;
+    for (let i = 0; i < c.N; i++) if (lArr[i] === lArr[i] && lArr[i] > lmv) { lmv = lArr[i]; lmi = i; }
+    const dt = (pi >= 0 && lmi >= 0) ? Math.abs(lmi - pi) * c.step : NaN;
     const wotSeen = c.dur(c.masks.wot) > 1;
     if (!wotSeen) return { status: S.UNCLEAR, note: 'Ohne Volllastzug lässt sich die Pedalskalierung nicht prüfen.' };
     const st = pMax >= 55 ? S.OK : S.WARN;
     return { status: st, value: pMax, unit: '%', dec: 1, ref: '≥ 55 % bei Volllast', refLo: 55, refHi: 100,
-      extra: [['Ruhewert', fmt(pIdle, 1) + ' %'], ['Maximale Last dabei', fmt(lMax, 0) + ' %']],
+      extra: [['Ruhewert', fmt(pIdle, 1) + ' %'],
+              ['Last im Sekundenfenster um das Pedalmaximum', isFinite(lNear) ? fmt(lNear, 0) + ' %' : '–'],
+              ['Höchste Last der Fahrt', fmt(lMax, 0) + ' %'],
+              isFinite(dt) ? ['Abstand beider Maxima', fmt(dt, 1) + ' s'] : null],
       text: st === S.OK
-        ? 'Der Pedalgeber meldet im Ruhezustand ' + fmt(pIdle, 1) + ' % und bei Vollgas ' + fmt(pMax, 1) + ' %. VAG nutzt den elektrischen Sensorbereich bewusst nicht voll aus – ' + fmt(pMax, 1) + ' % sind hier echtes Vollgas, nicht Teillast. Die gleichzeitig erreichten ' + fmt(lMax, 0) + ' % Motorlast bestätigen das.'
+        ? 'Der Pedalgeber meldet im Ruhezustand ' + fmt(pIdle, 1) + ' % und bei Vollgas ' + fmt(pMax, 1) + ' %. VAG nutzt den elektrischen Sensorbereich bewusst nicht voll aus – ' + fmt(pMax, 1) + ' % sind hier echtes Vollgas, nicht Teillast. Im Sekundenfenster um dieses Pedalmaximum liegt die Motorlast bei ' + fmt(lNear, 0) + ' %, was das bestätigt.'
         : 'Bei Volllast (' + fmt(lMax, 0) + ' % Motorlast) erreicht der Pedalgeber nur ' + fmt(pMax, 1) + ' %. Kennlinie des Gebers prüfen.' };
   }
 }
@@ -4842,6 +4913,10 @@ function findingCard(r) {
         el('span', {}, r.unit || ''))
     : null;
   const body = el('div', { class: 'f-b' });
+  // Auf welche Fahrsituation der Wert eingegrenzt ist, gehoert neben den Wert und nicht in
+  // eine Fussnote: ein "Maximum" unter Maske ist nicht das Maximum der Aufzeichnung.
+  if (r.cond) body.appendChild(el('p', { class: 'dim2', style: { fontSize: '12px' } },
+    'Bewertet nur unter: ' + r.cond + '. Werte über die gesamte Aufzeichnung können höher liegen.'));
   if (r.text) body.appendChild(el('p', {}, r.text));
   if (r.note) body.appendChild(el('p', {}, r.note));
   if (st === 'missing') body.appendChild(el('p', {},
@@ -4863,11 +4938,18 @@ function findingCard(r) {
       'Rückfallwert der Motorklasse – der ist bewusst weit gefasst, damit er keine Fehlalarme erzeugt, ' +
       'und entsprechend grob. Ein eigenes Profil mit dem Werkswert macht diese Prüfung schärfer.'));
   body.appendChild(el('div', { class: 'f-meta' },
-    el('span', { class: 'badge mute' }, 'Aussagekraft: ' + (r.confidence || '–')),
+    // Bei nicht bewerteten Befunden beschreibt confidence das Vorabgewicht der Regel und nicht
+    // die Belastbarkeit des Ergebnisses – dort waere "Aussagekraft: hoch" irrefuehrend.
+    (st === 'ok' || st === 'warn' || st === 'crit')
+      ? el('span', { class: 'badge mute' }, 'Aussagekraft: ' + (r.confidence || '–')) : null,
     el('span', { class: 'badge mute' }, r.provenance === 'gemessen' ? 'gemessener Wert'
       : r.provenance === 'abgeleitet' ? 'abgeleiteter Wert' : 'Schätzung'),
+    r.cond ? el('span', { class: 'badge mute' }, 'Bedingung: ' + r.cond) : null,
     r.ref ? el('span', { class: 'badge mute' }, 'Soll: ' + r.ref) : null,
-    r.specDerived ? el('span', { class: 'badge warn' }, 'Sollwert klassenbasiert') : null));
+    r.specDerived ? el('span', { class: 'badge warn' }, 'Sollwert klassenbasiert')
+      : (r.ref && !(r.usesSpec && r.usesSpec.length))
+        ? el('span', { class: 'badge mute', title: 'Allgemeiner Werkstatt-Erfahrungswert, keine Herstellerangabe für genau diesen Motor.' }, 'Sollwert aus Regelwerk')
+        : null));
 
   return el('details', { class: 'finding acc ' + st, open: st === 'crit' || st === 'warn' },
     el('summary', { class: 'f-h' },
@@ -6922,8 +7004,10 @@ const AI_DETAIL = {
 const AI_RULES = [
   'Die Werte in diesem Dokument sind bereits ausgewertet. Rechne sie nicht neu und leite keine Zahlen ab, die hier nicht stehen.',
   'Jede Messgröße trägt ein Attribut herkunft. „gemessen“ heißt: vom Steuergerät geliefert. „berechnet“ heißt: von diesem Werkzeug aus anderen Größen abgeleitet. „app-rechenwert“ heißt: die Aufzeichnungs-App hat den Wert selbst errechnet statt gemessen — solche Werte können ein Problem weder belegen noch ausschließen und dürfen nicht als Beweis benutzt werden.',
-  'Jeder Befund trägt einen Status. „unauffaellig“, „grenzwertig“ und „auffaellig“ sind bewertete Ergebnisse. „nicht-bewertbar“ heißt: die dafür nötige Fahrsituation kam in dieser Aufzeichnung nicht vor. „pid-fehlt“ heißt: die Messgröße wurde gar nicht aufgezeichnet. Die letzten beiden sind keine Entwarnung, sondern eine Wissenslücke — behandle sie als solche.',
-  'Sollwerte tragen ein Attribut sollwert-quelle. Bei „klassenbasiert“ stammt der Sollbereich nicht aus den Werksangaben dieses Motors, sondern aus einem weit gefassten Rückfallwert der Motorbauart. Solche Befunde tragen weniger Gewicht.',
+  'Jeder Befund trägt einen Status. „unauffaellig“, „grenzwertig“ und „auffaellig“ sind bewertete Ergebnisse. „nicht-bewertbar“ heißt: die dafür nötige Fahrsituation kam in dieser Aufzeichnung nicht vor. „ohne-belastbare-messgroesse“ heißt: die Fahrsituation kam vor, aber die zugrunde liegende Messgröße taugt nicht für ein Urteil — der daneben stehende Rohwert ist kein Ergebnis. „pid-fehlt“ heißt: die Messgröße wurde gar nicht aufgezeichnet. Die letzten drei sind keine Entwarnung, sondern eine Wissenslücke — behandle sie als solche.',
+  'Sollwerte tragen ein Attribut sollwert_quelle mit drei möglichen Werten. „profil“ heißt: der Sollbereich stammt aus den hinterlegten Werksangaben genau dieses Motors. „klassenbasiert“ heißt: er stammt aus einem weit gefassten Rückfallwert der Motorbauart, nicht aus den Werksangaben — solche Befunde tragen weniger Gewicht. „regelwerk“ heißt: es ist ein allgemeiner Werkstatt-Erfahrungswert, der für keinen bestimmten Motor gilt — behandle ihn als Faustregel, nicht als Herstellervorgabe.',
+  'Weitere Attribute an Befunden: aussagekraft ist die Belastbarkeit des Ergebnisses (hoch/mittel/niedrig). herkunft sagt, wie der Befundwert zustande kam (gemessen, berechnet, abgeleitet, geschätzt). bedingung nennt die Fahrsituation, auf die der Wert eingegrenzt ist — ein „Maximum“ unter bedingung ist nicht das Maximum der ganzen Aufzeichnung. ohne_ampel=„ja“ heißt: der Wert wird bewusst nicht bewertet.',
+  'Weitere Attribute an Messgrößen: n ist die Zahl der Messpunkte, abdeckung der Anteil der Fahrtzeit mit Werten in Prozent, umgerechnet_aus die Originaleinheit der Aufzeichnung, abgeleitet_aus die Größe, aus der ein Wert errechnet wurde. An <gaenge> gibt zugeordnete_punkte_prozent an, wie viel der Fahrt der Gangerkennung zugeordnet werden konnte.',
   'Erfinde keine Werksangaben, keine Fehlercodes und keine Messwerte. Fehlt dir etwas für eine Aussage, sage das und benenne, welche Messgröße oder welche Fahrsituation du bräuchtest.',
   'Eine einzelne Fahrt ist eine Momentaufnahme. Formuliere Verdachtsmomente als solche und nenne jeweils, wie sich der Verdacht erhärten oder ausräumen ließe.',
   'Antworte auf Deutsch, sachlich und ohne Panikmache. Wenn alles unauffällig ist, sage das klar, statt Auffälligkeiten zu konstruieren.'
@@ -7062,30 +7146,79 @@ function buildAiPrompt(detailKey) {
   if (T.unknownTime > ds.duration * 0.05)
     p('  <luecke groesse="Geschwindigkeit"' + xattr({ dauer_s: round(T.unknownTime, 0) }) +
       '>Für diesen Teil der Fahrt liegt keine Geschwindigkeit vor. Alle geschwindigkeitsabhängigen Kennzahlen beziehen sich ausschließlich auf den abgedeckten Zeitraum.</luecke>');
+
+  /* Wo endet eine Messreihe vor dem Ende der Aufzeichnung, und wo klaffen Lücken?
+     Ohne diese Angabe hält der Leser das Ende der Datei für das Ende der Messung. */
+  {
+    const spans = [];
+    for (const [id, mm] of ds.metrics) {
+      if (mm.derived || !mm.n) continue;
+      const endGap = ds.t1 - mm.t[mm.n - 1], startGap = mm.t[0] - ds.t0;
+      let biggest = 0, at = 0;
+      for (let i = 1; i < mm.n; i++) { const d = mm.t[i] - mm.t[i - 1]; if (d > biggest) { biggest = d; at = mm.t[i - 1]; } }
+      if (endGap > 20 || startGap > 20 || biggest > 20)
+        spans.push({ id, label: mm.label, startGap, endGap, biggest, at });
+    }
+    if (spans.length) {
+      p('  <messreihen-luecken hinweis="Diese Messreihen decken nicht die ganze Aufzeichnung ab. Das Ende einer Reihe ist nicht das Ende der Fahrt.">');
+      spans.slice(0, 20).forEach(x => p('    <reihe' + xattr({
+        id: x.id, label: x.label,
+        beginnt_spaet_s: x.startGap > 20 ? round(x.startGap, 0) : '',
+        endet_frueh_s: x.endGap > 20 ? round(x.endGap, 0) : '',
+        groesste_luecke_s: x.biggest > 20 ? round(x.biggest, 0) : '',
+        luecke_ab: x.biggest > 20 ? xf(x.at) : ''
+      }) + '/>'));
+      p('  </messreihen-luecken>');
+    }
+  }
   p('</aufzeichnung>');
   p('');
 
-  /* ---- Fahrt-Kennzahlen ---- */
+  /* ---- Fahrt-Kennzahlen ----
+     Jede Kennzahl bekommt ihren Bezugszeitraum. Ohne den sieht es aus, als widersprächen
+     sich die Zahlen: die Strecke stammt vom GPS über die ganze Fahrt, die Bewegungszeit nur
+     aus dem Abschnitt mit Geschwindigkeitsdaten. Wer beides multipliziert, bekommt Unsinn. */
+  const GES = 'gesamte Aufzeichnung', SPD = 'nur Zeitraum mit Geschwindigkeitsdaten',
+        TRK = 'GPS-Track', MOT = 'nur Zeitraum mit Motordaten';
   const K = [
-    ['Fahrtdauer', T.duration, 's'], ['Zeit in Bewegung', T.movingTime, 's'],
-    ['Standzeit', T.stoppedTime, 's'], ['Leerlaufzeit', T.idleTime, 's'],
-    ['Strecke', T.dist, 'km', T.distSource], ['davon Luftlinie über GPS-Lücken', T.gapDist, 'km'],
-    ['Durchschnittsgeschwindigkeit in Bewegung', T.speedAvgMoving, 'km/h'],
-    ['Höchstgeschwindigkeit', T.speedMax, 'km/h'],
-    ['Kraftstoff verbraucht', T.fuelUsed, 'L'], ['Verbrauch', T.consAvg, 'L/100km'],
-    ['Kosten', T.cost, '€'], ['CO2', T.co2, 'kg'], ['CO2 je km', T.co2PerKm, 'g/km'],
-    ['Durchschnittsdrehzahl', T.rpmAvg, 'min⁻¹'], ['Höchstdrehzahl', T.rpmMax, 'min⁻¹'],
-    ['Maximaler Ladedruck', T.boostMax, 'bar'], ['Maximale absolute Motorlast', T.loadMax, '%'],
-    ['Maximale Kühlmitteltemperatur', T.coolantMax, '°C'],
-    ['Kühlmitteltemperatur beim Start', T.coolantStart, '°C'],
-    ['Warmlaufzeit auf 85 °C', T.warmupTime, 's'],
-    ['Zeitanteil über 4000 min⁻¹', T.timeHighRpm * 100, '%'],
-    ['Vollgasanteil', T.wotShare * 100, '%', T.wotSignal],
-    ['Schubanteil', T.coastShare * 100, '%'],
-    ['Höhenmeter bergauf', T.ascent, 'm'], ['Höhenmeter bergab', T.descent, 'm']
+    ['Fahrtdauer', T.duration, 's', GES],
+    ['Zeit in Bewegung', T.movingTime, 's', SPD],
+    ['Standzeit', T.stoppedTime, 's', SPD],
+    ['Leerlaufzeit', T.idleTime, 's', SPD],
+    ['Zeit ohne Geschwindigkeitsdaten', T.unknownTime, 's', GES],
+    ['Strecke', T.dist, 'km', TRK],
+    ['davon Luftlinie über GPS-Lücken', T.gapDist, 'km', TRK],
+    ['Strecke im Zeitraum mit Geschwindigkeitsdaten', T.distInt, 'km', SPD],
+    ['Durchschnittsgeschwindigkeit in Bewegung', T.speedAvgMoving, 'km/h', SPD],
+    ['Höchstgeschwindigkeit', T.speedMax, 'km/h', SPD],
+    ['Kraftstoff verbraucht', T.fuelUsed, 'L', MOT],
+    ['Verbrauch', T.consAvg, 'L/100km', 'Kraftstoff geteilt durch Strecke'],
+    ['Kosten', T.cost, '€', MOT], ['CO2', T.co2, 'kg', MOT],
+    ['CO2 je km', T.co2PerKm, 'g/km', 'CO2 geteilt durch Strecke'],
+    ['Durchschnittsdrehzahl', T.rpmAvg, 'min⁻¹', MOT],
+    ['Höchstdrehzahl', T.rpmMax, 'min⁻¹', MOT],
+    ['Maximaler Ladedruck', T.boostMax, 'bar', MOT],
+    ['Maximale absolute Motorlast', T.loadMax, '%', MOT],
+    ['Maximale Kühlmitteltemperatur', T.coolantMax, '°C', MOT],
+    ['Kühlmitteltemperatur beim Start', T.coolantStart, '°C', MOT],
+    ['Warmlaufzeit auf 85 °C', T.warmupTime, 's', MOT],
+    ['Zeitanteil über 4000 min⁻¹', T.timeHighRpm * 100, '%', MOT],
+    ['Vollgasanteil', T.wotShare * 100, '%', MOT],
+    ['Schubanteil', T.coastShare * 100, '%', T.coastBezug || MOT],
+    ['Höhenmeter bergauf', T.ascent, 'm', TRK], ['Höhenmeter bergab', T.descent, 'm', TRK]
   ];
-  p('<fahrt>');
-  K.forEach(([n, v, u, q]) => { if (isFinite(v)) p('  <kennzahl' + xattr({ name: n, wert: v, einheit: u, quelle: q }) + '/>'); });
+  p('<fahrt hinweis="Achtung beim Nachrechnen: die Kennzahlen haben unterschiedliche Bezugszeiträume, siehe Attribut bezug. Geschwindigkeit und Strecke decken nicht denselben Zeitraum ab.">');
+  K.forEach(([n, v, u, bez]) => {
+    if (!isFinite(v)) return;
+    const dec = u === '%' ? 1 : u === 'bar' ? 2 : u === 's' ? 0 : undefined;
+    p('  <kennzahl' + xattr({ name: n, wert: dec === undefined ? v : round(v, dec), einheit: u, bezug: bez }) + '/>');
+  });
+  if (T.wotSignal) p('  <definition betrifft="Vollgasanteil">' + xtext(T.wotSignal) + '</definition>');
+  p('  <zeitbudget hinweis="Diese drei Zeiten ergeben zusammen die Fahrtdauer.">');
+  p('    <anteil' + xattr({ name: 'in Bewegung', sekunden: round(T.movingTime, 0) }) + '/>');
+  p('    <anteil' + xattr({ name: 'Stillstand', sekunden: round(T.stoppedTime, 0) }) + '/>');
+  p('    <anteil' + xattr({ name: 'ohne Geschwindigkeitsdaten', sekunden: round(T.unknownTime, 0) }) + '/>');
+  p('  </zeitbudget>');
   p('  <stopps' + xattr({ anzahl: ds.events.stops.length }) + '/>');
   p('</fahrt>');
   p('');
@@ -7094,12 +7227,19 @@ function buildAiPrompt(detailKey) {
   p('<messgroessen hinweis="Ø ist zeitgewichtet. p05 und p95 sind robuster als Minimum und Maximum, die ein einzelner Ausreißer bestimmt.">');
   Array.from(ds.metrics.values()).forEach(mm => {
     const s = ds.stats[mm.id]; if (!s) return;
-    const herkunft = mm.derived ? 'berechnet'
-      : (mm.id === 'boost' && ds.boostDerived) || mm.id === 'power' || /^cons_(avg|10s|inst)$/.test(mm.id)
-        ? 'app-rechenwert' : 'gemessen';
+    /* Von der App selbst gerechnete Größen — und alles, was daraus abgeleitet wird.
+       Die Kette muss durchgereicht werden: ein Drehmoment, das aus einer geschätzten
+       Leistung stammt, ist keine Messung, egal wie sauber die Zwischenrechnung ist. */
+    const APP_CALC = /^(power|fuel_rate|cons_avg|cons_10s|cons_inst)$/;
+    const FROM_APP = { power_kw: 'power', torque_est: 'power', cons_calc: 'fuel_rate' };
+    const herkunft = (mm.id === 'boost' && ds.boostDerived) || APP_CALC.test(mm.id) ? 'app-rechenwert'
+      : FROM_APP[mm.id] ? 'app-rechenwert'
+      : mm.derived ? 'berechnet' : 'gemessen';
     p('  <messgroesse' + xattr({
       id: mm.id, label: mm.label, einheit: mm.unit, herkunft: herkunft,
-      pid: mm.rawName, umgerechnet_aus: mm.converted ? mm.srcUnit : '',
+      abgeleitet_aus: FROM_APP[mm.id] || '',
+      pid: mm.rawName, umgerechnet_aus: (mm.converted || mm.renamed) ? mm.srcUnit : '',
+      einheit_nur_umbenannt: mm.renamed ? 'ja' : '',
       n: s.n, abdeckung: round((ds.coverage[mm.id] || 0) * 100, 0),
       min: s.min, p05: s.p05, median: s.median, mittel: s.meanW, p95: s.p95, max: s.max, std: s.std
     }) + '/>');
@@ -7109,16 +7249,35 @@ function buildAiPrompt(detailKey) {
 
   /* ---- Befunde ---- */
   const STAT = { ok: 'unauffaellig', warn: 'grenzwertig', crit: 'auffaellig', unklar: 'nicht-bewertbar', missing: 'pid-fehlt' };
+  // "nicht-bewertbar" heisst laut Anleitung: die Fahrsituation kam nicht vor. Bei bewusst
+  // ampellosen Regeln kam sie sehr wohl vor – nur taugt die Messgroesse nicht. Daneben ein
+  // `wert` und ein `soll` stehen zu lassen laedt genau zu dem Urteil ein, das die Regel verweigert.
+  const noMeasure = r => r.noLight === true && r.status === 'unklar';
   p('<befunde' + xattr({ unauffaellig: App.diag.tally.ok, grenzwertig: App.diag.tally.warn,
     auffaellig: App.diag.tally.crit, nicht_bewertbar: App.diag.tally.unklar, pid_fehlt: App.diag.tally.missing }) + '>');
   App.diag.results.forEach(r => {
     p('  <befund' + xattr({
-      id: r.id, titel: r.title, gruppe: r.group, status: STAT[r.status] || r.status,
-      wert: isFinite(r.value) ? round(r.value, r.dec) : '', einheit: r.unit,
-      soll: r.ref, aussagekraft: r.confidence, herkunft: r.provenance,
-      sollwert_quelle: r.specDerived ? 'klassenbasiert' : (r.ref ? 'profil' : ''),
+      id: r.id, titel: r.title, gruppe: r.group,
+      status: noMeasure(r) ? 'ohne-belastbare-messgroesse' : (STAT[r.status] || r.status),
+      wert: (!noMeasure(r) && isFinite(r.value)) ? round(r.value, r.dec) : '',
+      einheit: noMeasure(r) ? '' : r.unit,
+      soll: noMeasure(r) ? '' : r.ref,
+      // aussagekraft ist die Belastbarkeit des *Ergebnisses*. Wo es keins gibt, beschreibt der
+      // Wert nur das Vorabgewicht der Regel und wird als Gegenteil dessen gelesen, was er meint.
+      aussagekraft: (r.status === 'ok' || r.status === 'warn' || r.status === 'crit') ? r.confidence : '',
+      herkunft: r.provenance,
+      // "profil" nur, wenn der Sollwert wirklich aus den Fahrzeug-Stammdaten kommt.
+      // Alles andere ist ein Werkstatt-Erfahrungswert und darf nicht dasselbe Gewicht bekommen.
+      sollwert_quelle: noMeasure(r) ? '' : (r.specDerived ? 'klassenbasiert'
+        : (r.usesSpec && r.usesSpec.length ? 'profil' : (r.ref ? 'regelwerk' : ''))),
+      bedingung: r.cond || '',
       ohne_ampel: r.noLight ? 'ja' : ''
     }) + '>');
+    if (noMeasure(r) && isFinite(r.value))
+      p('    <detail' + xattr({ name: 'Rohwert (nicht bewertbar)',
+        wert: round(r.value, r.dec) + (r.unit ? ' ' + r.unit : '') }) + '/>');
+    if (noMeasure(r) && r.ref)
+      p('    <detail' + xattr({ name: 'Werksbereich (nicht zum Vergleich geeignet)', wert: r.ref }) + '/>');
     if (r.text) p('    <bewertung>' + xtext(r.text) + '</bewertung>');
     if (r.note) p('    <einschraenkung>' + xtext(r.note) + '</einschraenkung>');
     if (r.missing) p('    <fehlende-messgroessen>' + xtext(r.missing.join(', ')) + '</fehlende-messgroessen>');
@@ -7129,29 +7288,53 @@ function buildAiPrompt(detailKey) {
   p('</befunde>');
   p('');
 
-  /* ---- Ereignisse ---- */
-  p('<ereignisse>');
+  /* ---- Ereignisse ----
+     Vollständig ausgeben. Eine gekürzte Liste, die sich nicht als gekürzt zu erkennen gibt,
+     verleitet den Leser zu einer Entwarnung, die die Daten nicht hergeben. */
+  const MAXEV = 60;
+  const cut = (list, name) => {
+    if (list.length <= MAXEV) return list;
+    p('  <hinweis' + xattr({ betrifft: name, vorhanden: list.length, ausgegeben: MAXEV }) +
+      '>Diese Liste ist gekürzt. Es gibt mehr Ereignisse als hier stehen — aus dieser Liste lässt sich deshalb nicht schließen, dass anderswo keine auftraten.</hinweis>');
+    return list.slice(0, MAXEV);
+  };
+  p('<ereignisse' + xattr({ hinweis: 'Bei <volllastzug> sind _von und _bis die Werte am Anfang und Ende des Zugs, _max ist das Maximum dazwischen. Drehzahl und Tempo erreichen ihr Maximum nicht zum selben Zeitpunkt – aus einem Paar aus Maximaldrehzahl und Endtempo lässt sich keine Übersetzung ableiten, dafür steht <gaenge> zur Verfügung.', beschleunigungen: ds.events.sprints.length, volllastzuege: ds.events.wot.length,
+    zuendwinkel_ruecknahmen: ds.events.knock.length, stopps: ds.events.stops.length }) + '>');
   ds.events.sprints.forEach(s => p('  <beschleunigung' + xattr({
     von_kmh: s.from, bis_kmh: s.to, sekunden: round(s.dur, 2), zeitpunkt: xf(s.t0),
+    art: s.rolling ? 'rollend' : 'aus dem Stand',
     mittlere_beschleunigung_g: round(s.avgA / 9.80665, 2) }) + '/>'));
-  ds.events.wot.slice(0, 12).sort((a, b) => a.t0 - b.t0).forEach(w => p('  <volllastzug' + xattr({
-    zeitpunkt: xf(w.t0), dauer_s: round(w.dur, 1), drehzahl_von: round(w.rpm0, 0), drehzahl_bis: round(w.rpmMax, 0),
+  if (ds.events.sprints.some(s => s.rolling))
+    p('  <hinweis betrifft="beschleunigung">Ein rollend gemessener Zug ist nicht mit einer Werksangabe aus dem Stand vergleichbar: es fehlen Anfahrt und Schaltvorgang, dafür wurde der Startpunkt aus dem laufenden Verkehr gegriffen. Stelle solche Zeiten nicht neben eine 0–100-km/h-Werksangabe.</hinweis>');
+  cut(ds.events.wot.slice().sort((a, b) => a.t0 - b.t0), 'volllastzug').forEach(w => p('  <volllastzug' + xattr({
+    zeitpunkt: xf(w.t0), dauer_s: round(w.dur, 1),
+    drehzahl_von: round(w.rpm0, 0), drehzahl_bis: round(w.rpm1, 0), drehzahl_max: round(w.rpmMax, 0),
     ladedruck_max_bar: round(w.boostMax, 2), leistung_max_ps: round(w.powerMax, 0),
     zuendwinkel_min: round(w.timingMin, 1), ladeluft_max_c: round(w.cacMax, 0),
-    tempo_von: round(w.speed0, 0), tempo_bis: round(w.speed1, 0) }) + '/>'));
-  ds.events.knock.slice(0, 12).forEach(k => p('  <zuendwinkel-ruecknahme-unter-last' + xattr({
+    tempo_von: round(w.speed0, 0), tempo_bis: round(w.speed1, 0), tempo_max: round(w.speedMax, 0) }) + '/>'));
+  cut(ds.events.knock, 'zuendwinkel-ruecknahme').forEach(k => p('  <zuendwinkel-ruecknahme-unter-last' + xattr({
     zeitpunkt: xf(k.t0), dauer_s: round(k.dur, 1), zuendwinkel_min: round(k.timingMin, 1),
     drehzahl_max: round(k.rpmMax, 0) }) + '/>'));
-  ds.events.stops.slice(0, 12).forEach(s => p('  <stopp' + xattr({ zeitpunkt: xf(s.t0), dauer_s: round(s.dur, 0) }) + '/>'));
+  cut(ds.events.stops, 'stopp').forEach(s => p('  <stopp' + xattr({ zeitpunkt: xf(s.t0), dauer_s: round(s.dur, 0) }) + '/>'));
   p('</ereignisse>');
   p('');
 
   /* ---- Betriebszustände und Gänge ---- */
-  p('<betriebszustaende hinweis="Zeitanteil der Fahrt je Zustand.">');
+  // Die Zustaende werden nur fuer Rasterpunkte mit bekannter Geschwindigkeit vergeben.
+  // Gegen die Gesamtdauer gerechnet summiert sich die Spalte auf die Haelfte und der Leser
+  // haelt die Luecke fuer einen Rundungsfehler oder erfindet einen fehlenden Zustand.
+  const phBase = ds.trip.knownTime > 0 ? ds.trip.knownTime : ds.duration;
+  p('<betriebszustaende' + xattr({
+    hinweis: 'Zeitanteil je Zustand, bezogen auf die Zeit mit bekannter Geschwindigkeit. Die Anteile summieren sich auf 100 %.',
+    bezug: 'Zeit mit bekannter Geschwindigkeit', bezug_s: round(phBase, 0),
+    gesamte_aufzeichnung_s: round(ds.duration, 0) }) + '>');
   ds.phases.defs.forEach(ph => {
     const t = ds.phases.time[ph.id];
-    if (t > 0) p('  <zustand' + xattr({ name: ph.label, sekunden: round(t, 0), anteil_prozent: round(t / ds.duration * 100, 1) }) + '/>');
+    if (t > 0) p('  <zustand' + xattr({ name: ph.label, sekunden: round(t, 0), anteil_prozent: round(t / phBase * 100, 1) }) + '/>');
   });
+  if (ds.trip.unknownTime > 1)
+    p('  <ausserhalb' + xattr({ name: 'Geschwindigkeit unbekannt', sekunden: round(ds.trip.unknownTime, 0),
+      hinweis: 'Nicht in den Anteilen oben enthalten – hier ließ sich kein Betriebszustand bestimmen.' }) + '/>');
   p('</betriebszustaende>');
   if (App.gears && App.gears.gears.length > 1) {
     p('<gaenge' + xattr({ hinweis: 'Aus dem Verhältnis Drehzahl zu Geschwindigkeit geclustert, nicht aus einer Tabelle. Nummeriert nach Übersetzung, nicht nach Gangnummer.',

@@ -101,6 +101,10 @@ function findingCard(r) {
         el('span', {}, r.unit || ''))
     : null;
   const body = el('div', { class: 'f-b' });
+  // Auf welche Fahrsituation der Wert eingegrenzt ist, gehoert neben den Wert und nicht in
+  // eine Fussnote: ein "Maximum" unter Maske ist nicht das Maximum der Aufzeichnung.
+  if (r.cond) body.appendChild(el('p', { class: 'dim2', style: { fontSize: '12px' } },
+    'Bewertet nur unter: ' + r.cond + '. Werte über die gesamte Aufzeichnung können höher liegen.'));
   if (r.text) body.appendChild(el('p', {}, r.text));
   if (r.note) body.appendChild(el('p', {}, r.note));
   if (st === 'missing') body.appendChild(el('p', {},
@@ -122,11 +126,18 @@ function findingCard(r) {
       'Rückfallwert der Motorklasse – der ist bewusst weit gefasst, damit er keine Fehlalarme erzeugt, ' +
       'und entsprechend grob. Ein eigenes Profil mit dem Werkswert macht diese Prüfung schärfer.'));
   body.appendChild(el('div', { class: 'f-meta' },
-    el('span', { class: 'badge mute' }, 'Aussagekraft: ' + (r.confidence || '–')),
+    // Bei nicht bewerteten Befunden beschreibt confidence das Vorabgewicht der Regel und nicht
+    // die Belastbarkeit des Ergebnisses – dort waere "Aussagekraft: hoch" irrefuehrend.
+    (st === 'ok' || st === 'warn' || st === 'crit')
+      ? el('span', { class: 'badge mute' }, 'Aussagekraft: ' + (r.confidence || '–')) : null,
     el('span', { class: 'badge mute' }, r.provenance === 'gemessen' ? 'gemessener Wert'
       : r.provenance === 'abgeleitet' ? 'abgeleiteter Wert' : 'Schätzung'),
+    r.cond ? el('span', { class: 'badge mute' }, 'Bedingung: ' + r.cond) : null,
     r.ref ? el('span', { class: 'badge mute' }, 'Soll: ' + r.ref) : null,
-    r.specDerived ? el('span', { class: 'badge warn' }, 'Sollwert klassenbasiert') : null));
+    r.specDerived ? el('span', { class: 'badge warn' }, 'Sollwert klassenbasiert')
+      : (r.ref && !(r.usesSpec && r.usesSpec.length))
+        ? el('span', { class: 'badge mute', title: 'Allgemeiner Werkstatt-Erfahrungswert, keine Herstellerangabe für genau diesen Motor.' }, 'Sollwert aus Regelwerk')
+        : null));
 
   return el('details', { class: 'finding acc ' + st, open: st === 'crit' || st === 'warn' },
     el('summary', { class: 'f-h' },

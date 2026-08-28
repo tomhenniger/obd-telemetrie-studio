@@ -124,9 +124,11 @@ const DIAG_RULES = [
     return {
       status: st, value: med, unit: '°C', dec: 0,
       ref: P[0] + '–' + P[1] + ' °C', refLo: P[0], refHi: P[1],
-      extra: [['Maximum', fmt(mx, 0) + ' °C'], ['Minimum (warm)', fmt(mn, 0) + ' °C'], ['Bewertete Zeit', fmtDur(d)]],
+      cond: 'Kühlmittel ≥ 80 °C und Motor läuft',
+      // kein "Minimum (warm)": das ist die Maskengrenze, keine Beobachtung
+      extra: [['Maximum', fmt(mx, 0) + ' °C'], ['Bewertete Zeit', fmtDur(d)]],
       text: st === S.OK
-        ? 'Die Kühlmitteltemperatur hält im warmen Betrieb ein stabiles Plateau von ' + fmt(med, 0) + ' °C. Kennfeldthermostat, Wasserpumpe und Kühlerlüfter arbeiten unauffällig.'
+        ? 'Die Kühlmitteltemperatur hält im warmen Betrieb ein stabiles Plateau von ' + fmt(med, 0) + ' °C. Kennfeldthermostat und Wasserpumpe arbeiten unauffällig. Über den Kühlerlüfter sagt die Aufzeichnung nichts – dafür fehlt die Messgröße.'
         : med < P[0]
           ? 'Der Motor bleibt mit ' + fmt(med, 0) + ' °C unter dem Sollplateau. Typische Ursache: Thermostat hängt offen oder falsches Thermostat verbaut. Folge: mehr Verbrauch, stärkere Ventilverkokung, Ölverdünnung.'
           : 'Die Kühlmitteltemperatur liegt mit ' + fmt(med, 0) + ' °C über dem Sollband (Spitze ' + fmt(mx, 0) + ' °C). Kühlmittelstand, Entlüftung, Wasserpumpe und Lüfterlauf prüfen.',
@@ -161,12 +163,21 @@ const DIAG_RULES = [
   requires: ['cac_mean'], confidence: 'hoch', provenance: 'gemessen',
   run(c) {
     const m = c.masks.warm;
+    const d = c.dur(m);
     const mx = c.agg('cac_mean', m, 'max'), med = c.agg('cac_mean', m, 'median');
+    // Der Gesamtmaximalwert steht anderswo im Dokument. Ohne ihn hier liest sich "maximal"
+    // zweimal mit verschiedenen Zahlen und der Leser muss einen Fehler annehmen.
+    const mxAll = c.stats.cac_mean ? c.stats.cac_mean.max : NaN;
+    const colder = isFinite(mxAll) && mxAll > mx + 0.4;
     const st = band(mx, 65, 80, true);
     return { status: st, value: mx, unit: '°C', dec: 0, ref: '≤ 65 °C', refLo: 20, refHi: 65,
-      extra: [['Median', fmt(med, 0) + ' °C']],
+      cond: 'Kühlmittel ≥ 80 °C',
+      extra: [['Median', fmt(med, 0) + ' °C'], ['Bewertete Zeit', fmtDur(d)],
+              colder ? ['Maximum über die ganze Aufzeichnung', fmt(mxAll, 0) + ' °C (vor Erreichen der Betriebstemperatur)'] : null],
       text: st === S.OK
-        ? 'Die Ladeluft bleibt mit maximal ' + fmt(mx, 0) + ' °C klar unterhalb der Klopfgrenze. Der Ladeluftkühlkreis arbeitet.'
+        ? 'Die Ladeluft bleibt im warmen Betrieb mit maximal ' + fmt(mx, 0) + ' °C klar unterhalb der Klopfgrenze'
+          + (colder ? ' (über die ganze Aufzeichnung, also inklusive Warmlaufphase, bis ' + fmt(mxAll, 0) + ' °C)' : '')
+          + '. Der Ladeluftkühlkreis arbeitet.'
         : 'Die Ladeluft erreicht ' + fmt(mx, 0) + ' °C. Ab etwa 65 °C beginnt das Steuergerät Zündwinkel und Ladedruck zurückzunehmen – die Leistung sinkt, bevor etwas kaputtgeht.',
       action: st === S.OK ? null : ['Niedertemperatur-Kreis entlüften', 'Zusatz-Kühlmittelpumpe per Stellglieddiagnose prüfen', 'NT-Kühler vorne auf Verschmutzung kontrollieren'] };
   }
@@ -194,6 +205,7 @@ const DIAG_RULES = [
   run(c) {
     const m = c.combine(c.masks.warm, c.mask(i => { const l = c.V('load_abs') || c.V('load_calc'); return l && l[i] > (c.loadIsAbs ? 100 : 60); }));
     const use = c.dur(m) > 20 ? m : c.masks.warm;
+    const useLoad = c.dur(m) > 20;
     const d = c.V('cac_delta');
     let mx = 0, sum = 0, cnt = 0;
     for (let i = 0; i < c.N; i++) { if (!use[i] || !(d[i] === d[i])) continue; const a = Math.abs(d[i]); if (a > mx) mx = a; sum += a; cnt++; }
@@ -201,7 +213,8 @@ const DIAG_RULES = [
     const mean = sum / cnt;
     const st = band(mean, 3, 6, true);
     return { status: st, value: mean, unit: 'K', dec: 2, ref: '≤ 3,0 K', refLo: 0, refHi: 3,
-      extra: [['Maximale Abweichung', fmt(mx, 1) + ' K']],
+      cond: useLoad ? 'Kühlmittel ≥ 80 °C und hohe Last' : 'Kühlmittel ≥ 80 °C',
+      extra: [['Maximale Abweichung', fmt(mx, 1) + ' K'], ['Bewertete Zeit', fmtDur(c.dur(use))]],
       text: st === S.OK
         ? 'Beide Ladeluftkühler-Pakete arbeiten mit im Mittel ' + fmt(mean, 2) + ' K Abweichung praktisch identisch. Ein einseitig zugesetztes oder innen undichtes Kühlerpaket ist damit sehr unwahrscheinlich.'
         : 'Die beiden Bänke weichen im Mittel um ' + fmt(mean, 2) + ' K voneinander ab (Spitze ' + fmt(mx, 1) + ' K). Das deutet auf ein einseitig zugesetztes Kühlerpaket, einen Luftpolster im NT-Kreis oder einen driftenden Sensor hin.',
@@ -236,13 +249,20 @@ const DIAG_RULES = [
     const med = quantileSorted(sorted, .5);
     const best = drops.reduce((a, b) => b.drop > a.drop ? b : a);
     const st = med >= 8 ? S.OK : med >= 3 ? S.WARN : S.CRIT;
+    // Ein "Median" aus einem einzigen Zug ist eine Einzelmessung. Sagen, was es ist.
+    const few = drops.length < 3;
+    const wie = drops.length === 1 ? 'im einzigen auswertbaren Zug'
+              : few ? 'in den ' + drops.length + ' auswertbaren Zügen' : 'im Median';
     return { status: st, value: med, unit: 'K', dec: 1, ref: '≥ 8 K in 60 s', refLo: 8, refHi: 40,
+      confidence: few ? 'niedrig' : 'mittel',
+      note: few ? 'Nur ' + drops.length + ' auswertbare' + (drops.length === 1 ? 'r Zug' : ' Züge')
+                  + ' – die Zahl beschreibt diese Messung, nicht das typische Verhalten des Fahrzeugs.' : null,
       extra: [['Ausgewertete Züge', String(drops.length)],
               ['Bester Zug', fmt(best.drop, 1) + ' K (' + fmt(best.peak, 0) + ' → ' + fmt(best.after, 0) + ' °C)'],
               ['Erwärmung dabei', '+' + fmt(best.peak - best.before, 0) + ' K']],
       text: st === S.OK
-        ? 'Nach einem Volllastzug fällt die Ladelufttemperatur binnen einer Minute im Median um ' + fmt(med, 1) + ' K. Der Niedertemperatur-Kreis transportiert die Wärme ab – die Zusatzwasserpumpe fördert.'
-        : 'Nach Volllast fällt die Ladelufttemperatur nur um ' + fmt(med, 1) + ' K je Minute. Eine schwache Rückkühlung ist die klassische Signatur einer nicht mehr fördernden Zusatz-Wasserpumpe im Ladeluftkreis – vorausgesetzt, beide Bänke verhalten sich dabei gleich.',
+        ? 'Nach einem Volllastzug fällt die Ladelufttemperatur binnen einer Minute ' + wie + ' um ' + fmt(med, 1) + ' K. Der Niedertemperatur-Kreis transportiert die Wärme ab – die Zusatzwasserpumpe fördert.'
+        : 'Nach Volllast fällt die Ladelufttemperatur ' + wie + ' nur um ' + fmt(med, 1) + ' K je Minute. Eine schwache Rückkühlung ist die klassische Signatur einer nicht mehr fördernden Zusatz-Wasserpumpe im Ladeluftkreis – vorausgesetzt, beide Bänke verhalten sich dabei gleich.',
       action: st === S.OK ? null : ['Zusatz-Wasserpumpe (V188/V178) stellgliedtesten', 'Niedertemperatur-Kreis auf Luftpolster prüfen', 'Messung bei über 30 °C Außentemperatur wiederholen'] };
   }
 },
@@ -465,7 +485,7 @@ const DIAG_RULES = [
   }
 },
 {
-  id: 'speed_cross', group: 'Motor', title: 'Tachoabgleich OBD gegen GPS',
+  id: 'speed_cross', group: 'Motor', title: 'Geschwindigkeitssignal OBD gegen GPS',
   requires: ['speed', 'speed_gps'], confidence: 'mittel', provenance: 'abgeleitet',
   run(c) {
     const a = c.V('speed'), b = c.V('speed_gps');
@@ -477,7 +497,7 @@ const DIAG_RULES = [
     return { status: st, value: dev, unit: '%', dec: 2, ref: '±4 %', refLo: -4, refHi: 4,
       extra: [['⌀ OBD', fmt(sa / n, 1) + ' km/h'], ['⌀ GPS', fmt(sb / n, 1) + ' km/h']],
       text: st === S.OK
-        ? 'OBD- und GPS-Geschwindigkeit weichen nur um ' + fmt(dev, 2) + ' % voneinander ab. Radumfang und Tachokalibrierung passen zusammen.'
+        ? 'OBD- und GPS-Geschwindigkeit weichen nur um ' + fmt(dev, 2) + ' % voneinander ab. Der Radumfang passt zur codierten Übersetzung. Über die Tachoanzeige sagt das nichts: verglichen wird der Steuergerätewert (PID 0x0D), die Anzeige im Kombiinstrument muss gesetzlich nach oben abweichen.'
         : 'OBD-Geschwindigkeit weicht um ' + fmt(dev, 2) + ' % vom GPS ab. Bei dauerhaft mehr als 8 % lohnt der Blick auf Reifengröße und die codierte Achsübersetzung.' };
   }
 },
@@ -559,13 +579,28 @@ const DIAG_RULES = [
   run(c) {
     const pMax = c.stats.pedal.max, pIdle = c.stats.pedal.p05;
     const lMax = c.stats.load_abs.max;
+    // Last im Fenster um das Pedalmaximum – sonst behauptet der Text eine Gleichzeitigkeit,
+    // die aus zwei unabhaengigen globalen Maxima gar nicht folgt
+    const pArr = c.V('pedal'), lArr = c.V('load_abs');
+    let pi = -1, pv = -Infinity;
+    for (let i = 0; i < c.N; i++) if (pArr[i] === pArr[i] && pArr[i] > pv) { pv = pArr[i]; pi = i; }
+    const w = Math.max(1, Math.round(1 / c.step));
+    let lNear = -Infinity, li = -1;
+    for (let i = Math.max(0, pi - w); i <= Math.min(c.N - 1, pi + w); i++)
+      if (lArr[i] === lArr[i] && lArr[i] > lNear) { lNear = lArr[i]; li = i; }
+    let lmi = -1, lmv = -Infinity;
+    for (let i = 0; i < c.N; i++) if (lArr[i] === lArr[i] && lArr[i] > lmv) { lmv = lArr[i]; lmi = i; }
+    const dt = (pi >= 0 && lmi >= 0) ? Math.abs(lmi - pi) * c.step : NaN;
     const wotSeen = c.dur(c.masks.wot) > 1;
     if (!wotSeen) return { status: S.UNCLEAR, note: 'Ohne Volllastzug lässt sich die Pedalskalierung nicht prüfen.' };
     const st = pMax >= 55 ? S.OK : S.WARN;
     return { status: st, value: pMax, unit: '%', dec: 1, ref: '≥ 55 % bei Volllast', refLo: 55, refHi: 100,
-      extra: [['Ruhewert', fmt(pIdle, 1) + ' %'], ['Maximale Last dabei', fmt(lMax, 0) + ' %']],
+      extra: [['Ruhewert', fmt(pIdle, 1) + ' %'],
+              ['Last im Sekundenfenster um das Pedalmaximum', isFinite(lNear) ? fmt(lNear, 0) + ' %' : '–'],
+              ['Höchste Last der Fahrt', fmt(lMax, 0) + ' %'],
+              isFinite(dt) ? ['Abstand beider Maxima', fmt(dt, 1) + ' s'] : null],
       text: st === S.OK
-        ? 'Der Pedalgeber meldet im Ruhezustand ' + fmt(pIdle, 1) + ' % und bei Vollgas ' + fmt(pMax, 1) + ' %. VAG nutzt den elektrischen Sensorbereich bewusst nicht voll aus – ' + fmt(pMax, 1) + ' % sind hier echtes Vollgas, nicht Teillast. Die gleichzeitig erreichten ' + fmt(lMax, 0) + ' % Motorlast bestätigen das.'
+        ? 'Der Pedalgeber meldet im Ruhezustand ' + fmt(pIdle, 1) + ' % und bei Vollgas ' + fmt(pMax, 1) + ' %. VAG nutzt den elektrischen Sensorbereich bewusst nicht voll aus – ' + fmt(pMax, 1) + ' % sind hier echtes Vollgas, nicht Teillast. Im Sekundenfenster um dieses Pedalmaximum liegt die Motorlast bei ' + fmt(lNear, 0) + ' %, was das bestätigt.'
         : 'Bei Volllast (' + fmt(lMax, 0) + ' % Motorlast) erreicht der Pedalgeber nur ' + fmt(pMax, 1) + ' %. Kennlinie des Gebers prüfen.' };
   }
 }

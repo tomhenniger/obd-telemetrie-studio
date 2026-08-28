@@ -270,6 +270,10 @@ function buildMetric(def, s, rawName) {
     id: def.id, def, label: def.label, short: def.short || def.label,
     unit: canonUnit(def.u), srcUnit: s.unit, rawName,
     t: s.t, v, n: s.n, converted: needConv,
+    // hp -> PS ist keine Umrechnung, aber eine Umdeutung: die Zahl bleibt, die Bedeutung
+    // aendert sich. Wer das nicht ausweist, laesst den Leser mit einer stillen Annahme allein.
+    renamed: !!(srcUnit && !needConv && String(s.unit || '').trim() &&
+                String(s.unit).trim() !== canonUnit(def.u)),
     group: def.g, decimals: def.d, color: def.c || null, agg: def.agg || 'inst'
   };
 }
