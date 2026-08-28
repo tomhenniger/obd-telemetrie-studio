@@ -938,6 +938,19 @@ BUILDERS.fields = function (page) {
 
     const gi = g.gearbox || { mode: 'none' };
     const named = gi.mode === 'table' || gi.mode === 'count';
+    if (gi.uniform)
+      page.appendChild(noteBox('ok', 'Alle Gänge weichen gleichmäßig um ' +
+        (gi.uniform.mean >= 0 ? '+' : '') + fmt(gi.uniform.mean * 100, 1) + ' % ab',
+        'Die Abweichung ist in allen Gängen praktisch gleich (Streuung ' + fmt(gi.uniform.spread * 100, 2) +
+        ' %). Das liegt nicht am Getriebe, sondern am Abrollumfang: unter Last rollt ein Reifen mit rund 96–97 % ' +
+        'seines geometrischen Umfangs ab. Aus der Messung folgt ein tatsächlicher Abrollumfang von ' +
+        fmt(gi.uniform.suggestedCircum, 3) + ' m. Auf die Gangnummern hat das keinen Einfluss – nur auf die ' +
+        'Gesamtübersetzungen. Unter Einstellungen lässt sich der Wert übernehmen.'));
+    if (gi.kindOfBox === 'cvt')
+      page.appendChild(noteBox('warn', 'Stufenloses Getriebe',
+        'Ein CVT hat keine festen Gänge. Die hinterlegten Stufen sind nur in der manuellen Ebene simuliert und je ' +
+        'Motorisierung unterschiedlich appliziert. Eine Zuordnung ist nur aussagekräftig, wenn durchgehend manuell ' +
+        'geschaltet wurde – sonst beschreiben die gemessenen Cluster bloß häufig gefahrene Betriebspunkte.'));
     if (gi.mode === 'mismatch')
       page.appendChild(noteBox('warn', 'Das hinterlegte Getriebe passt nicht zur Messung',
         'Die gemessenen Übersetzungen weichen um bis zu ' + fmt((gi.worst || 0) * 100, 1) + ' % von ' + gi.label +
@@ -2027,25 +2040,6 @@ function gearboxCard() {
       el('span', { class: 'dim', style: { fontSize: '12.5px' } }, 'Angabe'), modeSel));
 
     if (s.mode === 'catalog') {
-      // Vorschlag aus der Messung: die Abstaende der Uebersetzungen sind ein
-      // Fingerabdruck, den der Achsantrieb nicht veraendert.
-      if (App.gears && App.gears.gears.length >= 4 && GEARBOXES.length) {
-        const meas = App.gears.gears.map(g => g.kmhPer1000).sort((a, b) => a - b);
-        const sug = suggestGearboxes(meas, rc, 4).filter(h => h.worst <= 0.06);
-        if (sug.length) {
-          const box = el('div', { class: 'note', style: { marginBottom: '10px' } },
-            el('b', {}, 'Aus der Messung vorgeschlagen'),
-            el('div', { class: 'chiprow', style: { flexWrap: 'wrap', marginTop: '6px' } },
-              sug.map(h => el('button', { class: 'btn' + (h.worst <= 0.025 ? ' primary' : ''), type: 'button',
-                onclick: () => { setGearboxSetting({ mode: 'catalog', id: h.gb.id, final: 0 }); render(); recompute(); } },
-                h.gb.kennung + ' · ' + fmt(h.worst * 100, 1) + ' % · Achse ' + fmt(h.final, 2)))),
-            el('p', { class: 'dim2', style: { fontSize: '12px', marginTop: '6px' } },
-              'Verglichen werden nur die Abstände der Gänge – dafür muss der Achsantrieb nicht bekannt sein. ' +
-              'Unter etwa 1 % ist die Übereinstimmung eindeutig; darüber können mehrere Getriebe ähnlich abgestuft sein. ' +
-              'Das ersetzt keinen Blick in die Papiere.'));
-          wrap.appendChild(box);
-        }
-      }
       if (!GEARBOXES.length) {
         wrap.appendChild(noteBox('warn', 'Noch kein Getriebe im Katalog',
           'Für dieses Werkzeug sind noch keine Werksübersetzungen hinterlegt. Trag sie über „Übersetzungen selbst eintragen" ein – die Zahlen stehen in den Fahrzeugpapieren, im Reparaturleitfaden oder im Selbststudienprogramm des Herstellers.'));
@@ -2070,6 +2064,31 @@ function gearboxCard() {
         };
         q.addEventListener('input', paint); paint();
         wrap.appendChild(q); wrap.appendChild(list);
+      // Vorschlag aus der Messung: die Abstaende der Uebersetzungen sind ein
+      // Fingerabdruck, den der Achsantrieb nicht veraendert.
+      if (App.gears && App.gears.gears.length >= 4 && GEARBOXES.length) {
+        const meas = App.gears.gears.map(g => g.kmhPer1000).sort((a, b) => a - b);
+        const sug = suggestGearboxes(meas, rc, 4).filter(h => h.worst <= 0.06);
+        if (sug.length) {
+          const box = el('div', { class: 'note', style: { marginBottom: '10px' } },
+            el('b', {}, 'Aus der Messung vorgeschlagen'),
+            el('div', { class: 'chiprow', style: { flexWrap: 'wrap', marginTop: '6px' } },
+              sug.map(h => el('button', { class: 'btn' + (h.worst <= 0.025 ? ' primary' : ''), type: 'button',
+                onclick: () => {
+                  // Bei mehreren Achsantrieb-Varianten die Auswahl auf sie eingrenzen,
+                  // statt eine zu raten – welche es ist, entscheidet das Modell.
+                  if (h.variants.length > 1) { q.value = h.gb.kennung; paint(); q.scrollIntoView({ block: 'nearest' }); return; }
+                  setGearboxSetting({ mode: 'catalog', id: h.gb.id, final: 0 }); render(); recompute();
+                } },
+                h.gb.kennung + ' · ' + fmt(h.worst * 100, 1) + ' %' +
+                (h.variants.length > 1 ? ' · ' + h.variants.length + ' Varianten' : ' · Achse ' + fmt(h.final, 2))))),
+            el('p', { class: 'dim2', style: { fontSize: '12px', marginTop: '6px' } },
+              'Verglichen werden nur die Abstände der Gänge – dafür muss der Achsantrieb nicht bekannt sein. ' +
+              'Unter etwa 1 % ist die Übereinstimmung eindeutig; darüber können mehrere Getriebe ähnlich abgestuft sein. ' +
+              'Das ersetzt keinen Blick in die Papiere.'));
+          wrap.appendChild(box);
+        }
+      }
         const gb = gearboxById(s.id);
         if (gb) {
           const gi2 = App.gears && App.gears.gearbox;
@@ -2157,6 +2176,16 @@ function gearboxCard() {
         'aus den Daten ablesen – die automatische Schätzung geht davon aus, dass ein erster Gang am Drehzahlbegrenzer ' +
         'etwa 45–75 km/h erreicht. Aktuell angenommen: Gang ' + cur + ' bis ' + (cur + meas - 1) + '.'));
     }
+
+    const giU = App.gears && App.gears.gearbox;
+    if (giU && giU.uniform) wrap.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center', marginTop: '10px' } },
+      el('button', { class: 'btn', type: 'button', onclick: () => {
+        store.set('rollCircum', +giU.uniform.suggestedCircum.toFixed(4));
+        if (App.profile) App.profile.specs.rollCircum = +giU.uniform.suggestedCircum.toFixed(4);
+        render(); recompute();
+      } }, 'Abrollumfang auf ' + fmt(giU.uniform.suggestedCircum, 3) + ' m korrigieren'),
+      el('span', { class: 'dim', style: { fontSize: '12px' } },
+        'aus der gleichmäßigen Abweichung aller Gänge – das ist der dynamische Umfang, mit dem der Reifen unter Last abrollt')));
 
     /* Gegenüberstellung Soll gegen gemessen */
     const gbx = resolveGearbox(App.profile, rc);

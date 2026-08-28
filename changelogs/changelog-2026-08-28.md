@@ -349,3 +349,32 @@ base64-Fehldeutung, hp/PS, kg/h, MPa, AFR, °C-Falschmeldung, Ist- gegen Soll-La
 - Dedupe hielt „Golf VI" für „Golf VII" (Teilstring), kürte den Gewinner nach beliebigen
   Feldern statt nach Sollwerten und warf dessen Sollwerte weg.
 - Jeder Diesel mit Baujahr vor 2007 galt als Pumpe-Düse.
+
+## Neue Features (Getriebe und Gangnummern)
+
+- **Getriebeangabe** als eigene Einstellung, unabhängig vom Motorprofil: Katalog, eigene
+  Übersetzungen oder nur die Gangzahl. Denselben Motor gibt es mit Handschalter, Wandler
+  und Doppelkupplung — das Getriebe folgt nicht aus dem Motor.
+- **Getriebekatalog mit 34 Einträgen**, jeder mit Quelle, Konfidenz und Anwendungshinweis:
+  VAG (DL501, DQ200/250/381/500, ZF 8HP/6HP in Audi-Applikation, multitronic, 01E, 0B2/0B4,
+  02Q, 02S), BMW/Mercedes/Ford (ZF 8HP in vier Generationen, ZF 6HP, 722.6, 722.9, 725.0,
+  AMG MCT 7, 6F35). Getrennte Achsantriebe je Teilgetriebe werden abgebildet — beim DQ381
+  und DQ500 verschachtelt (Gänge 1/4/5 auf dem einen, 2/3/6/7 auf dem anderen).
+- **Achsantrieb aus der Messung bestimmen**: bei Wandlerautomaten steht er am Fahrzeug,
+  nicht am Getriebe. Die Abstände der gefahrenen Übersetzungen sind aber ein Fingerabdruck,
+  den ein gemeinsamer Faktor nicht verändert — daraus folgt die Gangzuordnung und danach
+  der Achsantrieb als Median.
+- **Getriebe-Vorschlag aus der Messung**: dasselbe Verfahren rückwärts über den ganzen
+  Katalog. Varianten mit identischem Radsatz werden zusammengefasst, weil die Messung sie
+  nicht unterscheiden kann.
+- **Gleichmäßige Abweichung erkennen**: weichen alle Gänge um denselben Betrag ab, liegt es
+  am Abrollumfang, nicht am Getriebe. Der tatsächliche Umfang wird ausgerechnet und lässt
+  sich per Knopf übernehmen.
+- Ohne Getriebeangabe heißen die Stufen jetzt S1, S2, … statt G1, G2, … Der XML-Export
+  benennt in jedem Fall, woher die Nummerierung stammt.
+
+## Bugfixes (Getriebe)
+
+- Die Gangkarte behauptete, monoton fallende Stufensprünge seien das Kennzeichen einer
+  echten Getriebeabstufung. ZF 8HP, Mercedes 9G-Tronic und der Ford 6F35 haben rund um den
+  Direktgang bewusst gestauchte Nachbarstufen — die Aussage taugt nicht als Prüfung.
