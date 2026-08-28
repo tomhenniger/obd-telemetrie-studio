@@ -43,6 +43,11 @@ function classKey(p) {
   if (p.aspiration === 'sauger') return 'petrol_sauger';
   return hub && hub <= 1650 ? 'petrol_turbo_small' : 'petrol_turbo_big';
 }
+/* Welche Sollwerte die Diagnose tatsächlich auswertet. Nur diese entscheiden
+   über die Güte eines Profils — Hubraum und Bohrung sind Information, kein Sollwert. */
+const DIAG_SPEC_FIELDS = ['coolantGreen', 'idleWarm', 'redline', 'loadWotGreen',
+                          'loadIdleGreen', 'boostWotGreen', 'thermostat', 'consNEDC'];
+
 /* Liefert die Sollwerte eines Profils, ergänzt um die Klassenwerte.
    `derived` sagt, welche Werte nicht aus dem Profil stammen. */
 function resolveSpecs(p) {
@@ -51,7 +56,24 @@ function resolveSpecs(p) {
   const out = Object.assign({}, base, own);
   const derived = [];
   for (const k in base) if (own[k] === undefined) derived.push(k);
+
+  /* Der Klassenwert für den Drehzahlbegrenzer ist ein grober Mittelwert und kann
+     unter der Nenndrehzahl des konkreten Motors liegen — dann meldet die Diagnose
+     ein Überdrehen, das keines war. Wo die Nennleistungsdrehzahl bekannt ist,
+     wird der Begrenzer daraus abgeleitet: Serienbegrenzer liegen typisch 300 bis
+     800 min⁻¹ darüber. */
+  if (own.redline === undefined && own.powerRpm && own.powerRpm[1]) {
+    const est = Math.round((own.powerRpm[1] + 400) / 100) * 100;
+    if (est > out.redline) out.redline = est;
+  }
   return { specs: out, derived };
+}
+
+/* Wie viele der acht diagnostisch genutzten Sollwerte kommen aus dem Profil? */
+function specQuality(p) {
+  const own = p.specs || {};
+  const have = DIAG_SPEC_FIELDS.filter(k => own[k] !== undefined);
+  return { have: have.length, total: DIAG_SPEC_FIELDS.length, fields: have };
 }
 
 const BUILTIN_PROFILES = [

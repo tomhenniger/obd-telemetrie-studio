@@ -138,6 +138,25 @@ Gesucht wird über Marke, Motorfamilie, Motorkennbuchstaben, Leistung, Hubraum, 
 oder Baujahr – „cjeb", „320d", „a4 tdi 150" oder „2015" führen alle zum Ziel. Findet die Suche
 nichts, das alle Begriffe trifft, zeigt sie die besten Teiltreffer statt einer leeren Liste.
 
+### Datengüte — was die Zahlen wert sind
+
+Zwei Dinge, die auseinandergehalten gehören:
+
+**Stammdaten** (Hubraum, Leistung, Drehmoment, Baujahre, Motorkennbuchstaben) sind zu 99–100 %
+belegt und in sich widerspruchsfrei: Leistung passt zu Hubraum, Drehmoment zu seiner Drehzahl,
+Bohrung mal Hub zum Hubraum, kein Drehzahlbegrenzer unter der Nennleistungsdrehzahl. Über alle
+231 Profile geprüft, null Widersprüche.
+
+**Sollwerte** (Kühlmittelband, Leerlaufdrehzahl, Ladedruckband, Lastkorridore, Thermostat) sind
+die schwache Stelle: sie stehen in keinem öffentlichen Datenblatt. Genau **eines** von 231
+Profilen bringt sie mit — das restliche Feld läuft auf Klassenwerten. Der Drehzahlbegrenzer wird,
+wo er fehlt, aus der Nennleistungsdrehzahl abgeleitet.
+
+Die Oberfläche sagt das an jedem Profil: ein Abzeichen für die Stammdaten, ein zweites mit
+„n/8 Sollwerte“. Unter *Einstellungen → Datengüte* steht die vollständige Abdeckung je Feld.
+Befunde, die auf einem Klassenwert beruhen, tragen den Hinweis „Sollwert klassenbasiert“ und
+wiegen weniger.
+
 **Was ein Profil nicht belegt, wird nicht erfunden.** Leerlaufdrehzahl, Ladedruck-Sollband und
 Thermostat-Temperatur stehen in keinem öffentlichen Datenblatt; sie fehlen deshalb in den meisten
 Profilen und werden aus dem Klassenprofil der Motorbauart ergänzt. Die betroffenen Befunde tragen

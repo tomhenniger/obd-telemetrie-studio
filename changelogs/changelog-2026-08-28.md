@@ -204,3 +204,19 @@
   Alle drei Bedingungen sind nötig: Hersteller wie BMW und Mercedes vergeben denselben
   Kennbuchstaben über mehrere Leistungsstufen, und zwei Toyota-Hybridgenerationen teilen sich
   denselben Verbrenner bei unterschiedlicher Systemleistung — beides bleibt getrennt.
+
+## Bugfixes (Datengüte)
+
+- **Vier Profile hätten ein Überdrehen gemeldet, das keines war.** Der klassenbasierte
+  Drehzahlbegrenzer lag unter der Nennleistungsdrehzahl des konkreten Motors — betroffen waren
+  zwei Toyota-Hybride und zwei 3.0-TDI-Varianten. Fehlt der Wert im Profil, wird er jetzt aus der
+  Nennleistungsdrehzahl abgeleitet (plus 400 min⁻¹, auf hundert gerundet).
+- **Das Abzeichen „belegt“ hat überversprochen.** Es bezog sich auf die Stammdaten, wurde aber als
+  Aussage über die Sollwerte gelesen. Jetzt zwei getrennte Abzeichen: „Stammdaten belegt“ und
+  „n/8 Sollwerte“ mit Aufzählung, welche aus dem Profil stammen.
+
+## Neue Features (Datengüte)
+
+- **Neue Karte „Datengüte des Profilkatalogs“** in den Einstellungen: gemessene Abdeckung je Feld
+  über alle 231 Profile, getrennt nach Stammdaten und Sollwerten, mit Balken und Erklärung, was
+  ein fehlender Wert für die Diagnose bedeutet.

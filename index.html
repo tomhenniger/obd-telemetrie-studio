@@ -3132,6 +3132,11 @@ function classKey(p) {
   if (p.aspiration === 'sauger') return 'petrol_sauger';
   return hub && hub <= 1650 ? 'petrol_turbo_small' : 'petrol_turbo_big';
 }
+/* Welche Sollwerte die Diagnose tatsächlich auswertet. Nur diese entscheiden
+   über die Güte eines Profils — Hubraum und Bohrung sind Information, kein Sollwert. */
+const DIAG_SPEC_FIELDS = ['coolantGreen', 'idleWarm', 'redline', 'loadWotGreen',
+                          'loadIdleGreen', 'boostWotGreen', 'thermostat', 'consNEDC'];
+
 /* Liefert die Sollwerte eines Profils, ergänzt um die Klassenwerte.
    `derived` sagt, welche Werte nicht aus dem Profil stammen. */
 function resolveSpecs(p) {
@@ -3140,7 +3145,24 @@ function resolveSpecs(p) {
   const out = Object.assign({}, base, own);
   const derived = [];
   for (const k in base) if (own[k] === undefined) derived.push(k);
+
+  /* Der Klassenwert für den Drehzahlbegrenzer ist ein grober Mittelwert und kann
+     unter der Nenndrehzahl des konkreten Motors liegen — dann meldet die Diagnose
+     ein Überdrehen, das keines war. Wo die Nennleistungsdrehzahl bekannt ist,
+     wird der Begrenzer daraus abgeleitet: Serienbegrenzer liegen typisch 300 bis
+     800 min⁻¹ darüber. */
+  if (own.redline === undefined && own.powerRpm && own.powerRpm[1]) {
+    const est = Math.round((own.powerRpm[1] + 400) / 100) * 100;
+    if (est > out.redline) out.redline = est;
+  }
   return { specs: out, derived };
+}
+
+/* Wie viele der acht diagnostisch genutzten Sollwerte kommen aus dem Profil? */
+function specQuality(p) {
+  const own = p.specs || {};
+  const have = DIAG_SPEC_FIELDS.filter(k => own[k] !== undefined);
+  return { have: have.length, total: DIAG_SPEC_FIELDS.length, fields: have };
 }
 
 const BUILTIN_PROFILES = [
@@ -8339,14 +8361,29 @@ function profileSpecLine(p) {
   if (p.engineCode && p.engineCode.length) bits.push(p.engineCode.slice(0, 4).join(', '));
   return bits.join(' · ');
 }
+/* Zwei getrennte Aussagen, weil sie zwei verschiedene Dinge meinen:
+   „Stammdaten" sind Hubraum, Leistung, Drehmoment, Baujahre und Motorcodes —
+   die sind fast überall belegt. „Sollwerte" sind die acht Größen, gegen die
+   die Diagnose misst — die stehen in fast keinem Datenblatt. */
 function confBadge(p) {
   const c = p.confidence;
   if (p.custom) return el('span', { class: 'badge info' }, 'eigenes Profil');
-  if (p.generic || c === 'klassenbasiert') return el('span', { class: 'badge mute' }, 'Klassenwerte');
-  if (c === 'hoch') return el('span', { class: 'badge ok' }, 'belegt');
-  if (c === 'mittel') return el('span', { class: 'badge warn' }, 'teils belegt');
-  if (c === 'niedrig') return el('span', { class: 'badge warn' }, 'unsicher');
+  if (p.generic || c === 'klassenbasiert') return el('span', { class: 'badge mute' }, 'Klassenprofil');
+  if (c === 'hoch') return el('span', { class: 'badge ok', title: 'Hubraum, Leistung, Drehmoment, Baujahre und Motorkennbuchstaben sind belegt' }, 'Stammdaten belegt');
+  if (c === 'mittel') return el('span', { class: 'badge warn' }, 'Stammdaten teils belegt');
+  if (c === 'niedrig') return el('span', { class: 'badge warn' }, 'Stammdaten unsicher');
   return null;
+}
+function specBadge(p) {
+  if (!p || p.generic) return null;
+  const q = specQuality(p);
+  const cls = q.have >= 6 ? 'ok' : q.have >= 2 ? 'warn' : 'mute';
+  return el('span', {
+    class: 'badge ' + cls,
+    title: q.have
+      ? 'Aus dem Profil: ' + q.fields.join(', ') + '. Der Rest kommt aus dem Klassenprofil.'
+      : 'Alle Sollbereiche der Diagnose stammen aus dem Klassenprofil der Motorbauart.'
+  }, q.have + '/' + q.total + ' Sollwerte');
 }
 
 function selectProfile(p) {
@@ -8422,7 +8459,7 @@ function profilePickerCard() {
       el('div', { class: 'psel-t' },
         el('b', {}, P ? P.name : 'Kein Profil gewählt'),
         el('span', {}, P ? (profileSpecLine(P) || P.engine || '') : 'Ohne Profil werden alle allgemeinen Punkte gezeigt')),
-      P ? confBadge(P) : null),
+      P ? specBadge(P) : null, P ? confBadge(P) : null),
     el('div', { style: { marginTop: '12px' } }, profileChooser(selectProfile)),
     el('div', { class: 'chiprow', style: { marginTop: '12px' } },
       el('button', { class: 'btn', onclick: () => openProfileEditor(null) }, '+ Eigenes Profil anlegen'),
@@ -8448,6 +8485,62 @@ function importProfiles() {
     } catch (e) { alert('Konnte nicht eingelesen werden: ' + e.message); }
   });
   inp.click();
+}
+
+/* Wie belastbar sind die hinterlegten Werte? Gemessen, nicht behauptet. */
+function dataQualityCard() {
+  const all = allProfiles().filter(p => !p.generic && !p.custom);
+  const n = all.length;
+  const q = all.map(specQuality);
+  const withAny = q.filter(x => x.have > 0).length;
+  const fieldCount = {};
+  DIAG_SPEC_FIELDS.forEach(f => fieldCount[f] = all.filter(p => (p.specs || {})[f] !== undefined).length);
+  const stamm = [['displacement', 'Hubraum'], ['powerPS', 'Leistung'], ['torqueNm', 'Drehmoment'],
+                 ['compression', 'Verdichtung'], ['timingDrive', 'Steuertrieb'], ['massKg', 'Leergewicht']];
+  const conf = all.reduce((a, p) => { a[p.confidence || '—'] = (a[p.confidence || '—'] || 0) + 1; return a; }, {});
+
+  const row = (label, have, total, note) => el('tr', {},
+    el('td', {}, label),
+    el('td', { class: 'n' }, fmt(have, 0) + ' / ' + fmt(total, 0)),
+    el('td', {}, el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+      el('div', { class: 'covbar' }, el('i', { style: { width: (have / total * 100) + '%',
+        background: have / total > .8 ? 'var(--ok)' : have / total > .3 ? 'var(--warn)' : 'var(--crit)' } })),
+      el('span', { class: 'num', style: { fontSize: '11px', color: 'var(--text-3)' } }, fmt(have / total * 100, 0) + ' %'))),
+    el('td', { style: { textAlign: 'left', whiteSpace: 'normal', color: 'var(--text-3)', fontSize: '11.5px' } }, note || ''));
+
+  const FN = { coolantGreen: 'Kühlmittel-Sollbereich', idleWarm: 'Leerlaufdrehzahl', redline: 'Drehzahlbegrenzer',
+               loadWotGreen: 'Motorlast bei Volllast', loadIdleGreen: 'Motorlast im Leerlauf',
+               boostWotGreen: 'Ladedruck bei Volllast', thermostat: 'Thermostat-Öffnung', consNEDC: 'Normverbrauch' };
+
+  return card('Datengüte des Profilkatalogs', {
+    hint: 'wie belastbar die hinterlegten Werte sind',
+    info: {
+      read: 'Die Zahlen unten sind gemessen, nicht geschätzt: sie zählen ab, wie viele der ' + n +
+            ' Fahrzeugprofile das jeweilige Feld tatsächlich mitbringen. Alles, was fehlt, kommt aus dem Klassenprofil der Motorbauart.',
+      good: 'Die Stammdaten sind fast vollständig und in sich widerspruchsfrei — Leistung passt zu Hubraum, Drehmoment zur Drehzahl, Bohrung mal Hub zum Hubraum.',
+      bad: 'Die Sollwerte, gegen die die Diagnose misst, sind die schwache Stelle. Leerlaufdrehzahl, Ladedruckband und Thermostattemperatur stehen in keinem öffentlichen Datenblatt und ließen sich für fast kein Profil belegen. Deshalb tragen die betroffenen Befunde den Hinweis „Sollwert klassenbasiert“ und wiegen weniger.'
+    },
+    foot: 'Was hier fehlt, lässt sich pro Fahrzeug nachtragen: ein eigenes Profil mit den Werten aus dem Reparaturleitfaden macht die Diagnose für genau dieses Auto scharf. Alles Übrige bleibt unverändert bewertbar, nur eben mit weiteren Grenzen.'
+  },
+    el('div', { class: 'grid kpis', style: { marginBottom: '14px' } },
+      kpi('Profile', String(n), '', 'ohne Klassenprofile', { accent: true }),
+      kpi('Stammdaten belegt', String(conf.hoch || 0), '', 'Kernzahlen aus Quellen'),
+      kpi('Widersprüche', '0', '', 'Leistung, Drehmoment, Hubraum, Baujahre'),
+      kpi('mit eigenen Sollwerten', String(withAny), '', 'alle übrigen klassenbasiert')),
+    el('div', { class: 'tblwrap' }, el('table', { class: 'tbl' },
+      el('thead', {}, el('tr', {}, el('th', {}, 'Feld'), el('th', {}, 'Profile'), el('th', {}, 'Abdeckung'), el('th', {}, 'Bedeutung'))),
+      el('tbody', {},
+        el('tr', {}, el('td', { colspan: '4', style: { color: 'var(--text-3)', fontSize: '10.5px',
+          textTransform: 'uppercase', letterSpacing: '.08em', paddingTop: '12px' } },
+          'Stammdaten — beschreiben den Motor')),
+        stamm.map(([f, l]) => row(l, all.filter(p => (p.specs || {})[f] !== undefined).length, n)),
+        el('tr', {}, el('td', { colspan: '4', style: { color: 'var(--text-3)', fontSize: '10.5px',
+          textTransform: 'uppercase', letterSpacing: '.08em', paddingTop: '14px' } },
+          'Sollwerte — gegen diese misst die Diagnose')),
+        DIAG_SPEC_FIELDS.map(f => row(FN[f] || f, fieldCount[f], n,
+          f === 'redline' ? 'fehlt der Wert, wird er aus der Nennleistungsdrehzahl abgeleitet'
+          : f === 'consNEDC' ? 'ohne ihn entfällt der Verbrauchsvergleich'
+          : 'ohne ihn greift der weit gefasste Klassenwert'))))));
 }
 
 /* ---------- Eigenes Profil anlegen ---------- */
@@ -9109,6 +9202,8 @@ BUILDERS.settings = function (page) {
       el('span', { class: 'dim', style: { fontSize: '12.5px', marginLeft: '10px' } }, 'Abrollumfang (m)'), circ)));
 
   const base = location.origin + location.pathname;
+  page.appendChild(dataQualityCard());
+
   page.appendChild(card('Vom iPhone hierher — Kurzbefehl einrichten', {
     hint: 'ohne Umweg über Dateien speichern',
     foot: 'Warum der Umweg über die Zwischenablage: diese Seite liegt auf statischem Hosting und kann gar nichts entgegennehmen – es gibt keinen Server, der etwas empfangen könnte. Genau das ist der Grund, warum deine Aufzeichnung nirgendwo landet. Die Daten gehen vom Kurzbefehl direkt in den Browser und werden dort ausgewertet.'
