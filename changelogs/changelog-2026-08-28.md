@@ -163,3 +163,30 @@
   für Diagnose-Befunde.
 - Die Markierungen für Soll- und Warnzustand standen in den Prüfpunkten auf eigener Zeile statt
   neben dem Text.
+
+## UI-Änderungen (Prüfplan je Motorbauart)
+
+- **Textvarianten je Bauart.** Die Felder eines Prüfpunkts und einer Messfahrt dürfen statt eines
+  Textes ein Objekt mit den Schlüsseln base, petrol, diesel, turbo, sauger, manuell, wandler, dkg
+  und cvt tragen. Die Anwendung setzt base plus die passenden Varianten zusammen. 36 der 85
+  Prüfpunkte und alle elf Messfahrten nutzen das: beim Ottomotor steht damit nichts mehr über
+  Glühkerzen, Partikelfilter oder Nageln, beim Diesel nichts über Zündkerzen, Klopfen oder
+  Katalysator-Heizphase.
+- Vorher enthielten 16 von 81 angezeigten Punkten Diesel-Inhalte bei einem Benziner; jetzt keiner.
+- Der überarbeitete Plan wurde von einem eigenen Prüfagenten gegengelesen, der 21 Fehler fand.
+  Eingearbeitet wurden unter anderem: bauartspezifische Kostenspannen, die auf Punktebene standen
+  und dem Text daneben widersprachen; ein Rückruf mit Brandgefahr, der Diesel-Käufern vorenthalten
+  worden wäre; die falsche Angabe, der Motorkennbuchstabe stehe in Feld P.3 (das ist die
+  Kraftstoffart); die falsche Aussage, die Öldruckleuchte dürfe nach dem Start anbleiben; der
+  fehlende Hinweis, dass das trockene Doppelkupplungsgetriebe gar keinen Ölservice hat.
+
+## Neue Features (Motorcodes)
+
+- **240 statt 220 Profile.** Zwanzig fehlende Leistungsstufen ergänzt: BMW N46, N43, N52, N54,
+  N55, N20, B48, B58 und B58 TÜ1, Mercedes M272 in beiden Hubräumen, dazu VAG EA837 272 PS,
+  EA888 Gen2 180 PS, Gen3 192/225/290/300 PS, Gen4 310 PS und EA897 evo2 231 PS.
+- **Fehlende Motorkennbuchstaben nachgetragen**, jeder einzeln belegt: unter anderem CGWC, CREC
+  und CTWA beim 3.0 TFSI Kompressor mit 333 PS — bis dahin fand man den S5 B8.5 nicht über seinen
+  Motorcode. Dazu CDNC, CPMA und CADA beim EA888 Gen2 211 PS sowie mehrere EA288-Varianten.
+- Falsche Zuordnungen korrigiert: der SQ5 8R gehört nicht in das 333-PS-Profil, er läuft mit
+  CTUD/CTXA und 313 PS. CTUA wurde nicht ergänzt, weil es in keiner Quelle auffindbar war.

@@ -104,6 +104,11 @@ GPS-Spuren versehentlich veröffentlicht werden.
 Ein eigener Bereich für die Gebrauchtwagen-Besichtigung, nutzbar **ohne geladene CSV** – beim
 Termin gibt es die Messdaten noch nicht, die Checkliste aber schon.
 
+- **Auf die Motorbauart zugeschnitten.** Ein Prüfpunkt kann für Benziner und Diesel, für
+  aufgeladene und Saugmotoren, für Handschalter, Wandler, Doppelkupplung und CVT jeweils eigene
+  Textvarianten tragen. Beim Ottomotor steht dann nichts über Glühkerzen und Partikelfilter, beim
+  Diesel nichts über Zündkerzen und Katalysator-Heizphase — es ist derselbe Prüfpunkt, nur für das
+  Auto vor dir formuliert. 36 der 85 Punkte und alle elf Messfahrten nutzen das.
 - **85 Prüfpunkte in neun Phasen**, vom Telefonat vor dem Termin über Papiere, Karosserie,
   kalten Motorraum, Kaltstart, Innenraum und Fahrwerk bis zur Probefahrt und dem Blick unter das
   warme Auto. Je Punkt: was genau zu tun ist, woran man erkennt dass es passt, das Warnsignal,
@@ -122,9 +127,12 @@ Termin gibt es die Messdaten noch nicht, die Checkliste aber schon.
 ## Fahrzeugprofile
 
 Die Sollbereiche der Diagnose kommen aus dem gewählten Fahrzeugprofil. Der Katalog umfasst
-**220 Profile** – VW-Konzern, Mercedes-Benz, BMW, Toyota, Hyundai/Kia, Mazda, Honda, Nissan,
+**240 Profile** – VW-Konzern, Mercedes-Benz, BMW, Toyota, Hyundai/Kia, Mazda, Honda, Nissan,
 Suzuki und mehr, Benziner wie Diesel, Baujahre etwa 2003 bis heute. 200 davon sind vollständig
 belegt, jedes bringt seine bekannten Schwachstellen samt Erkennungssignatur mit.
+Vollständig ist er nicht: bei Ford, Opel, Volvo, Renault, PSA und Fiat ist die Lücke am größten,
+und auch bei den abgedeckten Marken fehlen einzelne Leistungsstufen. Wo kein Profil passt, greifen
+die Klassenprofile — oder man legt in zwei Minuten ein eigenes an.
 
 Gesucht wird über Marke, Motorfamilie, Motorkennbuchstaben, Leistung, Hubraum, Trägerfahrzeug
 oder Baujahr – „cjeb", „320d", „a4 tdi 150" oder „2015" führen alle zum Ziel. Findet die Suche

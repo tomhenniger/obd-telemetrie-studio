@@ -59,8 +59,8 @@ const BUILTIN_PROFILES = [
   id: 'audi_s5_b85_cgwc',
   name: 'Audi S5 B8.5 · 3.0 TFSI Kompressor · 333 PS',
   short: 'S5 B8.5 CGWC',
-  brand: 'Audi', family: 'EA837 3.0 TFSI', engineCode: ['CGWC'],
-  years: [2011, 2016], models: 'A4/S4 B8.5, A5/S5 B8.5, Q5 SQ5',
+  brand: 'Audi', family: 'EA837 3.0 TFSI', engineCode: ['CGWC', 'CREC'],
+  years: [2011, 2017], models: 'A4/S4 B8.5, A5/S5 B8.5, A6 C7, A7 C7',
   confidence: 'hoch',
   engine: 'V6 90°, 24V DOHC, Roots-Kompressor Eaton TVS 1320',
   aspiration: 'kompressor', fuel: 'petrol',
@@ -250,7 +250,7 @@ const BUILTIN_PROFILES = [
 {"id":"vag_ea888_g2_18tsi_160","name":"VAG 1.8 TSI EA888 Gen 2 · 160 PS","brand":"VW/Audi/Seat/Skoda","family":"EA888 Gen 2","engineCode":["CDAA","CDHB"],"years":[2008,2011],"models":"Golf VI, A3 8P, A4 B8, A5 8T, Seat Exeo, Octavia II, Passat B7, Tiguan I, Scirocco III","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1798,"bore":82.5,"stroke":84.1,"compression":9.6,"powerPS":160,"powerKW":118,"powerRpm":[4500,6200],"torqueNm":250,"torqueRpm":[1500,4500],"injection":"Benzin-Direkteinspritzung","massKg":1301,"consNEDC":6.9,"co2NEDC":159,"banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Ölverbrauch durch Ölabstreifringe","s":"Baujahre 2008–2011: Ölabstreifring nur 1,5 mm mit verkokenden Rücklaufbohrungen. Ölverbrauch ab 40.000–70.000 km, teils über 1 l/1000 km; blauer Rauch bei Lastwechsel, Ölnebel im Ladeluftweg","km":"ab ca. 40.000 km"},{"t":"Steuerkette und Kettenspanner","s":"Unterdimensionierter Spanner: Kaltstart-Rasseln, P0016/P0011, Verstellwinkel Soll/Ist driftet","km":"ab ca. 100.000 km"},{"t":"Verkokte Einlassventile","s":"Gen 1/2 nur Direkteinspritzung: unrunder Leerlauf, Aussetzerzähler, wandernde Langzeitadaption","km":"ab ca. 80.000 km"},{"t":"Folgeschäden aus Ölverbrauch","s":"Öl im Brennraum belastet Katalysator und Kerzen: Katalysator-Wirkungsgradfehler, verölte Kerzen","km":"ab ca. 100.000 km"}]},
 {"id":"vag_ea888_g2_20tsi_200","name":"VAG 2.0 TSI EA888 Gen 2 · 200 PS","brand":"VW/Seat/Skoda","family":"EA888 Gen 2","engineCode":["CCZA","CAWB"],"years":[2008,2011],"models":"Tiguan I, Passat B6, Scirocco III, Octavia II RS, Seat Exeo","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"powerPS":200,"powerKW":147,"powerRpm":[5100,6000],"torqueNm":280,"torqueRpm":[1700,5000],"injection":"Benzin-Direkteinspritzung","massKg":1360,"banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Ölverbrauch durch Ölabstreifringe","s":"Baujahre 2008–2011 betroffen: Ölverbrauch ab 40.000–70.000 km, blauer Rauch bei Lastwechsel, Ölnebel im Ladeluftrohr; Reparaturbelege über Kolbentausch verlangen","km":"ab ca. 40.000 km"},{"t":"Steuerkette und Kettenspanner","s":"Kaltstart-Rasseln, P0016/P0011, Verstellwinkel-Abweichung","km":"ab ca. 100.000 km"},{"t":"Verkokte Einlassventile","s":"Unrunder Leerlauf, Aussetzerzähler, wandernde Langzeitadaption","km":"ab ca. 80.000 km"},{"t":"Ladedruckregelung","s":"Negative Dauerabweichung deutet auf Wastegate oder Ladeluftleckage","km":"ab ca. 120.000 km"}]},
 {"id":"vag_ea888_g2_20tsi_210","name":"VAG 2.0 TSI EA888 Gen 2 · 210 PS","brand":"VW/Seat","family":"EA888 Gen 2","engineCode":["CCZB"],"years":[2009,2014],"models":"Golf VI GTI, VW CC, Tiguan I, Leon II FR, Seat Exeo","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"compression":9.6,"powerPS":210,"powerKW":155,"powerRpm":[5300,6200],"torqueNm":280,"torqueRpm":[1700,5200],"injection":"Benzin-Direkteinspritzung","massKg":1318,"consNEDC":7.3,"co2NEDC":170,"banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Ölverbrauch durch Ölabstreifringe","s":"Fahrzeuge bis ca. 2011 stark betroffen, verbesserte Ringe erst ab Modelljahr 2015 belegt: blauer Rauch bei Lastwechsel, Ölnebel im Ladeluftweg, Reparaturnachweis verlangen","km":"ab ca. 40.000 km"},{"t":"Steuerkette und Kettenspanner","s":"Kaltstart-Rasseln, P0016/P0011, Verstellwinkel Soll/Ist driftet; bei Kolbenring-Reparatur meist mitgetauscht — Beleg prüfen","km":"ab ca. 100.000 km"},{"t":"Verkokte Einlassventile","s":"Nur Direkteinspritzung: Aussetzerzähler, wandernde Langzeitadaption, ruppiger Kaltlauf","km":"ab ca. 80.000 km"},{"t":"Ladedruckregelung","s":"Negative Dauerabweichung deutet auf Wastegate-Steller oder Leckage","km":"ab ca. 120.000 km"}]},
-{"id":"vag_ea888_g2_20tfsi_211","name":"VAG 2.0 TFSI EA888 Gen 2 längs · 211 PS","brand":"Audi","family":"EA888 Gen 2","engineCode":["CAEB","CESA"],"years":[2008,2011],"models":"A4 B8, A5 8T, Q5 8R","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"compression":9.6,"powerPS":211,"powerKW":155,"powerRpm":[4300,6200],"torqueNm":350,"torqueRpm":[1600,4200],"injection":"Benzin-Direkteinspritzung","massKg":1435,"consNEDC":6.6,"co2NEDC":154,"banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Ölverbrauch durch Ölabstreifringe","s":"Kernbaujahre 2008–2011: Ölverbrauch ab 40.000–70.000 km, teils weit über 1 l/1000 km; niedriger Ölstand, blauer Rauch, Ölnebel im Ladeluftrohr. Reparatur nur durch Kolben-/Kolbenringtausch","km":"ab ca. 40.000 km"},{"t":"Steuerkette und Kettenspanner","s":"Kaltstart-Rasseln, P0016/P0011, Verstellwinkel Soll/Ist driftet","km":"ab ca. 100.000 km"},{"t":"Verkokte Einlassventile","s":"Ablagerungen behindern Luftstrom und Ventilschluss: Aussetzerzähler, wandernde Langzeitadaption","km":"ab ca. 80.000 km"},{"t":"Audi Valvelift auslassseitig","s":"AVS-Umschaltstatus im Messwertblock und zugehörige Fehlerspeichereinträge prüfen","km":"ab ca. 120.000 km"}]},
+{"id":"vag_ea888_g2_20tfsi_211","name":"VAG 2.0 TFSI EA888 Gen 2 längs · 211 PS","brand":"Audi","family":"EA888 Gen 2","engineCode":["CAEB", "CESA", "CDNC", "CPMA", "CADA"],"years":[2008, 2013],"models":"A4 B8, A5 8T, Q5 8R","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"compression":9.6,"powerPS":211,"powerKW":155,"powerRpm":[4300,6200],"torqueNm":350,"torqueRpm":[1600,4200],"injection":"Benzin-Direkteinspritzung","massKg":1435,"consNEDC":6.6,"co2NEDC":154,"banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Ölverbrauch durch Ölabstreifringe","s":"Kernbaujahre 2008–2011: Ölverbrauch ab 40.000–70.000 km, teils weit über 1 l/1000 km; niedriger Ölstand, blauer Rauch, Ölnebel im Ladeluftrohr. Reparatur nur durch Kolben-/Kolbenringtausch","km":"ab ca. 40.000 km"},{"t":"Steuerkette und Kettenspanner","s":"Kaltstart-Rasseln, P0016/P0011, Verstellwinkel Soll/Ist driftet","km":"ab ca. 100.000 km"},{"t":"Verkokte Einlassventile","s":"Ablagerungen behindern Luftstrom und Ventilschluss: Aussetzerzähler, wandernde Langzeitadaption","km":"ab ca. 80.000 km"},{"t":"Audi Valvelift auslassseitig","s":"AVS-Umschaltstatus im Messwertblock und zugehörige Fehlerspeichereinträge prüfen","km":"ab ca. 120.000 km"}]},
 {"id":"vag_ea888_g3_18tfsi_170","name":"VAG 1.8 TFSI EA888 Gen 3 längs · 170 PS","brand":"Audi","family":"EA888 Gen 3","engineCode":["CJEB"],"years":[2011,2018],"models":"A4 B8 (8K5), A5 8T","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1798,"bore":82.5,"stroke":84.1,"compression":9.6,"powerPS":170,"powerKW":125,"powerRpm":[3800,6200],"torqueNm":320,"torqueRpm":[1400,3700],"injection":"Direkt- und Saugrohreinspritzung","banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Wastegate-Steller Turbolader","s":"Muss bei Gen 3 um 100.000 km angelernt oder erneuert werden: Ladedruck Soll/Ist weicht ab, Fehler Ladedruckregelgrenze, Leistungsloch","km":"ab ca. 100.000 km"},{"t":"Steuerkette","s":"Verbesserter Spanner, Thema entschärft aber nicht erledigt: kalt auf Rasseln hören, P0016/P0011 und Verstellwinkel prüfen","km":"ab ca. 150.000 km"},{"t":"Ölverbrauch bis Modelljahr 2014","s":"Wesentlich verbesserter Ölabstreifring erst ab Modelljahr 2015; davor Ölstand und Ölnebel im Ladeluftweg prüfen","km":"ab ca. 80.000 km"},{"t":"Kombinierte Einspritzung","s":"Direkt- plus Saugrohreinspritzung reduziert Verkokung stark; bei Kaltlaufruckeln eher MPI-Ventile und Zündung prüfen","km":"—"}]},
 {"id":"vag_ea888_g3_18tsi_180","name":"VAG 1.8 TSI EA888 Gen 3 quer · 180 PS","brand":"VW/Audi/Seat/Skoda","family":"EA888 Gen 3","engineCode":["CJSA"],"years":[2013,2018],"models":"A3 8V, TT 8S, Leon III, Octavia III, Golf VII, Passat B8","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1798,"bore":82.5,"stroke":84.1,"compression":9.6,"powerPS":180,"powerKW":132,"powerRpm":[5100,6200],"torqueNm":250,"torqueRpm":[1250,5000],"injection":"Direkt- und Saugrohreinspritzung","massKg":1260,"consNEDC":5.8,"co2NEDC":135,"banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Wastegate-Steller Turbolader","s":"Anlernen oder Erneuern um 100.000 km: Ladedruck Soll/Ist-Abweichung, Fehler Ladedruckregelgrenze, Leistungsloch","km":"ab ca. 100.000 km"},{"t":"Steuerkette","s":"Kaltstart-Rasseln, P0016/P0011, Verstellwinkel Soll/Ist prüfen","km":"ab ca. 150.000 km"},{"t":"Ölverbrauch bis Modelljahr 2014","s":"Bei Baujahren 2013/2014 Ölstand und Ölnebel im Ladeluftweg prüfen","km":"ab ca. 80.000 km"},{"t":"Doppeleinspritzung","s":"Hält die Einlassventile weitgehend sauber; bei Kaltlaufruckeln MPI-Ventile, Zündspulen und Aussetzerzähler prüfen","km":"—"}]},
 {"id":"vag_ea888_g3_20tfsi_190","name":"VAG 2.0 TFSI EA888 Gen 3 B-Zyklus · 190 PS","brand":"VW/Audi","family":"EA888 Gen 3 (ultra/B-Zyklus)","engineCode":["CVKB","CZPB"],"years":[2016,2018],"models":"A4 B9, A5 F5, A3 8V, VW Arteon","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"powerPS":190,"powerKW":140,"powerRpm":[4200,6000],"torqueNm":320,"torqueRpm":[1500,4180],"injection":"Direkt- und Saugrohreinspritzung","massKg":1380,"consNEDC":5.4,"co2NEDC":122,"banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"B-Zyklus mit verkürztem Einlass-Ventilhub","s":"Klopfempfindlich bei schlechtem Kraftstoff: Klopfregelungs- und Zündwinkelwerte je Zylinder im Messwertblock beobachten","km":"—"},{"t":"Wastegate-Steller Turbolader","s":"Ladedruck Soll/Ist-Abweichung, Fehler Ladedruckregelgrenze, Leistungsloch unter Volllast","km":"ab ca. 100.000 km"},{"t":"Steuerkette","s":"Kaltstart-Rasseln und Nockenwellen-Verstellwinkel prüfen","km":"ab ca. 150.000 km"},{"t":"Doppeleinspritzung","s":"Ventilverkokung gering; bei Aussetzern zuerst MPI-Ventile und Zündung prüfen","km":"—"}]},
@@ -260,13 +260,13 @@ const BUILTIN_PROFILES = [
 {"id":"vag_ea888_g3_20tsi_265","name":"VAG 2.0 TSI EA888 Gen 3 · 265 PS","brand":"VW/Seat","family":"EA888 Gen 3","engineCode":["CJXE"],"years":[2014,2017],"models":"Golf VII GTI Clubsport, Seat Leon Cupra 265","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"compression":9.3,"powerPS":265,"powerKW":195,"powerRpm":[5350,6600],"torqueNm":350,"torqueRpm":[1700,5300],"injection":"Direkt- und Saugrohreinspritzung","banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Wastegate-Steller Turbolader IS38","s":"Grösserer Lader, gleiche Stellerproblematik: Ladedruck Soll/Ist-Abweichung, Fehler Ladedruckregelgrenze","km":"ab ca. 100.000 km"},{"t":"Steuerkette","s":"Kaltstart-Rasseln, P0016/P0011, Verstellwinkel Soll/Ist prüfen","km":"ab ca. 150.000 km"},{"t":"Klopfregelung unter Volllast","s":"9,3:1 mit hohem Ladedruck: dauerhafte Zündwinkelrücknahme deutet auf Kraftstoff- oder Ladelufttemperaturproblem","km":"—"},{"t":"Tuning-Historie","s":"Beliebtes Tuningobjekt inklusive Overboost-Software; Ladedruck-Istwerte, Kupplungs- und DSG-Zustand prüfen","km":"—"}]},
 {"id":"vag_ea888_g3_20tsi_300","name":"VAG 2.0 TSI EA888 Gen 3 · 300 PS","brand":"VW/Audi","family":"EA888 Gen 3","engineCode":["CJXC"],"years":[2011,2017],"models":"Golf VII R, Audi S3 8V, Audi TTS 8S","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"compression":9.3,"powerPS":300,"powerKW":221,"powerRpm":[5500,6200],"torqueNm":380,"torqueRpm":[1800,5500],"injection":"Direkt- und Saugrohreinspritzung","massKg":1431,"consNEDC":7.1,"co2NEDC":165,"banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Wastegate-Steller Turbolader IS38","s":"Ladedruck Soll/Ist-Abweichung, Fehler Ladedruckregelgrenze, Leistungsloch unter Volllast","km":"ab ca. 100.000 km"},{"t":"Steuerkette","s":"Kaltstart-Rasseln, P0016/P0011, Nockenwellen-Verstellwinkel Soll/Ist prüfen","km":"ab ca. 150.000 km"},{"t":"Klopfregelung unter Volllast","s":"Zündwinkelrücknahme je Zylinder beobachten; dauerhafte Rücknahme deutet auf Kraftstoffqualität oder Ladelufttemperatur","km":"—"},{"t":"Tuning und Kupplung","s":"Sehr häufig auf Stage 1/2 umgerüstet: Ladedruck-Istwerte, DSG-Adaptionswerte und Haldex-Servicehistorie prüfen","km":"—"}]},
 {"id":"vag_ea888_g4_20tfsi_150","name":"VAG 2.0 TFSI EA888 Gen 4 · 150 PS (35 TFSI)","brand":"Audi","family":"EA888 Gen 4","engineCode":["DLVB"],"years":[2020,2024],"models":"A4 B9, A5 F5","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"powerPS":150,"powerKW":110,"powerRpm":[3900,6000],"torqueNm":270,"torqueRpm":[1300,3850],"injection":"Direkt- und Saugrohreinspritzung","massKg":1440,"consNEDC":6,"co2NEDC":136,"banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Miller-artiger Betrieb, klopfempfindlich","s":"Klopfregelung und Zündwinkelrücknahme je Zylinder beobachten, besonders bei minderwertigem Kraftstoff","km":"—"},{"t":"Ottopartikelfilter","s":"Serienmässig: Beladung, Differenzdruck und Regenerationszähler auslesen","km":"ab ca. 60.000 km"},{"t":"Ladedruckregelung","s":"Ladedruck Soll/Ist unter Volllast vergleichen; Dauerabweichung deutet auf Steller oder Ladeluftleckage","km":"ab ca. 100.000 km"},{"t":"Steuerkette","s":"Weiterhin Kettentrieb: Kaltstart auf Rasseln prüfen, P0016/P0011 und Verstellwinkel beobachten","km":"ab ca. 150.000 km"}]},
-{"id":"vag_ea888_g4_20tsi_190","name":"VAG 2.0 TSI EA888 Gen 4 · 190 PS","brand":"VW/Seat/Skoda","family":"EA888 Gen 4","engineCode":["DKZA","DNNA"],"years":[2019,2026],"models":"Tiguan II, Golf VIII, Passat, Arteon, Superb III, Tarraco","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"compression":12.2,"powerPS":190,"powerKW":140,"powerRpm":[4200,6000],"torqueNm":320,"torqueRpm":[1500,4100],"injection":"Direkt- und Saugrohreinspritzung","banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Hohe Verdichtung 12,2:1","s":"Klopfregelung je Zylinder und Zündwinkelrücknahme beobachten; dauerhafte Rücknahme deutet auf Kraftstoffqualität","km":"—"},{"t":"Ottopartikelfilter","s":"Beladungswert, Differenzdruck und Regenerationszähler auslesen, besonders bei Kurzstreckenfahrzeugen","km":"ab ca. 60.000 km"},{"t":"Ladedruckregelung","s":"Dauerabweichung deutet auf Wastegate-Steller oder Ladeluftleckage","km":"ab ca. 100.000 km"},{"t":"Steuerkette","s":"Beim Kaltstart auf Rasseln hören, P0016/P0011 und Verstellwinkel prüfen","km":"ab ca. 150.000 km"}]},
+{"id":"vag_ea888_g4_20tsi_190","name":"VAG 2.0 TSI EA888 Gen 4 · 190 PS","brand":"VW/Seat/Skoda","family":"EA888 Gen 4","engineCode":["DKZA", "DNNA", "DRFA"],"years":[2019,2026],"models":"Tiguan II, Golf VIII, Passat, Arteon, Superb III, Tarraco","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"compression":12.2,"powerPS":190,"powerKW":140,"powerRpm":[4200,6000],"torqueNm":320,"torqueRpm":[1500,4100],"injection":"Direkt- und Saugrohreinspritzung","banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Hohe Verdichtung 12,2:1","s":"Klopfregelung je Zylinder und Zündwinkelrücknahme beobachten; dauerhafte Rücknahme deutet auf Kraftstoffqualität","km":"—"},{"t":"Ottopartikelfilter","s":"Beladungswert, Differenzdruck und Regenerationszähler auslesen, besonders bei Kurzstreckenfahrzeugen","km":"ab ca. 60.000 km"},{"t":"Ladedruckregelung","s":"Dauerabweichung deutet auf Wastegate-Steller oder Ladeluftleckage","km":"ab ca. 100.000 km"},{"t":"Steuerkette","s":"Beim Kaltstart auf Rasseln hören, P0016/P0011 und Verstellwinkel prüfen","km":"ab ca. 150.000 km"}]},
 {"id":"vag_ea888_g4_20tsi_245","name":"VAG 2.0 TSI EA888 Gen 4 · 245 PS","brand":"VW/Skoda/Seat/Cupra","family":"EA888 Gen 4","engineCode":["DNPA"],"years":[2020,2024],"models":"Golf VIII GTI, Tiguan II, Cupra Leon, Octavia IV RS, Kodiaq RS, Cupra Formentor","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"compression":9.6,"powerPS":245,"powerKW":180,"powerRpm":[5000,6500],"torqueNm":370,"torqueRpm":[1600,4300],"injection":"Direkt- und Saugrohreinspritzung","massKg":1354,"consWLTP":7.4,"banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Ottopartikelfilter","s":"Beladung, Differenzdruck und Regenerationszähler auslesen; sportlich bewegte Fahrzeuge mit vielen Kaltstarts zeigen erhöhte Beladung","km":"ab ca. 60.000 km"},{"t":"Ladedruckregelung","s":"Ladedruck Soll/Ist unter Volllast vergleichen; Fehler Ladedruckregelgrenze deutet auf Steller oder Leckage","km":"ab ca. 100.000 km"},{"t":"Steuerkette","s":"Kaltstart-Rasseln, P0016/P0011 und Verstellwinkel prüfen","km":"ab ca. 150.000 km"},{"t":"Tuning-Historie","s":"Sehr häufig gechippt: Ladedruck-Istwerte über Serie, Zündwinkelrücknahme und DSG-Adaptionen prüfen","km":"—"}]},
 {"id":"vag_ea888_g4_20tsi_300","name":"VAG 2.0 TSI EA888 Gen 4 · 300 PS","brand":"VW/Audi/Cupra","family":"EA888 Gen 4","engineCode":["DNFC"],"years":[2020,2024],"models":"Golf VIII GTI Clubsport, T-Roc R, Audi SQ2, Cupra Ateca, Cupra Leon","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"compression":9.3,"powerPS":300,"powerKW":221,"powerRpm":[5300,6600],"torqueNm":400,"torqueRpm":[2000,5300],"injection":"Direkt- und Saugrohreinspritzung","massKg":1386,"banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Ottopartikelfilter","s":"Beladung, Differenzdruck und Regenerationszähler auslesen","km":"ab ca. 60.000 km"},{"t":"Ladedruckregelung","s":"Fehler Ladedruckregelgrenze deutet auf Steller oder Ladeluftleckage","km":"ab ca. 100.000 km"},{"t":"Klopfregelung unter Volllast","s":"9,3:1 mit hohem Ladedruck: Dauerrücknahme des Zündwinkels deutet auf Kraftstoff oder Ladelufttemperatur","km":"—"},{"t":"Tuning und Antriebsstrang","s":"Häufig getunt: Ladedruck-Istwerte, DSG-Adaptionswerte und Haldex-Servicehistorie prüfen","km":"—"}]},
 {"id":"vag_ea888_g4_20tsi_320","name":"VAG 2.0 TSI EA888 Gen 4 · 320 PS","brand":"VW/Audi","family":"EA888 Gen 4","engineCode":["DNFG"],"years":[2020,2024],"models":"Golf VIII R, Tiguan II R, Arteon R, Audi TTS FV","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1984,"bore":82.5,"stroke":92.8,"compression":9.3,"powerPS":320,"powerKW":235,"powerRpm":[5200,6600],"torqueNm":420,"torqueRpm":[2100,5550],"injection":"Direkt- und Saugrohreinspritzung","massKg":1476,"consWLTP":7.8,"banks":1,"timingDrive":"Kette"},"weakSpots":[{"t":"Ottopartikelfilter","s":"Beladung, Differenzdruck und Regenerationszähler auslesen","km":"ab ca. 60.000 km"},{"t":"Ladedruckregelung","s":"Fehler Ladedruckregelgrenze deutet auf Steller oder Leckage","km":"ab ca. 100.000 km"},{"t":"Klopfregelung unter Volllast","s":"Höchste Serienlast des Vierzylinders: Zündwinkelrücknahme je Zylinder beobachten","km":"—"},{"t":"Tuning und Antriebsstrang","s":"Sehr häufig getunt: Ladedruck-Istwerte, DSG-Adaptionen und Haldex-Servicehistorie prüfen","km":"—"}]},
-{"id":"vag_ea837_30tfsi_kompressor_300","name":"Audi 3.0 TFSI Kompressor · 300 PS","brand":"Audi","family":"EA837 3.0 TFSI Kompressor","engineCode":["CGWB"],"years":[2011,2012],"models":"A6 C7, A7 C7","fuel":"petrol","aspiration":"kompressor","confidence":"hoch","specs":{"displacement":2995,"bore":84.5,"stroke":89,"compression":10.3,"powerPS":300,"powerKW":220,"powerRpm":[5250,6500],"torqueNm":440,"torqueRpm":[2900,4500],"injection":"Benzin-Direkteinspritzung","massKg":1740,"consNEDC":8.2,"co2NEDC":190,"banks":2,"timingDrive":"Kette"},"weakSpots":[{"t":"Schraubenkompressor im Innen-V","s":"Ladedruck-Ist bleibt schon bei niedriger Drehzahl unter Soll, jaulendes Nebengeräusch; Riemen- und Spannerzustand prüfen","km":"ab ca. 120.000 km"},{"t":"Verkokte Einlassventile","s":"Reine Direkteinspritzung: Aussetzerzähler je Zylinder, Langzeitadaption Bank 1/Bank 2 driftet auseinander","km":"ab ca. 80.000 km"},{"t":"Steuerkette an der Motorrückseite","s":"Kaltstart-Rasseln, P0016/P0017, Verstellwinkel beider Bänke prüfen; Erneuerung sehr aufwendig","km":"ab ca. 150.000 km"},{"t":"Wassergekühlter Ladeluftkühler im V","s":"Kühlmittelverlust ohne äussere Leckage, auffällige Ladelufttemperaturen","km":"ab ca. 120.000 km"}]},
-{"id":"vag_ea837_30tfsi_kompressor_310","name":"Audi 3.0 TFSI Kompressor · 310 PS","brand":"Audi","family":"EA837 3.0 TFSI Kompressor","engineCode":["CGWD","CGXB","CTUA"],"years":[2011,2014],"models":"A6 C7, A7 C7","fuel":"petrol","aspiration":"kompressor","confidence":"hoch","specs":{"displacement":2995,"bore":84.5,"stroke":89,"compression":10.3,"powerPS":310,"powerKW":228,"powerRpm":[5500,6500],"torqueNm":440,"torqueRpm":[2900,4500],"injection":"Benzin-Direkteinspritzung","massKg":1865,"consNEDC":8.2,"co2NEDC":190,"banks":2,"timingDrive":"Kette"},"weakSpots":[{"t":"Schraubenkompressor im Innen-V","s":"Ladedruck-Ist bleibt unter Soll, jaulendes Nebengeräusch; Riemen und Spanner prüfen","km":"ab ca. 120.000 km"},{"t":"Verkokte Einlassventile","s":"Aussetzerzähler je Zylinder, Langzeitadaption Bank 1 und Bank 2 vergleichen","km":"ab ca. 80.000 km"},{"t":"Steuerkette an der Motorrückseite","s":"Kaltstart-Rasseln, P0016/P0017, Verstellwinkel beider Bänke; sehr teure Instandsetzung","km":"ab ca. 150.000 km"},{"t":"Wassergekühlter Ladeluftkühler im V","s":"Schleichender Kühlmittelverlust und hohe Ladelufttemperaturen","km":"ab ca. 120.000 km"}]},
-{"id":"vag_ea837_30tfsi_kompressor_333","name":"Audi 3.0 TFSI Kompressor · 333 PS","brand":"Audi/VW","family":"EA837 3.0 TFSI Kompressor","engineCode":["CAKA","CCBA"],"years":[2009,2011],"models":"S4 B8, S5 Sportback/Cabrio, Q7, VW Touareg II","fuel":"petrol","aspiration":"kompressor","confidence":"hoch","specs":{"displacement":2995,"bore":84.5,"stroke":89,"compression":10.3,"powerPS":333,"powerKW":245,"powerRpm":[5500,7000],"torqueNm":440,"torqueRpm":[2900,5300],"injection":"Benzin-Direkteinspritzung","massKg":1650,"consNEDC":9.7,"co2NEDC":225,"banks":2,"timingDrive":"Kette"},"weakSpots":[{"t":"Schraubenkompressor im Innen-V","s":"Ladedruck-Ist bereits bei niedriger Drehzahl unter Soll, jaulendes Nebengeräusch; Riemen, Spanner und Laderlagerung prüfen","km":"ab ca. 120.000 km"},{"t":"Verkokte Einlassventile","s":"Aussetzerzähler einzelner Zylinder, auseinanderdriftende Langzeitadaption Bank 1/Bank 2","km":"ab ca. 80.000 km"},{"t":"Steuerkette an der Motorrückseite","s":"Kaltstart-Rasseln, P0016/P0017, Verstellwinkel beider Bänke; Instandsetzung nur mit Motorausbau","km":"ab ca. 150.000 km"},{"t":"Wassergekühlter Ladeluftkühler im V","s":"Schleichender Kühlmittelverlust ohne äussere Spur ist ein Warnzeichen","km":"ab ca. 120.000 km"}]},
+{"id":"vag_ea837_30tfsi_kompressor_300","name":"Audi 3.0 TFSI Kompressor · 300 PS","brand":"Audi","family":"EA837 3.0 TFSI Kompressor","engineCode":["CGWB"],"years":[2010, 2012],"models":"A6 C7, A7 C7","fuel":"petrol","aspiration":"kompressor","confidence":"hoch","specs":{"displacement":2995,"bore":84.5,"stroke":89,"compression":10.3,"powerPS":300,"powerKW":220,"powerRpm":[5250,6500],"torqueNm":440,"torqueRpm":[2900,4500],"injection":"Benzin-Direkteinspritzung","massKg":1740,"consNEDC":8.2,"co2NEDC":190,"banks":2,"timingDrive":"Kette"},"weakSpots":[{"t":"Schraubenkompressor im Innen-V","s":"Ladedruck-Ist bleibt schon bei niedriger Drehzahl unter Soll, jaulendes Nebengeräusch; Riemen- und Spannerzustand prüfen","km":"ab ca. 120.000 km"},{"t":"Verkokte Einlassventile","s":"Reine Direkteinspritzung: Aussetzerzähler je Zylinder, Langzeitadaption Bank 1/Bank 2 driftet auseinander","km":"ab ca. 80.000 km"},{"t":"Steuerkette an der Motorrückseite","s":"Kaltstart-Rasseln, P0016/P0017, Verstellwinkel beider Bänke prüfen; Erneuerung sehr aufwendig","km":"ab ca. 150.000 km"},{"t":"Wassergekühlter Ladeluftkühler im V","s":"Kühlmittelverlust ohne äussere Leckage, auffällige Ladelufttemperaturen","km":"ab ca. 120.000 km"}]},
+{"id":"vag_ea837_30tfsi_kompressor_310","name":"Audi 3.0 TFSI Kompressor · 310 PS","brand":"Audi","family":"EA837 3.0 TFSI Kompressor","engineCode":["CGWD", "CGXB"],"years":[2012, 2014],"models":"A6 C7, A7 C7","fuel":"petrol","aspiration":"kompressor","confidence":"hoch","specs":{"displacement":2995,"bore":84.5,"stroke":89,"compression":10.3,"powerPS":310,"powerKW":228,"powerRpm":[5500,6500],"torqueNm":440,"torqueRpm":[2900,4500],"injection":"Benzin-Direkteinspritzung","massKg":1865,"consNEDC":8.2,"co2NEDC":190,"banks":2,"timingDrive":"Kette"},"weakSpots":[{"t":"Schraubenkompressor im Innen-V","s":"Ladedruck-Ist bleibt unter Soll, jaulendes Nebengeräusch; Riemen und Spanner prüfen","km":"ab ca. 120.000 km"},{"t":"Verkokte Einlassventile","s":"Aussetzerzähler je Zylinder, Langzeitadaption Bank 1 und Bank 2 vergleichen","km":"ab ca. 80.000 km"},{"t":"Steuerkette an der Motorrückseite","s":"Kaltstart-Rasseln, P0016/P0017, Verstellwinkel beider Bänke; sehr teure Instandsetzung","km":"ab ca. 150.000 km"},{"t":"Wassergekühlter Ladeluftkühler im V","s":"Schleichender Kühlmittelverlust und hohe Ladelufttemperaturen","km":"ab ca. 120.000 km"}]},
+{"id":"vag_ea837_30tfsi_kompressor_333","name":"Audi 3.0 TFSI Kompressor · 333 PS","brand":"Audi/VW","family":"EA837 3.0 TFSI Kompressor","engineCode":["CAKA", "CCBA", "CGWC", "CREC", "CTWA"],"years":[2008, 2017],"models":"S4 B8/B8.5, A5/S5 8T/8F, A6 C7, A7 C7, A8 D4, Q7 4L/4M, VW Touareg II","fuel":"petrol","aspiration":"kompressor","confidence":"hoch","specs":{"displacement":2995,"bore":84.5,"stroke":89,"compression":10.3,"powerPS":333,"powerKW":245,"powerRpm":[5500,7000],"torqueNm":440,"torqueRpm":[2900,5300],"injection":"Benzin-Direkteinspritzung","massKg":1650,"consNEDC":9.7,"co2NEDC":225,"banks":2,"timingDrive":"Kette"},"weakSpots":[{"t":"Schraubenkompressor im Innen-V","s":"Ladedruck-Ist bereits bei niedriger Drehzahl unter Soll, jaulendes Nebengeräusch; Riemen, Spanner und Laderlagerung prüfen","km":"ab ca. 120.000 km"},{"t":"Verkokte Einlassventile","s":"Aussetzerzähler einzelner Zylinder, auseinanderdriftende Langzeitadaption Bank 1/Bank 2","km":"ab ca. 80.000 km"},{"t":"Steuerkette an der Motorrückseite","s":"Kaltstart-Rasseln, P0016/P0017, Verstellwinkel beider Bänke; Instandsetzung nur mit Motorausbau","km":"ab ca. 150.000 km"},{"t":"Wassergekühlter Ladeluftkühler im V","s":"Schleichender Kühlmittelverlust ohne äussere Spur ist ein Warnzeichen","km":"ab ca. 120.000 km"}]},
 {"id":"vag_ea839_30tfsi_354","name":"Audi 3.0 TFSI EA839 · 354 PS","brand":"Audi","family":"EA839","engineCode":["CWGD"],"years":[2016,2019],"models":"S4 B9, S5 F5, SQ5 FY","fuel":"petrol","aspiration":"turbo","confidence":"hoch","specs":{"displacement":2995,"bore":84.5,"stroke":89,"compression":11.2,"powerPS":354,"powerKW":260,"powerRpm":[5400,6400],"torqueNm":500,"torqueRpm":[1370,4500],"injection":"Benzin-Direkteinspritzung","massKg":1630,"consNEDC":7.3,"co2NEDC":166,"banks":2,"timingDrive":"Kette"},"weakSpots":[{"t":"Turbolader im Innen-V","s":"Ladedruck Soll/Ist-Abweichung, Fehler Ladedruckregelgrenze; Zugänglichkeit sehr schlecht, Reparatur teuer","km":"ab ca. 100.000 km"},{"t":"Kettentrieb über Ausgleichswelle","s":"Kurbelwelle treibt über Zahnräder die Ausgleichswelle, diese per Ketten die Nockenwellen: Kaltstart-Rasseln, P0016/P0017, Verstellwinkel beider Bänke","km":"ab ca. 150.000 km"},{"t":"Verkokte Einlassventile","s":"Reine Direkteinspritzung: Aussetzerzähler je Zylinder, Langzeitadaption Bank 1 und Bank 2 vergleichen","km":"ab ca. 80.000 km"},{"t":"Hohe Verdichtung 11,2:1 mit Aufladung","s":"Klopfregelung je Zylinder beobachten; dauerhafte Zündwinkelrücknahme deutet auf Kraftstoff oder Ladelufttemperatur","km":"—"}]},
 {"id":"vag_ea188_14tdi_pd_80","name":"VAG 1.4 TDI PD 3-Zyl. · 80 PS","brand":"VW/Seat/Skoda","family":"EA188 PD","engineCode":["BMS","BNV"],"years":[2005,2009],"models":"Polo 9N3, Fabia II, Ibiza 6L/6J, Roomster","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1422,"bore":79.5,"stroke":95.5,"compression":19.5,"powerPS":80,"powerKW":59,"powerRpm":[4000,4000],"torqueNm":195,"torqueRpm":[1800,1800],"fuelSpec":"Diesel EN 590, min. 49 CN","injection":"Pumpe-Düse, bis 2050 bar","banks":1,"timingDrive":"Zahnriemen","egr":true},"weakSpots":[{"t":"Ausgleichswellen-/Ölpumpenkette","s":"Kaltstart-Rasseln aus dem Steuertrieb; Öldruckfehler im Speicher, Kettengeräusch im Leerlauf nach dem Start","km":"ab ca. 150.000 km"},{"t":"AGR-Ventil versottet","s":"Luftmasse-Istwert bei Volllast deutlich unter Soll, AGR-Regelabweichung, russiger Ansaugkanal","km":"ab ca. 120.000 km"},{"t":"PD-Element / Ventildeckel undicht","s":"Ölfeuchter Ventildeckelrand, Dieselgeruch im Öl, steigender Ölstand am Peilstab","km":"ab ca. 150.000 km"},{"t":"Zahnriemen und Wasserpumpe","s":"Wechselnachweis verlangen; Kühlmittelspuren an der Riemenabdeckung","km":"intervallabhängig"}]},
 {"id":"vag_ea188_19tdi_pd_90_bru","name":"VAG 1.9 TDI PD · 90 PS (BRU, 210 Nm)","brand":"VW/Audi/Seat/Skoda","family":"EA188 PD","engineCode":["BRU"],"years":[2004,2010],"models":"Golf V, Golf Plus, Touran I, Caddy III, Octavia II, Leon 1P","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1896,"bore":79.5,"stroke":95.5,"compression":19,"powerPS":90,"powerKW":66,"powerRpm":[3750,3750],"torqueNm":210,"torqueRpm":[1800,2500],"fuelSpec":"Diesel EN 590, min. 49 CN","injection":"Pumpe-Düse, bis 2050 bar","consNEDC":5,"co2NEDC":132,"banks":1,"timingDrive":"Zahnriemen","egr":true},"weakSpots":[{"t":"VTG-Lader verkokt","s":"Ladedruck-Istwert erreicht Soll bei Volllast nicht (> 200 mbar Abweichung), Notlauf; Verstellhebel schwergängig","km":"ab ca. 150.000 km"},{"t":"AGR-Ventil und Ansaugbrücke versottet","s":"Luftmasse bei 3000/min Volllast unter Soll, AGR-Regelabweichung, schwarze Krusten im Krümmer","km":"ab ca. 150.000 km"},{"t":"Tandempumpe undicht","s":"Öl-/Dieselspur an der Stirnseite des Zylinderkopfs, im Extremfall Diesel im Motoröl","km":"ab ca. 130.000 km"},{"t":"Zahnriemen und Wasserpumpe","s":"Riemenzustand und Wechseldatum prüfen; Kühlmittelspuren an der Abdeckung","km":"intervallabhängig"}]},
@@ -289,14 +289,14 @@ const BUILTIN_PROFILES = [
 {"id":"vag_ea189_20tdi_177","name":"VAG 2.0 TDI EA189 · 177 PS","brand":"Audi/VW","family":"EA189","engineCode":["CFGC","CGLC"],"years":[2012,2015],"models":"A4 B8 FL, A5 8T, A6 C7, Q5 8R, Passat B7","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1968,"bore":81,"stroke":95.5,"compression":16.5,"powerPS":177,"powerKW":130,"powerRpm":[4200,4200],"torqueNm":380,"torqueRpm":[1750,2500],"fuelSpec":"Diesel EN 590, min. 51 CN","injection":"Common Rail, 230–1800 bar, Piezo","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"AGR-Kühler versottet","s":"Luftmasse-Abweichung bei Volllast, AGR-Regelabweichung","km":"ab ca. 140.000 km"},{"t":"Nockenwellen-Stirnräder rasseln","s":"Rasseln aus dem Zylinderkopf im kalten Leerlauf","km":"ab ca. 150.000 km"},{"t":"Piezo-Injektoren","s":"Hohe Mengenkorrektur einzelner Zylinder, ungleiche Rücklaufmengen","km":"ab ca. 180.000 km"},{"t":"Zahnriemen und Wasserpumpe","s":"Wechselnachweis verlangen; Kühlmittelspur hinter der Abdeckung","km":"intervallabhängig"}]},
 {"id":"vag_ea288_16tdi_90","name":"VAG 1.6 TDI EA288 · 90 PS","brand":"VW/Audi/Seat/Skoda","family":"EA288","engineCode":["CRKA","CLHB"],"years":[2013,2020],"models":"Golf VII, Golf Sportsvan, Octavia III, Leon III, A3 8V","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1598,"bore":79.5,"stroke":80.5,"powerPS":90,"powerKW":66,"powerRpm":[2750,4800],"torqueNm":230,"torqueRpm":[1400,2700],"injection":"Common Rail","massKg":1280,"banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"Zahnriemen","s":"VW gibt den Riemen als „auf Motorlebensdauer ausgelegt“ an; er ist trotzdem ein Zahnriemen im Interferenzmotor. Bei hoher Laufleistung Zustand und Wechselnachweis prüfen","km":"ab ca. 200.000 km"},{"t":"AGR-Kühler / AGR-Ventil versottet","s":"Luftmasse unter Soll, AGR-Regelabweichung, Leistungsloch im unteren Drehzahlbereich","km":"ab ca. 130.000 km"},{"t":"DPF-Beladung im Kurzstreckenbetrieb","s":"Aschemasse und Rußbeladung hoch, Regenerationsabstand unter 300 km, Ölstand steigt","km":"ab ca. 130.000 km"},{"t":"Elektrische Kühlmittelpumpe / Thermomanagement","s":"Motor wird nur langsam warm oder Heizung bleibt kalt; Kühlmitteltemperatur erreicht Sollbereich nicht","km":"ab ca. 120.000 km"}]},
 {"id":"vag_ea288_16tdi_105","name":"VAG 1.6 TDI EA288 · 105 PS","brand":"VW/Audi/Seat/Skoda","family":"EA288","engineCode":["CLHA"],"years":[2012,2014],"models":"Golf VII, Octavia III, Leon III, A3 8V","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1598,"bore":79.5,"stroke":80.5,"powerPS":105,"powerKW":77,"powerRpm":[3000,4000],"torqueNm":250,"torqueRpm":[1500,2750],"injection":"Common Rail","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"Zahnriemen","s":"Herstellerangabe „auf Motorlebensdauer ausgelegt“; bei hoher Laufleistung dennoch Zustand und Nachweis prüfen","km":"ab ca. 200.000 km"},{"t":"AGR-Kühler versottet","s":"Luftmasse-Abweichung, AGR-Regelabweichung","km":"ab ca. 130.000 km"},{"t":"DPF-Beladung","s":"Aschemasse hoch, häufige Regenerationen, Ölverdünnung","km":"ab ca. 130.000 km"},{"t":"Elektrische Kühlmittelpumpe","s":"Warmlauf verzögert, Heizleistung schwach, Kühlmitteltemperatur bleibt niedrig","km":"ab ca. 120.000 km"}]},
-{"id":"vag_ea288_16tdi_110","name":"VAG 1.6 TDI EA288 · 110 PS","brand":"VW/Audi/Seat/Skoda","family":"EA288","engineCode":["CRKB","CXXB"],"years":[2013,2017],"models":"Golf VII, Golf Sportsvan, Touran II, Octavia III, Leon III, A3 8V, Q2","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1598,"bore":79.5,"stroke":80.5,"powerPS":110,"powerKW":81,"powerRpm":[3200,4000],"torqueNm":250,"torqueRpm":[1500,3000],"injection":"Common Rail","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"Zahnriemen","s":"Herstellerangabe „auf Motorlebensdauer ausgelegt“; Zustand und Nachweis bei hoher Laufleistung prüfen","km":"ab ca. 200.000 km"},{"t":"AGR-Kühler versottet","s":"Luftmasse unter Soll, AGR-Regelabweichung","km":"ab ca. 130.000 km"},{"t":"DPF-Beladung","s":"Aschemasse hoch, kurze Regenerationsabstände, Ölstand über Max","km":"ab ca. 140.000 km"},{"t":"NOx-Speicherkat bzw. NOx-Sensor (Euro 6)","s":"Sensorwert unplausibel, Fehler im NOx-Pfad, MIL ohne Änderung im Fahrverhalten","km":"ab ca. 120.000 km"}]},
+{"id":"vag_ea288_16tdi_110","name":"VAG 1.6 TDI EA288 · 110 PS","brand":"VW/Audi/Seat/Skoda","family":"EA288","engineCode":["CRKB", "CXXB", "DBKA"],"years":[2013,2017],"models":"Golf VII, Golf Sportsvan, Touran II, Octavia III, Leon III, A3 8V, Q2","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1598,"bore":79.5,"stroke":80.5,"powerPS":110,"powerKW":81,"powerRpm":[3200,4000],"torqueNm":250,"torqueRpm":[1500,3000],"injection":"Common Rail","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"Zahnriemen","s":"Herstellerangabe „auf Motorlebensdauer ausgelegt“; Zustand und Nachweis bei hoher Laufleistung prüfen","km":"ab ca. 200.000 km"},{"t":"AGR-Kühler versottet","s":"Luftmasse unter Soll, AGR-Regelabweichung","km":"ab ca. 130.000 km"},{"t":"DPF-Beladung","s":"Aschemasse hoch, kurze Regenerationsabstände, Ölstand über Max","km":"ab ca. 140.000 km"},{"t":"NOx-Speicherkat bzw. NOx-Sensor (Euro 6)","s":"Sensorwert unplausibel, Fehler im NOx-Pfad, MIL ohne Änderung im Fahrverhalten","km":"ab ca. 120.000 km"}]},
 {"id":"vag_ea288_16tdi_115","name":"VAG 1.6 TDI EA288 · 115 PS","brand":"VW/Audi/Seat/Skoda","family":"EA288","engineCode":["DDYA","DGTE"],"years":[2017,2020],"models":"Golf VII FL, Polo VI, T-Roc, T-Cross, Octavia III, Karoq, Arona, Ateca","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1598,"bore":79.5,"stroke":80.5,"powerPS":115,"powerKW":85,"powerRpm":[3250,4000],"torqueNm":250,"torqueRpm":[1500,3200],"injection":"Common Rail","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-/AdBlue-System (je nach Modell)","s":"Dosierventil oder NOx-Sensor mit Fehlereintrag, AdBlue-Reichweitenwarnung, Startsperren-Countdown","km":"ab ca. 100.000 km"},{"t":"AGR-Kühler versottet","s":"Luftmasse-Abweichung bei Volllast, AGR-Regelabweichung","km":"ab ca. 130.000 km"},{"t":"DPF-Beladung","s":"Aschemasse hoch, kurze Regenerationsabstände","km":"ab ca. 140.000 km"},{"t":"Zahnriemen","s":"Herstellerangabe „auf Motorlebensdauer ausgelegt“; Zustand bei hoher Laufleistung prüfen","km":"ab ca. 200.000 km"}]},
 {"id":"vag_ea288_16tdi_120","name":"VAG 1.6 TDI EA288 · 120 PS","brand":"VW","family":"EA288","engineCode":["DCXA","DCZA"],"years":[2014,2020],"models":"Passat B8, Passat B8 FL","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1598,"bore":79.5,"stroke":80.5,"powerPS":120,"powerKW":88,"powerRpm":[3600,4000],"torqueNm":250,"torqueRpm":[1500,3250],"injection":"Common Rail","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-/AdBlue-System","s":"Dosierpumpe oder NOx-Sensor mit Fehler, AdBlue-Kristallisation am Dosierventil, Startsperren-Warnung","km":"ab ca. 100.000 km"},{"t":"Zahnriemen","s":"Für DCXA wird der Riemen mit rund 210.000 km Auslegung geführt; bei Riss verbiegen sich die Ventile — Zustand und Nachweis prüfen","km":"ab ca. 180.000 km"},{"t":"AGR-Kühler versottet","s":"Luftmasse unter Soll, AGR-Regelabweichung","km":"ab ca. 140.000 km"},{"t":"DPF-Beladung im Kurzstreckenbetrieb","s":"Aschemasse hoch, kurze Regenerationsabstände, Ölstand steigt","km":"ab ca. 150.000 km"}]},
 {"id":"vag_ea288_20tdi_122","name":"VAG 2.0 TDI EA288 · 122 PS","brand":"Audi","family":"EA288","engineCode":["DEUC"],"years":[2016,2018],"models":"A4 B9, A5 F5","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1968,"bore":81,"stroke":95.5,"powerPS":122,"powerKW":90,"powerRpm":[3500,4000],"torqueNm":270,"torqueRpm":[1500,3000],"injection":"Common Rail","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-/AdBlue-System","s":"NOx-Sensor oder Dosierventil mit Fehler; AdBlue-Tank nur 12 l, häufiges Nachfüllen normal, Startsperren-Countdown beachten","km":"ab ca. 100.000 km"},{"t":"AGR-Kühler versottet","s":"Luftmasse-Abweichung, AGR-Regelabweichung","km":"ab ca. 140.000 km"},{"t":"DPF-Beladung","s":"Aschemasse hoch, häufige Regenerationen, Ölverdünnung","km":"ab ca. 150.000 km"},{"t":"Zahnriemen","s":"Herstellerangabe „auf Motorlebensdauer ausgelegt“; Zustand bei hoher Laufleistung prüfen","km":"ab ca. 200.000 km"}]},
-{"id":"vag_ea288_20tdi_150_320","name":"VAG 2.0 TDI EA288 · 150 PS (320 Nm)","brand":"VW/Audi/Seat/Skoda","family":"EA288","engineCode":["CRBC","CRMB"],"years":[2012,2018],"models":"Golf VII, Octavia III, Leon III, A3 8V","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1968,"bore":81,"stroke":95.5,"powerPS":150,"powerKW":110,"powerRpm":[3500,4000],"torqueNm":320,"torqueRpm":[1750,3000],"injection":"Common Rail","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"AGR-Kühler versottet","s":"Luftmasse bei Volllast unter Soll, AGR-Regelabweichung","km":"ab ca. 140.000 km"},{"t":"DPF-Beladung","s":"Aschemasse hoch, häufige Regenerationen, Ölstand über Max","km":"ab ca. 150.000 km"},{"t":"Elektrische Kühlmittelpumpe / Thermostat","s":"Kühlmitteltemperatur erreicht Sollbereich nicht, Heizung schwach, verzögerter Warmlauf","km":"ab ca. 130.000 km"},{"t":"Ölabscheider / Kurbelgehäuseentlüftung","s":"Ölnebel im Ladeluftrohr, erhöhter Ölverbrauch, Nebenluftgeräusch","km":"ab ca. 150.000 km"}]},
-{"id":"vag_ea288_20tdi_150_340","name":"VAG 2.0 TDI EA288 · 150 PS (340 Nm)","brand":"VW/Audi/Seat/Skoda","family":"EA288","engineCode":["CRLB","DCYA","DEJA","DFGA"],"years":[2014,2020],"models":"Golf VII, Passat B8, Tiguan II, Touran II, T-Roc, Octavia III, Superb III, Kodiaq, Leon III, Ateca, A3 8V, Q2, Q3","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1968,"bore":81,"stroke":95.5,"powerPS":150,"powerKW":110,"powerRpm":[3500,4000],"torqueNm":340,"torqueRpm":[1750,3000],"injection":"Common Rail","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-/AdBlue-System","s":"NOx-Sensor oder Dosierventil defekt, AdBlue-Kristallisation, Startsperren-Countdown im Display","km":"ab ca. 100.000 km"},{"t":"AGR-Kühler versottet","s":"Luftmasse-Abweichung bei Volllast, AGR-Regelabweichung, Leistungsloch","km":"ab ca. 150.000 km"},{"t":"DPF-Beladung","s":"Aschemasse hoch, Regenerationsabstand kurz, Ölstand steigt","km":"ab ca. 160.000 km"},{"t":"Elektrische Kühlmittelpumpe / Thermomanagement","s":"Kühlmitteltemperatur bleibt unter Sollbereich, Heizung schwach","km":"ab ca. 130.000 km"}]},
+{"id":"vag_ea288_20tdi_150_320","name":"VAG 2.0 TDI EA288 · 150 PS (320 Nm)","brand":"VW/Audi/Seat/Skoda","family":"EA288","engineCode":["CRBC", "CRMB", "CKFC"],"years":[2012,2018],"models":"Golf VII, Octavia III, Leon III, A3 8V","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1968,"bore":81,"stroke":95.5,"powerPS":150,"powerKW":110,"powerRpm":[3500,4000],"torqueNm":320,"torqueRpm":[1750,3000],"injection":"Common Rail","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"AGR-Kühler versottet","s":"Luftmasse bei Volllast unter Soll, AGR-Regelabweichung","km":"ab ca. 140.000 km"},{"t":"DPF-Beladung","s":"Aschemasse hoch, häufige Regenerationen, Ölstand über Max","km":"ab ca. 150.000 km"},{"t":"Elektrische Kühlmittelpumpe / Thermostat","s":"Kühlmitteltemperatur erreicht Sollbereich nicht, Heizung schwach, verzögerter Warmlauf","km":"ab ca. 130.000 km"},{"t":"Ölabscheider / Kurbelgehäuseentlüftung","s":"Ölnebel im Ladeluftrohr, erhöhter Ölverbrauch, Nebenluftgeräusch","km":"ab ca. 150.000 km"}]},
+{"id":"vag_ea288_20tdi_150_340","name":"VAG 2.0 TDI EA288 · 150 PS (340 Nm)","brand":"VW/Audi/Seat/Skoda","family":"EA288","engineCode":["CRLB", "DCYA", "DEJA", "DFGA", "DBGC"],"years":[2014,2020],"models":"Golf VII, Passat B8, Tiguan II, Touran II, T-Roc, Octavia III, Superb III, Kodiaq, Leon III, Ateca, A3 8V, Q2, Q3","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1968,"bore":81,"stroke":95.5,"powerPS":150,"powerKW":110,"powerRpm":[3500,4000],"torqueNm":340,"torqueRpm":[1750,3000],"injection":"Common Rail","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-/AdBlue-System","s":"NOx-Sensor oder Dosierventil defekt, AdBlue-Kristallisation, Startsperren-Countdown im Display","km":"ab ca. 100.000 km"},{"t":"AGR-Kühler versottet","s":"Luftmasse-Abweichung bei Volllast, AGR-Regelabweichung, Leistungsloch","km":"ab ca. 150.000 km"},{"t":"DPF-Beladung","s":"Aschemasse hoch, Regenerationsabstand kurz, Ölstand steigt","km":"ab ca. 160.000 km"},{"t":"Elektrische Kühlmittelpumpe / Thermomanagement","s":"Kühlmitteltemperatur bleibt unter Sollbereich, Heizung schwach","km":"ab ca. 130.000 km"}]},
 {"id":"vag_ea288_20tdi_150_audi","name":"Audi 2.0 TDI EA288 längs · 150 PS","brand":"Audi","family":"EA288","engineCode":["DEUA"],"years":[2015,2018],"models":"A4 B9, A5 F5","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1968,"bore":81,"stroke":95.5,"powerPS":150,"powerKW":110,"powerRpm":[3250,4200],"torqueNm":320,"torqueRpm":[1500,3250],"injection":"Common Rail","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-/AdBlue-System","s":"Dosierventil oder NOx-Sensor mit Fehlereintrag, auffällig hoher AdBlue-Verbrauch, Startsperren-Warnung","km":"ab ca. 100.000 km"},{"t":"AGR-Kühler versottet","s":"Luftmasse-Abweichung, AGR-Regelabweichung","km":"ab ca. 150.000 km"},{"t":"DPF-Beladung","s":"Aschemasse hoch, häufige Regenerationen","km":"ab ca. 160.000 km"},{"t":"Injektoren","s":"Kaltlauf-Nageln, einzelne Zylinder mit hoher Mengenkorrektur","km":"ab ca. 180.000 km"}]},
-{"id":"vag_ea288_20tdi_184","name":"VAG 2.0 TDI EA288 · 184 PS (GTD)","brand":"VW/Audi/Seat/Skoda","family":"EA288","engineCode":["CUNA","DGCA","DJGA"],"years":[2013,2019],"models":"Golf VII GTD, Passat B8, Tiguan II, Octavia III RS, Superb III, Leon III FR, A3 8V, Q3","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1968,"bore":81,"stroke":95.5,"powerPS":184,"powerKW":135,"powerRpm":[3500,4000],"torqueNm":380,"torqueRpm":[1750,3250],"injection":"Common Rail","massKg":1377,"banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"AGR-Kühler versottet","s":"Luftmasse bei Volllast unter Soll, AGR-Regelabweichung, Leistungsloch unter 2000/min","km":"ab ca. 140.000 km"},{"t":"DPF-Beladung","s":"Aschemasse hoch, kurze Regenerationsabstände, Ölstand über Max","km":"ab ca. 150.000 km"},{"t":"Ölabscheider / Kurbelgehäuseentlüftung","s":"Ölnebel im Ladeluftrohr, erhöhter Ölverbrauch","km":"ab ca. 150.000 km"},{"t":"ZMS und DSG-Mechatronik (DQ250/DQ381)","s":"Rappeln im Leerlauf, Rucken beim Anfahren; DSG-Ölwechselhistorie prüfen","km":"ab ca. 150.000 km"}]},
+{"id":"vag_ea288_20tdi_184","name":"VAG 2.0 TDI EA288 · 184 PS (GTD)","brand":"VW/Audi/Seat/Skoda","family":"EA288","engineCode":["CUNA", "DGCA", "DJGA", "CUWA"],"years":[2013,2019],"models":"Golf VII GTD, Passat B8, Tiguan II, Octavia III RS, Superb III, Leon III FR, A3 8V, Q3","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1968,"bore":81,"stroke":95.5,"powerPS":184,"powerKW":135,"powerRpm":[3500,4000],"torqueNm":380,"torqueRpm":[1750,3250],"injection":"Common Rail","massKg":1377,"banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"AGR-Kühler versottet","s":"Luftmasse bei Volllast unter Soll, AGR-Regelabweichung, Leistungsloch unter 2000/min","km":"ab ca. 140.000 km"},{"t":"DPF-Beladung","s":"Aschemasse hoch, kurze Regenerationsabstände, Ölstand über Max","km":"ab ca. 150.000 km"},{"t":"Ölabscheider / Kurbelgehäuseentlüftung","s":"Ölnebel im Ladeluftrohr, erhöhter Ölverbrauch","km":"ab ca. 150.000 km"},{"t":"ZMS und DSG-Mechatronik (DQ250/DQ381)","s":"Rappeln im Leerlauf, Rucken beim Anfahren; DSG-Ölwechselhistorie prüfen","km":"ab ca. 150.000 km"}]},
 {"id":"vag_ea288_20tdi_190","name":"VAG 2.0 TDI EA288 · 190 PS","brand":"VW/Audi/Skoda","family":"EA288","engineCode":["DDAA","DFHA","DETA"],"years":[2014,2023],"models":"Passat B8, Tiguan II, Arteon, A4 B9, A5 F5, Superb III, Kodiaq","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1968,"bore":81,"stroke":95.5,"powerPS":190,"powerKW":140,"powerRpm":[3500,4200],"torqueNm":400,"torqueRpm":[1750,3000],"injection":"Common Rail","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-/AdBlue-System","s":"NOx-Sensor oder Dosierventil defekt, AdBlue-Kristallisation, Startsperren-Countdown","km":"ab ca. 100.000 km"},{"t":"AGR-Kühler versottet","s":"Luftmasse-Abweichung bei Volllast, AGR-Regelabweichung","km":"ab ca. 150.000 km"},{"t":"DPF-Beladung","s":"Aschemasse hoch, häufige Regenerationen, Ölstand steigt","km":"ab ca. 160.000 km"},{"t":"Ölabscheider / Kurbelgehäuseentlüftung","s":"Ölnebel im Ladeluftrohr, erhöhter Ölverbrauch","km":"ab ca. 150.000 km"}]},
 {"id":"vag_ea288_20tdi_biturbo_240","name":"VAG 2.0 TDI EA288 Biturbo · 240 PS","brand":"VW/Skoda","family":"EA288 Biturbo","engineCode":["CUAA"],"years":[2014,2023],"models":"Passat B8 4Motion, Tiguan II, Arteon, Kodiaq RS","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1968,"bore":81,"stroke":95.5,"powerPS":240,"powerKW":176,"powerRpm":[4000,4000],"torqueNm":500,"torqueRpm":[1750,2500],"injection":"Common Rail","banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"Zweistufige Aufladung / Umschaltklappe","s":"Ladedruck-Soll/Ist-Abweichung im Übergangsbereich um 2500/min, ruckelnder Leistungsaufbau, Notlauf unter Volllast","km":"ab ca. 120.000 km"},{"t":"SCR-/AdBlue-System","s":"Dosierventil oder NOx-Sensor mit Fehler, AdBlue-Kristallisation, Startsperren-Countdown","km":"ab ca. 100.000 km"},{"t":"AGR-Kühler versottet","s":"Luftmasse-Abweichung, AGR-Regelabweichung","km":"ab ca. 140.000 km"},{"t":"DPF und Ölverdünnung","s":"Aschemasse hoch, kurze Regenerationsabstände, Ölstand über Max","km":"ab ca. 150.000 km"}]},
 {"id":"vag_ea288evo_20tdi_116","name":"VAG 2.0 TDI EA288 evo · 116 PS","brand":"VW/Audi/Seat/Skoda","family":"EA288 evo","engineCode":["DTRD","DTRB","DSUD"],"years":[2019,2024],"models":"Golf VIII, Octavia IV, Leon IV, A3 8Y","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":1968,"bore":81,"stroke":95.5,"powerPS":116,"powerKW":85,"powerRpm":[3250,4000],"torqueNm":300,"torqueRpm":[1600,2500],"injection":"Common Rail","massKg":1380,"banks":1,"timingDrive":"Zahnriemen","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-Doppeldosierung (Twin Dosing)","s":"Zweiter Dosierpfad mit eigenem NOx-Sensor: Fehlereinträge im SCR-Pfad, auffälliger AdBlue-Verbrauch, Startsperren-Countdown","km":"ab ca. 80.000 km"},{"t":"DPF-Beladung im Kurzstreckenbetrieb","s":"Aschemasse hoch, sehr kurze Regenerationsabstände, Ölstand über Max","km":"ab ca. 100.000 km"},{"t":"AGR-Kühler / AGR-Ventil","s":"Luftmasse unter Soll, AGR-Regelabweichung","km":"ab ca. 130.000 km"},{"t":"Kühlmittelthermostat / elektrische Pumpe","s":"Kühlmitteltemperatur erreicht Sollbereich nicht, Heizleistung schwach","km":"ab ca. 120.000 km"}]},
@@ -310,9 +310,522 @@ const BUILTIN_PROFILES = [
 {"id":"vag_ea896g2_30tdi_245_suv","name":"VAG 3.0 V6 TDI EA896 Gen2 · 245 PS (550 Nm, SUV)","brand":"VW/Audi/Porsche","family":"EA896 Gen2","engineCode":["CRCA"],"years":[2010,2015],"models":"Touareg II, Q7 4L, Cayenne II Diesel","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":2967,"bore":83,"stroke":91.4,"compression":16.8,"powerPS":245,"powerKW":180,"powerRpm":[3800,4400],"torqueNm":550,"torqueRpm":[1750,2750],"injection":"Common Rail (Piezo), bis 2000 bar","banks":2,"timingDrive":"Kette","dpf":true,"egr":true},"weakSpots":[{"t":"Steuerkettentrieb","s":"Kaltstart-Rasseln aus der Motorrückseite, Korrelationsfehler Kurbel-/Nockenwelle; Reparatur mit Getriebeausbau","km":"ab ca. 200.000 km"},{"t":"Drallklappen / Ansaugbrücke","s":"Stellmotor-Rückmeldung unplausibel, verkokte Klappenwellen, unruhiger Leerlauf","km":"ab ca. 160.000 km"},{"t":"DPF-Beladung im Anhängerbetrieb","s":"Aschemasse hoch, häufige Regenerationen, Ölstand über Max","km":"ab ca. 170.000 km"},{"t":"Nebenaggregate im Innen-V","s":"Ölfeuchte im Motor-V bei Sichtprüfung von oben, Ölverlust ohne Tropfstelle darunter","km":"ab ca. 180.000 km"}]},
 {"id":"vag_ea897evo_30tdi_211","name":"Audi 3.0 V6 TDI EA897 evo · 211 PS","brand":"Audi","family":"EA897 evo","engineCode":["CRTF","CZVC"],"years":[2014,2017],"models":"A6 C7, A7 C7","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":2967,"bore":83,"stroke":91.4,"compression":16,"powerPS":211,"powerKW":155,"powerRpm":[3000,5000],"torqueNm":500,"torqueRpm":[1250,2750],"injection":"Common Rail (Piezo), bis 2000 bar","banks":2,"timingDrive":"Kette","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-/AdBlue-System (motornaher sDPF plus SCR-Sperrkat)","s":"NOx-Sensor oder Dosiereinheit mit Fehler, AdBlue-Kristallisation am Fallstrommischer, Startsperren-Countdown","km":"ab ca. 100.000 km"},{"t":"Steuerkettentrieb","s":"Kaltstart-Rasseln aus der Motorrückseite, Korrelationsfehler Kurbel-/Nockenwelle","km":"ab ca. 180.000 km"},{"t":"Drallklappe / Ansaugbrücke","s":"Stellmotor-Rückmeldung unplausibel, unruhiger Leerlauf","km":"ab ca. 160.000 km"},{"t":"Elektromechanische VTG-Verstellung","s":"Ladedruck-Soll/Ist-Abweichung bei Volllast, Fehler im Ladedruckregelkreis","km":"ab ca. 150.000 km"}]},
 {"id":"vag_ea897evo_30tdi_218","name":"Audi 3.0 V6 TDI EA897 evo · 218 PS (500 Nm)","brand":"Audi","family":"EA897 evo","engineCode":["CRTE"],"years":[2014,2018],"models":"A6 C7, A7 C7, Q7 4M ultra","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":2967,"bore":83,"stroke":91.4,"compression":16,"powerPS":218,"powerKW":160,"powerRpm":[3250,4500],"torqueNm":500,"torqueRpm":[1250,3000],"injection":"Common Rail (Piezo), bis 2000 bar","banks":2,"timingDrive":"Kette","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-/AdBlue-System","s":"Dosiereinheit oder NOx-Sensor mit Fehler, AdBlue-Kristallisation, Startsperren-Countdown","km":"ab ca. 100.000 km"},{"t":"Steuerkettentrieb","s":"Kaltstart-Rasseln aus der Motorrückseite, Korrelationsfehler Kurbel-/Nockenwelle","km":"ab ca. 180.000 km"},{"t":"Drallklappe / Ansaugbrücke verkokt","s":"Stellmotor-Rückmeldung unplausibel, unruhiger Leerlauf","km":"ab ca. 160.000 km"},{"t":"SCR-beschichteter DPF (sDPF)","s":"Aschemasse hoch, häufige Regenerationen, Ölstand über Max","km":"ab ca. 170.000 km"}]},
-{"id":"vag_ea897evo_30tdi_218_a4b9","name":"Audi 3.0 V6 TDI EA897 evo · 218 PS (400 Nm)","brand":"Audi","family":"EA897 evo","engineCode":["CSWB"],"years":[2015,2019],"models":"A4 B9, A5 F5","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":2967,"bore":83,"stroke":91.4,"compression":16,"powerPS":218,"powerKW":160,"powerRpm":[4000,5000],"torqueNm":400,"torqueRpm":[1250,3750],"injection":"Common Rail (Piezo), bis 2000 bar","banks":2,"timingDrive":"Kette","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-/AdBlue-System","s":"NOx-Sensor oder Dosiereinheit mit Fehler, AdBlue-Kristallisation, Startsperren-Countdown","km":"ab ca. 100.000 km"},{"t":"Steuerkettentrieb","s":"Kaltstart-Rasseln aus der Motorrückseite, Korrelationsfehler Kurbel-/Nockenwelle","km":"ab ca. 180.000 km"},{"t":"Elektrisch verstellbarer Lader","s":"Ladedruck-Soll/Ist-Abweichung bei Volllast, Fehler im Ladedruckregelkreis","km":"ab ca. 150.000 km"},{"t":"Drallklappe / Ansaugbrücke","s":"Stellmotor-Rückmeldung unplausibel, unruhiger Leerlauf","km":"ab ca. 160.000 km"}]},
+{"id":"vag_ea897evo_30tdi_218_a4b9","name":"Audi 3.0 V6 TDI EA897 evo · 218 PS (400 Nm)","brand":"Audi","family":"EA897 evo","engineCode":["CSWB", "CZVB"],"years":[2014, 2019],"models":"A4 B9, A5 F5, A6 C7, A7 C7","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":2967,"bore":83,"stroke":91.4,"compression":16,"powerPS":218,"powerKW":160,"powerRpm":[4000,5000],"torqueNm":400,"torqueRpm":[1250,3750],"injection":"Common Rail (Piezo), bis 2000 bar","banks":2,"timingDrive":"Kette","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-/AdBlue-System","s":"NOx-Sensor oder Dosiereinheit mit Fehler, AdBlue-Kristallisation, Startsperren-Countdown","km":"ab ca. 100.000 km"},{"t":"Steuerkettentrieb","s":"Kaltstart-Rasseln aus der Motorrückseite, Korrelationsfehler Kurbel-/Nockenwelle","km":"ab ca. 180.000 km"},{"t":"Elektrisch verstellbarer Lader","s":"Ladedruck-Soll/Ist-Abweichung bei Volllast, Fehler im Ladedruckregelkreis","km":"ab ca. 150.000 km"},{"t":"Drallklappe / Ansaugbrücke","s":"Stellmotor-Rückmeldung unplausibel, unruhiger Leerlauf","km":"ab ca. 160.000 km"}]},
 {"id":"vag_ea897evo_30tdi_272","name":"Audi 3.0 V6 TDI EA897 evo · 272 PS (580 Nm)","brand":"Audi","family":"EA897 evo","engineCode":["CRTD"],"years":[2014,2018],"models":"A6 C7, A7 C7","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":2967,"bore":83,"stroke":91.4,"compression":16,"powerPS":272,"powerKW":200,"powerRpm":[3500,4250],"torqueNm":580,"torqueRpm":[1250,3250],"injection":"Common Rail (Piezo), bis 2000 bar","banks":2,"timingDrive":"Kette","dpf":true,"egr":true},"weakSpots":[{"t":"Nockenwellenverschleiss am Zahnflankenspielausgleich (bei CRTD gehäuft)","s":"Erhöhter Verschleiss teils deutlich unter 100.000 km: Rasseln oder Klappern aus dem Zylinderkopf, Nockenwellen-Korrelationsfehler","km":"ab ca. 60.000 km"},{"t":"Pleuellagerschäden (vereinzelt gemeldet)","s":"Dumpfes lastabhängiges Klopfen aus dem Kurbeltrieb, Öldruckabfall warm, Metallabrieb im Ölfilter","km":"ab ca. 100.000 km"},{"t":"SCR-/AdBlue-System","s":"NOx-Sensor oder Dosiereinheit mit Fehler, AdBlue-Kristallisation, Startsperren-Countdown","km":"ab ca. 100.000 km"},{"t":"Steuerkettentrieb","s":"Kaltstart-Rasseln aus der Motorrückseite, Korrelationsfehler Kurbel-/Nockenwelle","km":"ab ca. 180.000 km"}]},
-{"id":"vag_ea897evo_30tdi_272_a4b9","name":"Audi 3.0 V6 TDI EA897 evo · 272 PS (600 Nm)","brand":"Audi","family":"EA897 evo","engineCode":["CRTC"],"years":[2015,2018],"models":"A4 B9 quattro, A5 F5","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":2967,"bore":83,"stroke":91.4,"compression":16,"powerPS":272,"powerKW":200,"powerRpm":[3250,4250],"torqueNm":600,"torqueRpm":[1500,3000],"injection":"Common Rail (Piezo), bis 2000 bar","banks":2,"timingDrive":"Kette","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-/AdBlue-System","s":"NOx-Sensor oder Dosiereinheit mit Fehler, AdBlue-Kristallisation am Mischer, Startsperren-Countdown","km":"ab ca. 100.000 km"},{"t":"Steuerkettentrieb","s":"Kaltstart-Rasseln aus der Motorrückseite, Korrelationsfehler Kurbel-/Nockenwelle","km":"ab ca. 180.000 km"},{"t":"Elektrisch verstellbarer Lader","s":"Ladedruck-Soll/Ist-Abweichung bei Volllast, Fehler im Ladedruckregelkreis","km":"ab ca. 150.000 km"},{"t":"Drallklappe / Ansaugbrücke verkokt","s":"Stellmotor-Rückmeldung unplausibel, unruhiger Leerlauf, Ölkohle im Ansaugkanal","km":"ab ca. 160.000 km"}]}
+{"id":"vag_ea897evo_30tdi_272_a4b9","name":"Audi 3.0 V6 TDI EA897 evo · 272 PS (600 Nm)","brand":"Audi","family":"EA897 evo","engineCode":["CRTC"],"years":[2015,2018],"models":"A4 B9 quattro, A5 F5, Q7 4M","fuel":"diesel","aspiration":"turbo","confidence":"hoch","specs":{"displacement":2967,"bore":83,"stroke":91.4,"compression":16,"powerPS":272,"powerKW":200,"powerRpm":[3250,4250],"torqueNm":600,"torqueRpm":[1500,3000],"injection":"Common Rail (Piezo), bis 2000 bar","banks":2,"timingDrive":"Kette","dpf":true,"egr":true},"weakSpots":[{"t":"SCR-/AdBlue-System","s":"NOx-Sensor oder Dosiereinheit mit Fehler, AdBlue-Kristallisation am Mischer, Startsperren-Countdown","km":"ab ca. 100.000 km"},{"t":"Steuerkettentrieb","s":"Kaltstart-Rasseln aus der Motorrückseite, Korrelationsfehler Kurbel-/Nockenwelle","km":"ab ca. 180.000 km"},{"t":"Elektrisch verstellbarer Lader","s":"Ladedruck-Soll/Ist-Abweichung bei Volllast, Fehler im Ladedruckregelkreis","km":"ab ca. 150.000 km"},{"t":"Drallklappe / Ansaugbrücke verkokt","s":"Stellmotor-Rückmeldung unplausibel, unruhiger Leerlauf, Ölkohle im Ansaugkanal","km":"ab ca. 160.000 km"}]},
+
+/* ---- nachgetragene Motorvarianten ---- */
+/* ---------- VAG ---------- */
+{
+  id: 'vag_ea837_30tfsi_kompressor_272',
+  name: 'Audi 3.0 TFSI Kompressor EA837 · 272 PS (400 Nm)',
+  brand: 'Audi', family: 'EA837 3.0 TFSI Kompressor',
+  engineCode: ['CMUA', 'CTUC', 'CTVA', 'CTWB'],
+  years: [2011, 2016],
+  models: 'A4 B8.5 quattro, A5/A5 Sportback 8T FL, Q5 8R',
+  fuel: 'petrol', aspiration: 'kompressor', confidence: 'hoch',
+  specs: {
+    displacement: 2995, bore: 84.5, stroke: 89, compression: 10.8,
+    powerPS: 272, powerKW: 200, powerRpm: [4780, 6500],
+    torqueNm: 400, torqueRpm: [2150, 4780],
+    redline: 6800,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'VW 502 00 / 504 00 · 5W-30 bzw. 5W-40 · ca. 6,8 L',
+    injection: 'FSI-Direkteinspritzung, Hitachi HDP 3',
+    ecu: 'Simos 8.x', massKg: 1670, banks: 2, timingDrive: 'Kette', cacType: 'wasser'
+  },
+  weakSpots: [
+    { t: 'Zusatz-Wasserpumpe / wassergekühlter LLK im Laderkäfig', s: 'Ladelufttemperatur bleibt nach Volllast oben, kühlt im Teillast nicht zurück; Kühlmittelverlust ohne äußere Leckage', km: 'ab ca. 120.000 km' },
+    { t: 'Kettenspanner und Steuerkettentrieb (V6-Kettentrieb hinten)', s: 'Kaltstart-Rasseln aus der Motorrückseite, Korrelationsfehler Kurbel-/Nockenwelle', km: 'ab ca. 150.000 km' },
+    { t: 'Kohlenstoffablagerungen an den Einlassventilen (reine Direkteinspritzung)', s: 'Unruhiger Leerlauf, erhöhte Leerlauf-Last, LTFT im Leerlauf höher als unter Last', km: 'ab ca. 100.000 km' },
+    { t: 'Kompressorriemen und Riemenspanner', s: 'Ladedruck bricht im Volllastzug ein, Last unter 130 % trotz Vollgas', km: 'ab ca. 140.000 km' }
+  ]
+},
+{
+  id: 'vag_ea888_g2_20tfsi_180',
+  name: 'Audi 2.0 TFSI EA888 Gen 2 längs · 180 PS',
+  brand: 'Audi', family: 'EA888 Gen 2',
+  engineCode: ['CDNB', 'CAEA', 'CNBC', 'CNCB', 'CDZA'],
+  years: [2008, 2015],
+  models: 'A4 B8/B8.5, A5 8T, Q5 8R',
+  fuel: 'petrol', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 1984, bore: 82.5, stroke: 92.8, compression: 9.6,
+    powerPS: 180, powerKW: 132, powerRpm: [4000, 6000],
+    torqueNm: 320, torqueRpm: [1500, 3900],
+    redline: 6800,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'VW 502 00 · 5W-40 · ca. 4,6 L',
+    injection: 'FSI-Direkteinspritzung', ecu: 'Simos 8.x',
+    massKg: 1520, banks: 1, timingDrive: 'Kette', cacType: 'luft'
+  },
+  weakSpots: [
+    { t: 'Erhöhter Ölverbrauch durch unterdimensionierte Ölabstreifringe', s: 'Ölverbrauch teils über 0,5 L/1000 km, verkokte Ringnuten, Ölwarnung zwischen den Serviceintervallen', km: 'ab ca. 60.000 km' },
+    { t: 'Steuerkette und Kettenspanner (Ausführung bis ca. 2011)', s: 'Kaltstart-Rasseln von der Getriebeseite, Nocken-/Kurbelwellen-Korrelationsfehler', km: 'ab ca. 100.000 km' },
+    { t: 'Kolbenring-/Kolbenbodenschaden bei hohem Ölverbrauch', s: 'Zündaussetzer einzelner Zylinder, Kompressionsverlust, blauer Rauch beim Lastwechsel', km: 'ab ca. 120.000 km' },
+    { t: 'Kohlenstoffablagerungen an den Einlassventilen', s: 'Unruhiger Leerlauf, Leistungsloch unten herum, erhöhte Leerlauf-Last', km: 'ab ca. 90.000 km' }
+  ]
+},
+{
+  id: 'vag_ea888_g3_20tfsi_225',
+  name: 'Audi 2.0 TFSI EA888 Gen 3 längs · 225 PS',
+  brand: 'Audi', family: 'EA888 Gen 3',
+  engineCode: ['CNCD'],
+  years: [2012, 2015],
+  models: 'A4 B8.5, A5 8T FL, Q5 8R',
+  fuel: 'petrol', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 1984, bore: 82.5, stroke: 92.8, compression: 9.6,
+    powerPS: 225, powerKW: 165, powerRpm: [4500, 6250],
+    torqueNm: 350, torqueRpm: [1500, 4500],
+    redline: 6800,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'VW 502 00 / 504 00 · 5W-30 · ca. 5,7 L',
+    injection: 'Kombinierte Direkt- und Saugrohreinspritzung', ecu: 'Simos 12/18',
+    massKg: 1560, banks: 1, timingDrive: 'Kette', cacType: 'luft'
+  },
+  weakSpots: [
+    { t: 'Thermostat-/Kühlmittelreglermodul', s: 'Kühlmitteltemperatur schwankt oder bleibt unter 85 °C, Fehler im Thermomanagement', km: 'ab ca. 100.000 km' },
+    { t: 'Wastegate-Steller des Turboladers', s: 'Ladedruck-Soll/Ist weicht unter Volllast ab, Klappern im Leerlauf', km: 'ab ca. 130.000 km' },
+    { t: 'Kurbelgehäuseentlüftung (Membran im Ventildeckel)', s: 'Erhöhter Ölverbrauch, Pfeifgeräusch, LTFT im Leerlauf deutlich positiv', km: 'ab ca. 110.000 km' },
+    { t: 'Erhöhter Ölverbrauch (Frühversionen der Gen-3-Kolbenringe)', s: 'Ölnachfüllmengen zwischen den Serviceintervallen', km: 'ab ca. 90.000 km' }
+  ]
+},
+{
+  id: 'vag_ea888_g3_18tsi_192',
+  name: 'VW 1.8 TSI EA888 Gen 3 · 192 PS',
+  brand: 'VW/Seat', family: 'EA888 Gen 3',
+  engineCode: ['DAJA', 'DAJB'],
+  years: [2014, 2019],
+  models: 'Polo V GTI (6C), Seat Ibiza Cupra (6P)',
+  fuel: 'petrol', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 1798, bore: 82.5, stroke: 84.1, compression: 9.6,
+    powerPS: 192, powerKW: 141, powerRpm: [4200, 6200],
+    torqueNm: 320, torqueRpm: [1450, 4200],
+    redline: 6800,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'VW 504 00 · 5W-30 · ca. 4,6 L',
+    injection: 'Kombinierte Direkt- und Saugrohreinspritzung', ecu: 'Simos 18',
+    massKg: 1280, banks: 1, timingDrive: 'Kette', cacType: 'luft'
+  },
+  weakSpots: [
+    { t: 'Wasserpumpen-/Thermostatmodul aus Kunststoff', s: 'Kühlmittelverlust am Modul, Temperatur bleibt zu niedrig', km: 'ab ca. 90.000 km' },
+    { t: 'Kurbelgehäuseentlüftung im Ventildeckel', s: 'Erhöhter Ölverbrauch, Pfeifen, positive Gemischadaption im Leerlauf', km: 'ab ca. 100.000 km' },
+    { t: 'Wastegate-Steller / Ladedruckregelung', s: 'Ladedruck-Regelabweichung unter Volllast, Notlauf', km: 'ab ca. 120.000 km' },
+    { t: 'Steuerkette (Kettenspanner)', s: 'Rasseln beim Kaltstart, Korrelationsfehler Nocken-/Kurbelwelle', km: 'ab ca. 140.000 km' }
+  ]
+},
+{
+  id: 'vag_ea888_g3_20tsi_290',
+  name: 'VW/Seat 2.0 TSI EA888 Gen 3 · 290 PS',
+  brand: 'VW/Seat', family: 'EA888 Gen 3',
+  engineCode: ['CJXH', 'DNUC'],
+  years: [2014, 2020],
+  models: 'Golf VII GTI TCR, Seat Leon Cupra 290',
+  fuel: 'petrol', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 1984, bore: 82.5, stroke: 92.8, compression: 9.3,
+    powerPS: 290, powerKW: 213, powerRpm: [5000, 6800],
+    torqueNm: 370, torqueRpm: [1600, 4300],
+    redline: 6800,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'VW 504 00 · 5W-30 · ca. 5,7 L',
+    injection: 'Kombinierte Direkt- und Saugrohreinspritzung', ecu: 'Simos 18',
+    massKg: 1370, banks: 1, timingDrive: 'Kette', cacType: 'luft'
+  },
+  weakSpots: [
+    { t: 'Wasserpumpen-/Thermostatmodul', s: 'Kühlmittelverlust, Temperaturschwankungen, Fehler im Thermomanagement', km: 'ab ca. 90.000 km' },
+    { t: 'Wastegate-Steller IHI IS38', s: 'Ladedruck-Soll/Ist-Abweichung, Ruckeln unter Volllast', km: 'ab ca. 100.000 km' },
+    { t: 'Kurbelgehäuseentlüftung', s: 'Ölverbrauch, LTFT im Leerlauf positiv, Pfeifgeräusch', km: 'ab ca. 110.000 km' },
+    { t: 'Kupplung / DSG-Mechatronik bei getunten Fahrzeugen', s: 'Drehzahl steigt ohne Vortrieb, Kupplungsrupfen beim Anfahren', km: 'ab ca. 80.000 km' }
+  ]
+},
+{
+  id: 'vag_ea888_g3_20tsi_300_dnue',
+  name: 'VW/Audi 2.0 TSI EA888 Gen 3 · 300 PS (400 Nm)',
+  brand: 'VW/Audi/Seat', family: 'EA888 Gen 3',
+  engineCode: ['DNUE'],
+  years: [2018, 2020],
+  models: 'Golf VII R (FL), T-Roc R, Audi S3 8V (FL), Audi TTS 8S, Cupra Leon 300, VW Arteon',
+  fuel: 'petrol', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 1984, bore: 82.5, stroke: 92.8, compression: 9.3,
+    powerPS: 300, powerKW: 221, powerRpm: [5500, 6200],
+    torqueNm: 400, torqueRpm: [2000, 5200],
+    redline: 6800,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'VW 504 00 · 5W-30 · ca. 5,7 L',
+    injection: 'Kombinierte Direkt- und Saugrohreinspritzung', ecu: 'Simos 18',
+    massKg: 1490, banks: 1, timingDrive: 'Kette', cacType: 'luft'
+  },
+  weakSpots: [
+    { t: 'Ottopartikelfilter (OPF, ab Serie 2018/2019)', s: 'Differenzdruck über OPF erhöht, Regenerationen häufen sich im Kurzstreckenbetrieb', km: 'ab ca. 100.000 km' },
+    { t: 'Wasserpumpen-/Thermostatmodul', s: 'Kühlmittelverlust, Temperaturschwankungen', km: 'ab ca. 90.000 km' },
+    { t: 'Wastegate-Steller IHI IS38', s: 'Ladedruck-Regelabweichung unter Volllast, Notlauf', km: 'ab ca. 100.000 km' },
+    { t: 'Haldex-Kupplung (Allrad) / Pumpenfilter', s: 'Allradverteilung greift verzögert, Fehler im Haldex-Steuergerät', km: 'ab ca. 120.000 km' }
+  ]
+},
+{
+  id: 'vag_ea888_g4_20tsi_310',
+  name: 'Audi/Cupra 2.0 TSI EA888 Gen 4 · 310 PS',
+  brand: 'Audi/Cupra', family: 'EA888 Gen 4',
+  engineCode: ['DNFB'],
+  years: [2020, 2024],
+  models: 'Audi S3 8Y, Cupra Leon 310, Cupra Formentor 310',
+  fuel: 'petrol', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 1984, bore: 82.5, stroke: 92.8, compression: 9.3,
+    powerPS: 310, powerKW: 228, powerRpm: [5450, 6500],
+    torqueNm: 400, torqueRpm: [2000, 5450],
+    redline: 6800,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'VW 508 00 / 504 00 · 0W-20 bzw. 5W-30 · ca. 5,3 L',
+    injection: 'Kombinierte Direkt- und Saugrohreinspritzung, bis 350 bar',
+    ecu: 'Vitesco (Continental)',
+    massKg: 1520, banks: 1, timingDrive: 'Kette', cacType: 'luft'
+  },
+  weakSpots: [
+    { t: 'Ottopartikelfilter (OPF)', s: 'Differenzdruck erhöht, häufige Regeneration, Ölverdünnung bei Kurzstrecke', km: 'ab ca. 90.000 km' },
+    { t: 'Ladedruckregelung / Wastegate-Steller', s: 'Ladedruck-Soll/Ist-Abweichung unter Volllast', km: 'ab ca. 100.000 km' },
+    { t: 'Kühlmittelpumpe und Thermomanagement-Modul', s: 'Temperatur schwankt, Kühlmittelverlust am Modul', km: 'ab ca. 100.000 km' },
+    { t: 'Software-/Steuergeräteupdates (Vitesco) noch nicht eingespielt', s: 'Sporadische Notläufe, Fehler ohne mechanische Ursache', km: 'jederzeit' }
+  ]
+},
+{
+  id: 'vag_ea897evo2_30tdi_231',
+  name: 'Audi 3.0 V6 TDI EA897 evo2 · 231 PS (45 TDI)',
+  brand: 'Audi/VW', family: 'EA897 evo2',
+  engineCode: ['DHXC', 'DDVE', 'DEND'],
+  years: [2018, 2024],
+  models: 'A4 B9, A4 allroad B9, A5 F5, A6 C8, A7 C8, Q5 FY, Q7 4M, Q8 4M, VW Touareg III',
+  fuel: 'diesel', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 2967, bore: 83, stroke: 91.4, compression: 16,
+    powerPS: 231, powerKW: 170, powerRpm: [3250, 4750],
+    torqueNm: 500, torqueRpm: [1750, 3250],
+    redline: 4800,
+    fuelSpec: 'Diesel EN 590, AdBlue (AUS 32) erforderlich',
+    oilSpec: 'VW 507 00 · 5W-30 · ca. 7,5 L',
+    injection: 'Common Rail (Piezo), bis 2000 bar',
+    banks: 2, timingDrive: 'Kette', dpf: true, egr: true,
+    massKg: 1850
+  },
+  weakSpots: [
+    { t: 'SCR-/AdBlue-System', s: 'NOx-Sensor oder Dosiereinheit mit Fehler, AdBlue-Kristallisation am Mischer, Startsperren-Countdown', km: 'ab ca. 100.000 km' },
+    { t: 'Steuerkettentrieb an der Motorrückseite', s: 'Kaltstart-Rasseln, Korrelationsfehler Kurbel-/Nockenwelle', km: 'ab ca. 180.000 km' },
+    { t: 'Elektrisch verstellbarer VTG-Lader', s: 'Ladedruck-Soll/Ist-Abweichung bei Volllast, Fehler im Ladedruckregelkreis', km: 'ab ca. 150.000 km' },
+    { t: 'Dieselpartikelfilter bei überwiegendem Kurzstreckenbetrieb', s: 'Beladung und Aschemasse hoch, Regeneration bricht ab, Ölstand steigt', km: 'ab ca. 120.000 km' }
+  ]
+},
+
+/* ---------- BMW ---------- */
+{
+  id: 'bmw_n46b20_150',
+  name: 'BMW 2.0i N46 · 150 PS',
+  brand: 'BMW', family: 'N46',
+  engineCode: ['N46B20'],
+  years: [2004, 2012],
+  models: '318Ci/318i E46 (ab 03/2005), 320i E90/E91 (bis 09/2007), 120i E87 (bis 03/2007), X3 2.0i E83, Z4 2.0i E85, X1 sDrive18i E84',
+  fuel: 'petrol', aspiration: 'sauger', confidence: 'hoch',
+  specs: {
+    displacement: 1995, bore: 84, stroke: 90,
+    powerPS: 150, powerKW: 110, powerRpm: [6200, 6400],
+    torqueNm: 200, torqueRpm: [3600, 3600],
+    redline: 6500,
+    fuelSpec: 'min. ROZ 95',
+    oilSpec: 'BMW Longlife-01 · 5W-30 bzw. 0W-40 · ca. 4,25 L',
+    injection: 'Saugrohreinspritzung, Valvetronic (variabler Ventilhub)',
+    massKg: 1420, banks: 1, timingDrive: 'Kette'
+  },
+  weakSpots: [
+    { t: 'Steuerkette und Kettenspanner (Ausführung bis ca. 2007)', s: 'Rasseln beim Kaltstart, Nocken-/Kurbelwellen-Korrelationsfehler, im Extremfall Kettenriss', km: 'ab ca. 120.000 km' },
+    { t: 'Valvetronic-Stellmotor und Exzenterwellensensor', s: 'Motor läuft im Notlauf mit fester Drosselklappenregelung, ruckelnder Leerlauf, Leistungsverlust', km: 'ab ca. 120.000 km' },
+    { t: 'Ventildeckeldichtung und Kurbelgehäuseentlüftung', s: 'Ölspuren am Zylinderkopf, Öl im Ansaugtrakt, unruhiger Leerlauf, positive Gemischadaption', km: 'ab ca. 100.000 km' },
+    { t: 'DISA-Schaltsaugrohrklappe', s: 'Klappern aus der Ansaugbrücke, Drehmomentloch um 3000/min, Fehler Schaltsaugrohr', km: 'ab ca. 110.000 km' }
+  ]
+},
+{
+  id: 'bmw_n43b20_170',
+  name: 'BMW 2.0i N43 (Schichtladung) · 170 PS',
+  brand: 'BMW', family: 'N43',
+  engineCode: ['N43B20'],
+  years: [2007, 2013],
+  models: '120i E81/E87/E82/E88, 320i E90/E91/E92/E93, 520i E60',
+  fuel: 'petrol', aspiration: 'sauger', confidence: 'hoch',
+  specs: {
+    displacement: 1995, bore: 84, stroke: 90,
+    powerPS: 170, powerKW: 125, powerRpm: [6700, 6700],
+    torqueNm: 210, torqueRpm: [4250, 4250],
+    redline: 7300,
+    fuelSpec: 'min. ROZ 95, schwefelarmer Kraftstoff zwingend (Magerbetrieb)',
+    oilSpec: 'BMW Longlife-01 FE · 0W-30 · ca. 4,25 L',
+    injection: 'Benzin-Direkteinspritzung mit Schichtladung (Magerbetrieb)',
+    massKg: 1440, banks: 1, timingDrive: 'Kette'
+  },
+  weakSpots: [
+    { t: 'Injektoren (Magnetventil-Injektoren der ersten Generation)', s: 'Zündaussetzer einzelner Zylinder, Ruckeln im Warmlauf, Kaltstartprobleme, Fehler Gemischadaption', km: 'ab ca. 80.000 km' },
+    { t: 'NOx-Speicherkatalysator und NOx-Sensor', s: 'Motorkontrollleuchte, kein Magerbetrieb mehr, erhöhter Verbrauch, Fehler NOx-Regelung', km: 'ab ca. 100.000 km' },
+    { t: 'Zündspulen und Zündkerzen', s: 'Aussetzer unter Last, rauer Lauf, Leistungsverlust', km: 'ab ca. 60.000 km' },
+    { t: 'Steuerkette (Kettenspanner)', s: 'Rasseln beim Kaltstart, Korrelationsfehler Nocken-/Kurbelwelle', km: 'ab ca. 150.000 km' }
+  ]
+},
+{
+  id: 'bmw_n52b30_258',
+  name: 'BMW 3.0i N52 · 258 PS',
+  brand: 'BMW', family: 'N52',
+  engineCode: ['N52B30'],
+  years: [2004, 2007],
+  models: '330i E90/E91, 530i E60/E61, 630i E63/E64, 730i E65/E66',
+  fuel: 'petrol', aspiration: 'sauger', confidence: 'hoch',
+  specs: {
+    displacement: 2996, bore: 85, stroke: 88, compression: 10.7,
+    powerPS: 258, powerKW: 190, powerRpm: [6600, 6600],
+    torqueNm: 300, torqueRpm: [2500, 4000],
+    redline: 7000,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'BMW Longlife-01 · 5W-30 bzw. 0W-40 · ca. 6,5 L',
+    injection: 'Saugrohreinspritzung, Valvetronic, Doppel-VANOS',
+    massKg: 1560, banks: 1, timingDrive: 'Kette'
+  },
+  weakSpots: [
+    { t: 'Ventildeckel und Ventildeckeldichtung (Magnesium-Kunststoff-Deckel)', s: 'Ölverlust am Zylinderkopf, Öl auf Krümmer und Zündspulen, Brandgeruch', km: 'ab ca. 100.000 km' },
+    { t: 'Ölfiltergehäusedichtung', s: 'Ölaustritt an der Motorvorderseite, Öl im Riementrieb, sinkender Ölstand ohne Verbrauch', km: 'ab ca. 100.000 km' },
+    { t: 'Elektrische Kühlmittelpumpe', s: 'Kühlmitteltemperatur steigt, Notlauf mit Leistungsreduzierung, Fehler Kühlmittelpumpe', km: 'ab ca. 120.000 km' },
+    { t: 'VANOS-Magnetventile und Exzenterwellensensor der Valvetronic', s: 'Unruhiger Leerlauf, verzögerte Gasannahme, Fehler Nockenwellenverstellung', km: 'ab ca. 130.000 km' }
+  ]
+},
+{
+  id: 'bmw_n54b30_306',
+  name: 'BMW 3.0i N54 Biturbo · 306 PS',
+  brand: 'BMW', family: 'N54 Biturbo',
+  engineCode: ['N54B30'],
+  years: [2006, 2016],
+  models: '335i E90/E91/E92/E93, 135i E82/E88, X6 xDrive35i E71, Z4 sDrive35i E89, 535i E60/E61',
+  fuel: 'petrol', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 2979, bore: 84, stroke: 89.6, compression: 10.2,
+    powerPS: 306, powerKW: 225, powerRpm: [5800, 5800],
+    torqueNm: 400, torqueRpm: [1300, 5000],
+    redline: 7000,
+    boostMaxBar: 0.5,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'BMW Longlife-01 · 5W-30 bzw. 0W-40 · ca. 6,5 L',
+    injection: 'Benzin-Direkteinspritzung mit Piezo-Injektoren (HPI)',
+    massKg: 1600, banks: 1, timingDrive: 'Kette', cacType: 'luft'
+  },
+  weakSpots: [
+    { t: 'Hochdruckkraftstoffpumpe (HDP)', s: 'Startprobleme warm, Leistungsreduzierung, Raildruck-Sollwert wird nicht erreicht, Notlauf', km: 'ab ca. 70.000 km' },
+    { t: 'Piezo-Injektoren', s: 'Zündaussetzer einzelner Zylinder, rauer Kaltlauf, Kraftstoffgeruch', km: 'ab ca. 90.000 km' },
+    { t: 'Wastegate-Buchsen der beiden Lader (Wastegate-Rasseln)', s: 'Metallisches Rasseln im Leerlauf und bei niedriger Last, Ladedruck-Regelabweichung', km: 'ab ca. 100.000 km' },
+    { t: 'Kunststoff-Thermostat, Wasserpumpe und Ölfiltergehäusedichtung', s: 'Kühlmittelverlust, Temperaturschwankungen, Ölaustritt an der Motorvorderseite', km: 'ab ca. 110.000 km' }
+  ]
+},
+{
+  id: 'bmw_n55b30_306',
+  name: 'BMW 3.0i N55 Twin-Scroll-Turbo · 306 PS',
+  brand: 'BMW', family: 'N55',
+  engineCode: ['N55B30'],
+  years: [2009, 2016],
+  models: '335i F30/F31/F34, 435i F32/F33/F36, 535i F10/F11/F07, X3 xDrive35i F25, X4 xDrive35i F26, X5 xDrive35i E70/F15, X6 xDrive35i E71, 335i E90/E92/E93 (ab 03/2010), 135i E82/E88',
+  fuel: 'petrol', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 2979, bore: 84, stroke: 89.6, compression: 10.2,
+    powerPS: 306, powerKW: 225, powerRpm: [5800, 6400],
+    torqueNm: 400, torqueRpm: [1200, 5000],
+    redline: 7100,
+    boostMaxBar: 0.8,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'BMW Longlife-01 FE · 0W-30 bzw. 5W-30 · ca. 6,5 L',
+    injection: 'Benzin-Direkteinspritzung mit Magnetventil-Injektoren, Valvetronic',
+    massKg: 1610, banks: 1, timingDrive: 'Kette', cacType: 'luft'
+  },
+  weakSpots: [
+    { t: 'Ventildeckel und Ventildeckeldichtung', s: 'Ölverlust am Zylinderkopf, Öl an den Zündspulen, Brandgeruch, Öl im Kabelbaum', km: 'ab ca. 100.000 km' },
+    { t: 'Ladeluftrohr (Charge Pipe) aus Kunststoff', s: 'Plötzlicher Ladedruckverlust mit Notlauf, lautes Zischen unter Volllast', km: 'ab ca. 100.000 km' },
+    { t: 'VANOS-Magnetventile und Kettenspanner', s: 'Rasseln beim Kaltstart, unruhiger Leerlauf, Fehler Nockenwellenverstellung', km: 'ab ca. 120.000 km' },
+    { t: 'Wasserpumpe und Thermostat (elektrisch)', s: 'Temperatur steigt oder bleibt zu niedrig, Notlauf mit Leistungsreduzierung', km: 'ab ca. 120.000 km' }
+  ]
+},
+{
+  id: 'bmw_n20b20_184',
+  name: 'BMW 2.0i N20 · 184 PS',
+  brand: 'BMW', family: 'N20',
+  engineCode: ['N20B20B'],
+  years: [2011, 2016],
+  models: '320i F30/F31, 420i F32/F33/F36, 520i F10/F11, 220i F22/F23, X1 sDrive20i/xDrive20i E84, X3 xDrive20i F25, Z4 sDrive20i E89',
+  fuel: 'petrol', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 1997, bore: 84, stroke: 90.1, compression: 11,
+    powerPS: 184, powerKW: 135, powerRpm: [5000, 6250],
+    torqueNm: 270, torqueRpm: [1250, 4500],
+    redline: 7000,
+    boostMaxBar: 0.8,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'BMW Longlife-01 FE · 0W-30 bzw. 5W-30 · ca. 5,25 L',
+    injection: 'Benzin-Direkteinspritzung (HPI), Valvetronic, Doppel-VANOS',
+    massKg: 1470, banks: 1, timingDrive: 'Kette', cacType: 'luft'
+  },
+  weakSpots: [
+    { t: 'Steuerkette und Kettenspanner (Motoren bis ca. Modelljahr 2015)', s: 'Rasseln beim Kaltstart aus der Motorrückseite, Korrelationsfehler Nocken-/Kurbelwelle, im Extremfall Kettenriss mit Motorschaden', km: 'ab ca. 100.000 km' },
+    { t: 'Ölfiltergehäusedichtung und Ventildeckeldichtung', s: 'Ölaustritt, Öl auf Riementrieb und Krümmer, sinkender Ölstand', km: 'ab ca. 90.000 km' },
+    { t: 'VANOS-Magnetventile', s: 'Unruhiger Leerlauf, verzögerte Gasannahme, Fehler Nockenwellenverstellung', km: 'ab ca. 110.000 km' },
+    { t: 'Kühlmittelpumpe und Thermostat', s: 'Temperatur schwankt, Kühlmittelverlust, Notlauf mit Leistungsreduzierung', km: 'ab ca. 120.000 km' }
+  ]
+},
+{
+  id: 'bmw_n20b20_245',
+  name: 'BMW 2.0i N20 · 245 PS',
+  brand: 'BMW', family: 'N20',
+  engineCode: ['N20B20A'],
+  years: [2011, 2017],
+  models: '328i F30/F31, 428i F32/F33/F36, 528i F10/F11, 228i F22/F23, X1 xDrive28i E84, X3 xDrive28i F25, X5 xDrive40e F15, Z4 sDrive28i E89',
+  fuel: 'petrol', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 1997, bore: 84, stroke: 90.1, compression: 10,
+    powerPS: 245, powerKW: 180, powerRpm: [5000, 6500],
+    torqueNm: 350, torqueRpm: [1250, 4800],
+    redline: 7000,
+    boostMaxBar: 1,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'BMW Longlife-01 FE · 0W-30 bzw. 5W-30 · ca. 5,25 L',
+    injection: 'Benzin-Direkteinspritzung (HPI), Valvetronic, Doppel-VANOS',
+    massKg: 1500, banks: 1, timingDrive: 'Kette', cacType: 'luft'
+  },
+  weakSpots: [
+    { t: 'Steuerkette und Kettenspanner (Motoren bis ca. Modelljahr 2015)', s: 'Rasseln beim Kaltstart aus der Motorrückseite, Korrelationsfehler Nocken-/Kurbelwelle, im Extremfall Kettenriss mit Motorschaden', km: 'ab ca. 100.000 km' },
+    { t: 'Ölfiltergehäusedichtung und Ventildeckeldichtung', s: 'Ölaustritt an Motorvorder- und -oberseite, Ölgeruch', km: 'ab ca. 90.000 km' },
+    { t: 'Kohlenstoffablagerungen an den Einlassventilen (reine Direkteinspritzung)', s: 'Unruhiger Leerlauf, Leistungsloch unten herum, erhöhte Leerlauf-Last', km: 'ab ca. 120.000 km' },
+    { t: 'Kühlmittelpumpe und Thermostat', s: 'Temperatur schwankt, Kühlmittelverlust, Notlauf', km: 'ab ca. 120.000 km' }
+  ]
+},
+{
+  id: 'bmw_b48b20_252',
+  name: 'BMW 2.0i B48 · 252 PS',
+  brand: 'BMW', family: 'B48',
+  engineCode: ['B48B20O0'],
+  years: [2015, 2019],
+  models: '330i F30/F31, 430i F32/F33/F36, 530i G30/G31',
+  fuel: 'petrol', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 1998, bore: 82, stroke: 94.6,
+    powerPS: 252, powerKW: 185, powerRpm: [5200, 6500],
+    torqueNm: 350, torqueRpm: [1450, 4800],
+    redline: 7000,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'BMW Longlife-01 FE / LL-17 FE+ · 0W-20 bzw. 0W-30 · ca. 5,2 L',
+    injection: 'Benzin-Direkteinspritzung, Valvetronic, Doppel-VANOS',
+    massKg: 1520, banks: 1, timingDrive: 'Kette', cacType: 'luft'
+  },
+  weakSpots: [
+    { t: 'Steuerkette und Kettenspanner (frühe B48 vor Modellpflege 2018)', s: 'Rasseln beim Kaltstart, Korrelationsfehler Nocken-/Kurbelwelle', km: 'ab ca. 120.000 km' },
+    { t: 'Kurbelgehäuseentlüftung im Ventildeckel', s: 'Erhöhter Ölverbrauch, Pfeifgeräusch, positive Gemischadaption im Leerlauf', km: 'ab ca. 110.000 km' },
+    { t: 'Kühlmittelpumpe und Thermomanagement-Modul', s: 'Temperatur schwankt, Kühlmittelverlust, Notlauf', km: 'ab ca. 120.000 km' },
+    { t: 'Ottopartikelfilter (Fahrzeuge ab 07/2018)', s: 'Differenzdruck erhöht, häufige Regeneration im Kurzstreckenbetrieb', km: 'ab ca. 100.000 km' }
+  ]
+},
+{
+  id: 'bmw_b58b30_326',
+  name: 'BMW 3.0i B58 · 326 PS',
+  brand: 'BMW', family: 'B58',
+  engineCode: ['B58B30M0'],
+  years: [2015, 2021],
+  models: '340i F30/F31, 340i GT F34, 440i F32/F33/F36, 740i G11',
+  fuel: 'petrol', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 2998, bore: 82, stroke: 94.6,
+    powerPS: 326, powerKW: 240, powerRpm: [5500, 6500],
+    torqueNm: 450, torqueRpm: [1380, 5000],
+    redline: 7000,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'BMW Longlife-01 FE / LL-17 FE+ · 0W-20 bzw. 0W-30 · ca. 6,5 L',
+    injection: 'Benzin-Direkteinspritzung bis 350 bar, Valvetronic, Doppel-VANOS',
+    massKg: 1620, banks: 1, timingDrive: 'Kette', cacType: 'luft'
+  },
+  weakSpots: [
+    { t: 'Kurbelgehäuseentlüftung / Ventildeckel', s: 'Erhöhter Ölverbrauch, Pfeifen im Leerlauf, positive Gemischadaption', km: 'ab ca. 120.000 km' },
+    { t: 'Kühlmittelpumpe und Ausgleichsbehälter', s: 'Kühlmittelverlust, Temperaturschwankungen, Notlauf', km: 'ab ca. 130.000 km' },
+    { t: 'Ladedruckregelung / Wastegate-Steller', s: 'Ladedruck-Soll/Ist-Abweichung unter Volllast', km: 'ab ca. 130.000 km' },
+    { t: 'Ottopartikelfilter (Fahrzeuge ab 07/2018)', s: 'Differenzdruck erhöht, häufige Regenerationen, Ölverdünnung bei Kurzstrecke', km: 'ab ca. 100.000 km' }
+  ]
+},
+{
+  id: 'bmw_b58b30_374',
+  name: 'BMW 3.0i B58 TÜ1 · 374 PS',
+  brand: 'BMW', family: 'B58 TÜ1',
+  engineCode: ['B58B30TÜ1'],
+  years: [2019, 2025],
+  models: 'M340i xDrive G20/G21, M440i xDrive G22/G23/G26, M240i xDrive G42',
+  fuel: 'petrol', aspiration: 'turbo', confidence: 'hoch',
+  specs: {
+    displacement: 2998, bore: 82, stroke: 94.6,
+    powerPS: 374, powerKW: 275, powerRpm: [5500, 6500],
+    torqueNm: 500, torqueRpm: [1850, 5000],
+    redline: 7000,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'BMW Longlife-17 FE+ · 0W-20 · ca. 6,5 L',
+    injection: 'Benzin-Direkteinspritzung bis 350 bar, Valvetronic, Doppel-VANOS',
+    massKg: 1750, banks: 1, timingDrive: 'Kette', cacType: 'luft'
+  },
+  weakSpots: [
+    { t: 'Ottopartikelfilter', s: 'Differenzdruck erhöht, häufige Regenerationen, Ölverdünnung bei Kurzstrecke', km: 'ab ca. 100.000 km' },
+    { t: '48-V-Startergenerator (ab Modellpflege)', s: 'Boost-Funktion fällt aus, Fehler im Riemen-Startergenerator, Meldung im Kombi', km: 'ab ca. 100.000 km' },
+    { t: 'Kühlmittelpumpe und Thermomanagement', s: 'Temperaturschwankungen, Kühlmittelverlust am Ausgleichsbehälter', km: 'ab ca. 120.000 km' },
+    { t: 'Kurbelgehäuseentlüftung', s: 'Ölverbrauch, Pfeifgeräusch, positive Gemischadaption im Leerlauf', km: 'ab ca. 120.000 km' }
+  ]
+},
+
+/* ---------- Mercedes-Benz ---------- */
+{
+  id: 'mb_m272_ke30_231',
+  name: 'Mercedes 3.0 V6 M272 · 231 PS',
+  brand: 'Mercedes-Benz', family: 'M272 KE 30',
+  engineCode: ['M272 KE 30'],
+  years: [2005, 2011],
+  models: 'C 280 / C 300 4MATIC (W204/S204), E 280 (W211/S211), SLK 280/300 (R171), ML 280 (W164), R 280 (W251), CLK 280 (C209)',
+  fuel: 'petrol', aspiration: 'sauger', confidence: 'hoch',
+  specs: {
+    displacement: 2996, bore: 88, stroke: 82.1, compression: 11.3,
+    powerPS: 231, powerKW: 170, powerRpm: [6000, 6000],
+    torqueNm: 300, torqueRpm: [2500, 5000],
+    redline: 6500,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'MB 229.5 · 5W-40 bzw. 0W-40 · ca. 8,0 L',
+    injection: 'Saugrohreinspritzung (KE), variable Ansauganlage mit Tumble-Klappen',
+    massKg: 1600, banks: 2, timingDrive: 'Kette'
+  },
+  weakSpots: [
+    { t: 'Kettenrad der Ausgleichswelle (Motoren bis Motornummer 2729..30 468993, ca. Mitte/Ende 2006)', s: 'Motorkontrollleuchte mit Nockenwellen-Korrelationsfehler, rauer Lauf; Reparatur nur mit Motorzerlegung', km: 'ab ca. 80.000 km' },
+    { t: 'Tumble-/Drallklappen der Ansauganlage (Kunststoffmechanik)', s: 'Klappern aus der Ansaugbrücke, Leerlaufschwankungen, Fehler Ansaugkanalumschaltung', km: 'ab ca. 120.000 km' },
+    { t: 'Nockenwellenversteller und Magnetventile', s: 'Rasseln beim Kaltstart, unruhiger Leerlauf, Fehler Nockenwellenverstellung', km: 'ab ca. 130.000 km' },
+    { t: 'Ölabscheider der Kurbelgehäuseentlüftung', s: 'Erhöhter Ölverbrauch, blauer Rauch bei Lastwechsel, Öl im Ansaugtrakt', km: 'ab ca. 120.000 km' }
+  ]
+},
+{
+  id: 'mb_m272_ke35_272',
+  name: 'Mercedes 3.5 V6 M272 · 272 PS',
+  brand: 'Mercedes-Benz', family: 'M272 KE 35',
+  engineCode: ['M272 KE 35'],
+  years: [2005, 2011],
+  models: 'C 350 (W204/S204), E 350 (W211/S211, W212/S212/C207), SLK 350 (R171), CLK 350 (C209), ML 350 (W164), R 350 (W251), GLK 350 (X204), CLS 350 (C219)',
+  fuel: 'petrol', aspiration: 'sauger', confidence: 'hoch',
+  specs: {
+    displacement: 3498, bore: 92.9, stroke: 86, compression: 10.7,
+    powerPS: 272, powerKW: 200, powerRpm: [6000, 6000],
+    torqueNm: 350, torqueRpm: [2400, 5000],
+    redline: 6500,
+    fuelSpec: 'min. ROZ 95, empfohlen ROZ 98 (Super Plus)',
+    oilSpec: 'MB 229.5 · 5W-40 bzw. 0W-40 · ca. 8,0 L',
+    injection: 'Saugrohreinspritzung (KE), variable Ansauganlage mit Tumble-Klappen',
+    massKg: 1670, banks: 2, timingDrive: 'Kette'
+  },
+  weakSpots: [
+    { t: 'Kettenrad der Ausgleichswelle (Motoren bis Motornummer 2729..30 468993, ca. Mitte/Ende 2006)', s: 'Motorkontrollleuchte mit Nockenwellen-Korrelationsfehler, rauer Lauf; Reparatur nur mit Motorzerlegung', km: 'ab ca. 80.000 km' },
+    { t: 'Tumble-/Drallklappen der Ansauganlage (Kunststoffmechanik)', s: 'Klappern aus der Ansaugbrücke, Leerlaufschwankungen, Fehler Ansaugkanalumschaltung', km: 'ab ca. 120.000 km' },
+    { t: 'Nockenwellenversteller und Magnetventile', s: 'Rasseln beim Kaltstart, unruhiger Leerlauf, Fehler Nockenwellenverstellung', km: 'ab ca. 130.000 km' },
+    { t: 'Ölabscheider der Kurbelgehäuseentlüftung', s: 'Erhöhter Ölverbrauch, blauer Rauch bei Lastwechsel, Öl im Ansaugtrakt', km: 'ab ca. 120.000 km' }
+  ]
+}
 ];
 
 /* Ältere gespeicherte Auswahl auf die neuen Kennungen abbilden */

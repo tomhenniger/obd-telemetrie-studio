@@ -1488,7 +1488,7 @@ BUILDERS.buy = function (page) {
     canShareFiles() ? el('button', { class: 'btn sm', onclick: () => shareInspection(insp, prof) }, icon('share'), 'Teilen') : null));
 
   if (view.tab === 'checks')      buildChecklist(page, insp, prof, checks, persist, rerender);
-  else if (view.tab === 'plan')   buildMeasurePlan(page, prof);
+  else if (view.tab === 'plan')   buildMeasurePlan(page, prof, insp);
   else if (view.tab === 'pids')   buildPidList(page, prof);
   else                            buildWeakSpots(page, prof);
 };
@@ -1575,8 +1575,8 @@ function checkRow(c, insp, persist, rerender) {
     body);
 }
 
-function buildMeasurePlan(page, prof) {
-  const plan = measuresFor(prof);
+function buildMeasurePlan(page, prof, insp) {
+  const plan = measuresFor(prof, insp);
   page.appendChild(noteBox('info', 'Wie diese Messfahrten gedacht sind',
     'Die Reihenfolge ist nicht beliebig. Der Kaltstart lässt sich pro Termin genau einmal aufzeichnen – ist der Motor bei der Ankunft schon warm, fehlt die aussagekräftigste Messung des ganzen Tages. Danach wird von ruhigen zu fordernden Zuständen gesteigert. Die Aufzeichnung läuft während der gesamten Probefahrt durch; getrennt werden die Abschnitte erst hinterher in der Auswertung.'));
   page.appendChild(el('div', { class: 'grid', style: { gap: '9px' } }, plan.map((m, i) =>
