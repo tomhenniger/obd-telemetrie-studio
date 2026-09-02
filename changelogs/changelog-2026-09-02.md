@@ -189,3 +189,13 @@ Kühlmitteltemperatur über 7 s. Alle Kennzahlen stimmten überein — bis auf z
 
 - Die Fahrzeugakte zog auf dem Handy die ganze Seite auf 833 px auf: ein Rasterkind wächst
   ohne `min-width: 0` auf Tabellenbreite. Jetzt allgemein für alle Seiteninhalte gesetzt.
+
+## Neue Features (Fehlerspeicher)
+
+- **Fehlercodes eintragen** – in der Diagnose, je Fahrt gespeichert. Codes oder die ganze
+  App-Ausgabe einfügen; genormte Codes (P0xxx, P2xxx) werden gedeutet, Herstellercodes
+  erkannt, aber ehrlich als „nur im Reparaturleitfaden“ benannt. Tabelle mit rund 130 Codes.
+- **Abgleich mit der Messung:** zu jedem Code steht, welche Prüfungen dieser Auswertung ihn
+  stützen (P0299 neben gedeckelter Last), entkräften (alle zugehörigen unauffällig – dann
+  eher sporadisch oder alt) oder nicht prüfen können. Die Codes wandern in den XML-Export
+  (`<fehlerspeicher>`) und in die Fahrzeugakte.

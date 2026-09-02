@@ -67,6 +67,7 @@ function driveSummary(ds, diag, gears, profile, fileName) {
       missing: r.status === 'missing' ? (r.missing || []) : null
     })) : [],
     tally: diag && diag.tally ? diag.tally : null,
+    dtc: (typeof activeDtcCodes === 'function') ? activeDtcCodes() : [],
     notes: ''
   };
 }

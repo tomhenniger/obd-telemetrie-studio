@@ -344,6 +344,19 @@ function buildAiPrompt(detailKey) {
   p('</befunde>');
   p('');
 
+  /* ---- Fehlerspeicher, falls eingetragen ---- */
+  const dtcs = (typeof activeDtcCodes === 'function') ? activeDtcCodes() : [];
+  if (dtcs.length) {
+    p('<fehlerspeicher' + xattr({ anzahl: dtcs.length,
+      hinweis: 'Vom Nutzer aus der OBD-App übernommen. Genormte Codes sind gedeutet, Herstellercodes nur benannt. messbild sagt, ob die Befunde oben den Code stützen.' }) + '>');
+    dtcCrossCheck(dtcs, App.diag.results).forEach(d => p('  <code' + xattr({
+      code: d.code, bedeutung: d.title, genormt: d.generic ? 'ja' : 'nein', messbild: d.verdict,
+      gestuetzt_von: d.supporting.join(', '), unauffaellig: d.contra.join(', '), nicht_pruefbar: d.open.join(', '),
+      pruefen: d.check }) + '/>'));
+    p('</fehlerspeicher>');
+    p('');
+  }
+
   /* ---- Ereignisse ----
      Vollständig ausgeben. Eine gekürzte Liste, die sich nicht als gekürzt zu erkennen gibt,
      verleitet den Leser zu einer Entwarnung, die die Daten nicht hergeben. */

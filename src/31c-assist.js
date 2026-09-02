@@ -115,7 +115,8 @@ function buildAssist(results, present, profile) {
         if (!pids.has(id)) pids.set(id, []);
         pids.get(id).push(r.id);
       }
-    } else if (r.status === 'unklar' && !r.noLight) {
+    } else if (r.status === 'unklar' && !r.noLight && !(r.fuel && profile && profile.fuel && r.fuel !== profile.fuel)) {
+      // gesperrte Regeln der anderen Kraftstoffart sind keine fehlende Fahrsituation
       const needs = RULE_NEEDS[r.id] || [];
       for (const s of needs) { if (!sits.has(s)) sits.set(s, []); sits.get(s).push(r.id); }
     }

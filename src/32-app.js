@@ -1163,6 +1163,7 @@ BUILDERS.diag = function (page) {
     kpi('Nicht bewertbar', String(t.unklar), '', 'Fahrsituation fehlte'),
     kpi('PID fehlt', String(t.missing), '', 'nicht aufgezeichnet')));
   { const ac = assistCard(); if (ac) page.appendChild(ac); }
+  { const dc = dtcCard(); if (dc) page.appendChild(dc); }
 
   page.appendChild(noteBox(t.crit ? 'crit' : t.warn ? 'warn' : 'info',
     t.crit ? 'Es gibt auffällige Befunde' : t.warn ? 'Alles im Rahmen, einzelne Punkte beobachten' : 'Keine Auffälligkeiten',
@@ -2431,6 +2432,51 @@ function openVehicleDialog(opts) {
   const esc = e => { if (e.key === 'Escape') { closeVehicleDialog(); document.removeEventListener('keydown', esc); } };
   document.addEventListener('keydown', esc);
   if (chooser.focusSearch) setTimeout(() => chooser.focusSearch(), 60);
+}
+
+/* --- Fehlerspeicher --------------------------------------------------------- */
+function dtcStoreKey() { return App.ds ? 'dtc:' + driveId(App.ds, App.fileName) : null; }
+function activeDtcCodes() { const k = dtcStoreKey(); return k ? parseDtcInput(store.get(k, '')) : []; }
+
+function dtcCard() {
+  if (!App.ds || !App.diag) return null;
+  const key = dtcStoreKey();
+  const ta = el('textarea', { class: 'inp', rows: 2, spellcheck: 'false',
+    placeholder: 'P0300, P0171 … oder die ganze Ausgabe der OBD-App hier einfügen',
+    style: { width: '100%', fontFamily: 'var(--mono)', resize: 'vertical' } }, store.get(key, ''));
+  const list = el('div', { class: 'dtc-list' });
+  const paint = () => {
+    list.innerHTML = '';
+    const codes = parseDtcInput(ta.value);
+    if (!codes.length) {
+      list.appendChild(el('p', { class: 'dim', style: { margin: '8px 0 0' } },
+        'Keine Codes eingetragen. Ein Fehlercode neben dem gemessenen Verlauf ist mehr wert als beides einzeln – ' +
+        'die Codes stehen in der OBD-App unter „Fehlerspeicher“ oder „Diagnose“. Gespeichert wird je Fahrt.'));
+      return;
+    }
+    dtcCrossCheck(codes, App.diag.results).forEach(d => {
+      const tone = d.supporting.length ? 'crit' : (d.contra.length && !d.open.length) ? 'ok' : 'mute';
+      const rt = id => { const r = DIAG_RULES.find(x => x.id === id); return r ? r.title : id; };
+      list.appendChild(el('div', { class: 'dtc-row' },
+        el('b', { class: 'dtc-code' + (d.generic ? '' : ' mfr') }, d.code),
+        el('div', { class: 'dtc-t' },
+          el('b', {}, d.title),
+          d.check ? el('span', { class: 'dim' }, d.check) : null,
+          el('div', { class: 'chiprow', style: { marginTop: '5px', gap: '5px' } },
+            el('span', { class: 'badge ' + tone }, d.verdict),
+            d.supporting.length ? el('span', { class: 'badge crit' }, 'gestützt: ' + d.supporting.map(rt).join(', ')) : null,
+            d.contra.length ? el('span', { class: 'badge ok' }, 'unauffällig: ' + d.contra.map(rt).join(', ')) : null,
+            d.open.length ? el('span', { class: 'badge mute' }, 'nicht prüfbar: ' + d.open.map(rt).join(', ')) : null))));
+    });
+  };
+  ta.addEventListener('input', () => { store.set(key, ta.value); paint(); akteAutoSave(); });
+  paint();
+  return card('Fehlerspeicher', {
+    hint: 'Codes aus der OBD-App, gegen die Messung gestellt',
+    info: { read: 'Genormte Codes (P0xxx, P2xxx) bedeuten in jedem Fahrzeug dasselbe und werden hier gedeutet. Herstellercodes (P1xxx, P3xxx) werden erkannt, aber nicht ausgelegt – ihre Bedeutung steht nur im Reparaturleitfaden des Herstellers. Zu jedem Code steht, welche Prüfungen dieser Auswertung ihn stützen oder entkräften.',
+            good: 'Ein Code, dessen zugehörige Prüfungen alle unauffällig sind, ist oft alt oder sporadisch – löschen, Fahrt wiederholen, wiederkommt er nicht, war er es nicht wert.',
+            bad: 'Ein Code, den die Messung stützt – P0299 neben gedeckelter Volllastlast, P0171 neben +8 % Gemischkorrektur – ist ein echter Befund, kein Zufall.' }
+  }, ta, list);
 }
 
 /* --- Aufzeichnungs-Assistent ----------------------------------------------- */
