@@ -1999,15 +1999,39 @@ function computeTrip(ds) {
   T.knownTime = known; T.unknownTime = ds.duration - known; T.engineOnTime = engineOn;
   T.movingShare = known > 0 ? moving / known : 0;
 
-  /* Strecke: bevorzugt GPS-Track, sonst Integration, sonst OBD-Zähler */
+  /* Strecke. Drei Quellen, und die Auswahl darf nicht blind sein.
+
+     Der GPS-Track überbrückt Datenlücken mit einer Luftlinie. Solange die Lücke
+     kurz ist, ist das eine gute Näherung. Fällt die Aufzeichnung aber minutenlang
+     aus und das Fahrzeug bewegt sich derweil, steht in der Luftlinie eine Strecke,
+     die gar nicht gemessen wurde — im Extremfall ein Vielfaches der gemessenen.
+     Deshalb: die überbrückte Strecke ist keine gemessene Strecke, und wo die
+     Quellen weit auseinanderliegen, entscheidet die Mehrheit, nicht die Rangfolge. */
   const obdDist = stats.distance ? stats.distance.max - stats.distance.min : NaN;
   T.distGps = track ? track.totalDist / 1000 : NaN;
+  T.distGpsTracked = track ? (track.totalDist - track.gapDist) / 1000 : NaN;   // ohne Luftlinien
   T.distInt = distInt / 1000;
   T.distObd = obdDist;
-  T.dist = isFinite(T.distGps) && T.distGps > 0.2 ? T.distGps
-         : isFinite(T.distInt) && T.distInt > 0.2 ? T.distInt : obdDist;
-  T.distSource = T.dist === T.distGps ? 'GPS' : T.dist === T.distInt ? 'integriert' : 'OBD';
   T.gapDist = track ? track.gapDist / 1000 : 0;
+
+  const cand = [];
+  if (isFinite(obdDist) && obdDist > 0.2) cand.push({ v: obdDist, src: 'OBD-Zähler' });
+  if (isFinite(T.distInt) && T.distInt > 0.2) cand.push({ v: T.distInt, src: 'integriert' });
+  if (isFinite(T.distGps) && T.distGps > 0.2) cand.push({ v: T.distGps, src: 'GPS' });
+  // Stimmen zwei Quellen auf 15 % überein, ist das die belastbare Zahl.
+  let pick = null;
+  for (let i = 0; i < cand.length && !pick; i++)
+    for (let j = i + 1; j < cand.length && !pick; j++)
+      if (Math.abs(cand[i].v - cand[j].v) / Math.max(cand[i].v, cand[j].v) < 0.15)
+        pick = cand[i].v <= cand[j].v ? cand[i] : cand[j];
+  if (!pick) pick = cand.find(c => c.src === 'GPS') || cand[0] || null;
+  T.dist = pick ? pick.v : NaN;
+  T.distSource = pick ? pick.src : '';
+  // Weichen die Quellen weit ab, muss das sichtbar werden statt still gewählt zu sein.
+  const vals = cand.map(c => c.v);
+  T.distSpread = vals.length > 1 ? (Math.max.apply(null, vals) - Math.min.apply(null, vals)) / Math.max.apply(null, vals) : 0;
+  T.distDisputed = T.distSpread > 0.15;
+  T.distCands = cand;
 
   T.speedMax = stats.speed_mix ? stats.speed_mix.max : NaN;
   T.speedAvgMoving = moving > 0 ? (distInt / moving) * 3.6 : NaN;
@@ -4863,8 +4887,31 @@ const DIAG_RULES = [
       note: 'Der Motor war beim Aufzeichnungsstart bereits warm (' + fmt(start, 0) + ' °C) – das Warmlaufverhalten lässt sich aus dieser Fahrt nicht bewerten.' };
     let t85 = NaN;
     for (let i = i0; i < c.N; i++) if (co[i] >= 85) { t85 = c.grid[i] - c.grid[i0]; break; }
-    if (!isFinite(t85)) return { status: S.CRIT, value: NaN,
-      text: 'Der Motor hat in der gesamten Aufzeichnung nie 85 °C erreicht. Thermostat prüfen.' };
+    if (!isFinite(t85)) {
+      /* "Nie 85 °C erreicht" ist nur dann ein Befund, wenn der Motor auch lange genug
+         gelaufen ist UND die Messreihe das begleitet hat. Vier Sekunden Kühlmitteldaten
+         vom Aufzeichnungsstart sagen nichts über ein Thermostat — daraus eine Werkstatt-
+         empfehlung abzuleiten ist schlimmer als gar keine Aussage. */
+      const covered = c.dur(c.mask(i => co[i] === co[i]));
+      const ran = c.dur(c.masks.engineOn);
+      const last = c.agg('coolant', c.mask(i => co[i] === co[i]), 'max');
+      if (covered < 300 || ran < 600)
+        return { status: S.UNCLEAR,
+          note: 'Zu wenig Daten für eine Aussage zum Warmlauf: Kühlmitteltemperatur liegt nur über ' +
+                fmtDur(covered) + ' vor, der Motor lief in der Aufzeichnung ' + fmtDur(ran) +
+                '. Für eine Bewertung wird ein Kaltstart mit durchgehender Aufzeichnung gebraucht, ' +
+                'bis der Motor sein Temperaturplateau erreicht hat.',
+          extra: [['Kühlmitteldaten vorhanden über', fmtDur(covered)],
+                  ['Motorlaufzeit in der Aufzeichnung', fmtDur(ran)],
+                  ['Höchste gemessene Temperatur', fmt(last, 0) + ' °C']] };
+      return { status: S.CRIT, value: NaN,
+        extra: [['Kühlmitteldaten vorhanden über', fmtDur(covered)],
+                ['Höchste gemessene Temperatur', fmt(last, 0) + ' °C']],
+        text: 'Der Motor läuft seit ' + fmtDur(ran) + ' und erreicht nur ' + fmt(last, 0) +
+              ' °C – 85 °C werden in der gesamten Aufzeichnung nie erreicht. Das ist die Signatur eines offen ' +
+              'hängenden oder falschen Thermostats. Folgen: mehr Verbrauch, stärkere Ventilverkokung, Ölverdünnung.',
+        action: ['Thermostat und Temperaturgeber prüfen', 'Kühlmittelstand und Entlüftung kontrollieren'] };
+    }
     const st = t85 < 360 ? S.OK : t85 < 600 ? S.WARN : S.CRIT;
     return { status: st, value: t85 / 60, unit: 'min', dec: 1, ref: '< 6 min', refLo: 0, refHi: 6,
       extra: [['Starttemperatur', fmt(start, 0) + ' °C']],
@@ -7829,7 +7876,10 @@ function buildAiPrompt(detailKey) {
     ['Leerlaufzeit', T.idleTime, 's', SPD],
     ['Zeit ohne Geschwindigkeitsdaten', T.unknownTime, 's', GES],
     ['Strecke', T.dist, 'km', TRK],
-    ['davon Luftlinie über GPS-Lücken', T.gapDist, 'km', TRK],
+    ['davon Luftlinie über GPS-Lücken (nicht gemessen)', T.gapDist, 'km', TRK],
+    ['Strecke laut GPS-Track', T.distGps, 'km', TRK],
+    ['Strecke laut Geschwindigkeits-Integration', T.distInt, 'km', SPD],
+    ['Strecke laut OBD-Zähler', T.distObd, 'km', GES],
     ['Strecke im Zeitraum mit Geschwindigkeitsdaten', T.distInt, 'km', SPD],
     ['Durchschnittsgeschwindigkeit in Bewegung', T.speedAvgMoving, 'km/h', SPD],
     ['Höchstgeschwindigkeit', T.speedMax, 'km/h', SPD],
@@ -7850,6 +7900,11 @@ function buildAiPrompt(detailKey) {
     ['Höhenmeter bergauf', T.ascent, 'm', TRK], ['Höhenmeter bergab', T.descent, 'm', TRK]
   ];
   p('<fahrt hinweis="Achtung beim Nachrechnen: die Kennzahlen haben unterschiedliche Bezugszeiträume, siehe Attribut bezug. Geschwindigkeit und Strecke decken nicht denselben Zeitraum ab.">');
+  if (T.distDisputed)
+    p('  <warnung betrifft="Strecke">Die Streckenquellen widersprechen sich um ' +
+      round(T.distSpread * 100, 0) + ' %. Der GPS-Track überbrückt Datenlücken mit einer Luftlinie – diese Strecke ' +
+      'wurde nicht gemessen, sondern nur zwischen zwei Fixen gerade durchgezogen. Stütze keine Strecken- oder ' +
+      'Verbrauchsaussage auf eine einzelne Quelle, ohne die anderen daneben zu stellen.</warnung>');
   K.forEach(([n, v, u, bez]) => {
     if (!isFinite(v)) return;
     const dec = u === '%' ? 1 : u === 'bar' ? 2 : u === 's' ? 0 : undefined;
@@ -8480,7 +8535,9 @@ BUILDERS.overview = function (page) {
   const K = el('div', { class: 'grid kpis' });
   const add = (l, v, u, sub, o) => K.appendChild(kpi(l, v, u, sub, o));
   add('Fahrtdauer', fmtDur(ds.duration), '', 'davon ' + fmtDur(T.movingTime) + ' in Bewegung', { accent: true });
-  add('Strecke', fmt(T.dist, 2), 'km', 'Quelle: ' + T.distSource + (T.gapDist > 0.05 ? ' · ' + fmt(T.gapDist, 1) + ' km über GPS-Lücken' : ''));
+  add('Strecke', fmt(T.dist, 2), 'km', 'Quelle: ' + T.distSource +
+    (T.distDisputed ? ' · Quellen uneinig' : '') +
+    (T.gapDist > 0.05 ? ' · ' + fmt(T.gapDist, 1) + ' km Luftlinie über GPS-Lücken' : ''));
   add('Ø Geschwindigkeit', fmt(T.speedAvgMoving, 1), 'km/h', 'in Bewegung · gesamt ' + fmt(T.speedAvgTotal, 1) + ' km/h',
       { spark: sparkOf('speed_mix'), sparkColor: '#29b6f6' });
   add('Höchstgeschwindigkeit', fmt(T.speedMax, 0), 'km/h', s.speed_mix ? 'bei ' + xFormatter()(s.speed_mix.tMax) : '');
@@ -8780,6 +8837,7 @@ BUILDERS.map = function (page) {
   const K = el('div', { class: 'grid kpis' });
   K.appendChild(kpi('Streckenlänge', fmt(tr.totalDist / 1000, 2), 'km',
     tr.gaps.length ? 'darin ' + fmt(tr.gapDist / 1000, 1) + ' km Luftlinie über ' + tr.gaps.length + ' GPS-Lücke(n)' : 'ohne Lücken'));
+  { const dn = distDisputeNote(ds); if (dn) page.appendChild(dn); }
   K.appendChild(kpi('Positionen', fmt(tr.n, 0), '', tr.rejected ? fmt(tr.rejected, 0) + ' Ausreißer verworfen' : 'keine Ausreißer'));
   if (isFinite(App.ds.trip.ascent))
     K.appendChild(kpi('Anstieg', fmt(App.ds.trip.ascent, 0), 'm', fmt(App.ds.trip.descent, 0) + ' m Gefälle'));
@@ -10028,9 +10086,24 @@ BUILDERS.ai = function (page) {
 };
 
 /* --- Datenqualität --- */
+/* Widersprechen sich die Streckenquellen, muss das sichtbar sein statt still gewählt. */
+function distDisputeNote(ds) {
+  const T = ds.trip;
+  if (!T.distDisputed) return null;
+  const c = T.distCands || [];
+  return noteBox('warn', 'Die Streckenangaben widersprechen sich um ' + fmt(T.distSpread * 100, 0) + ' %',
+    c.map(x => fmt(x.v, 2) + ' km (' + x.src + ')').join(' · ') +
+    '. Verwendet wird ' + fmt(T.dist, 2) + ' km aus der Quelle „' + T.distSource + '“. ' +
+    (T.gapDist > 0.5
+      ? 'Der GPS-Track überbrückt ' + fmt(T.gapDist, 1) + ' km als Luftlinie über Datenlücken – diese Strecke wurde ' +
+        'nicht gemessen, sondern nur zwischen dem letzten und dem nächsten Fix gerade durchgezogen. Bei langen ' +
+        'Ausfällen ist der GPS-Wert deshalb keine Fahrleistung.'
+      : 'Das deutet darauf hin, dass eine der Quellen nicht die ganze Fahrt abdeckt.'));
+}
 BUILDERS.data = function (page) {
   const ds = App.ds, m = ds.meta;
   page.appendChild(sectionHead('Datenqualität', 'Was tatsächlich in der Datei steht – bevor irgendetwas daraus geschlossen wird.'));
+  { const n = distDisputeNote(ds); if (n) page.appendChild(n); }
 
   page.appendChild(el('div', { class: 'grid kpis' },
     kpi('Datenzeilen', fmt(m.rows, 0), '', m.skipped ? fmt(m.skipped, 0) + ' übersprungen' : 'alle verwertet'),

@@ -356,15 +356,39 @@ function computeTrip(ds) {
   T.knownTime = known; T.unknownTime = ds.duration - known; T.engineOnTime = engineOn;
   T.movingShare = known > 0 ? moving / known : 0;
 
-  /* Strecke: bevorzugt GPS-Track, sonst Integration, sonst OBD-Zähler */
+  /* Strecke. Drei Quellen, und die Auswahl darf nicht blind sein.
+
+     Der GPS-Track überbrückt Datenlücken mit einer Luftlinie. Solange die Lücke
+     kurz ist, ist das eine gute Näherung. Fällt die Aufzeichnung aber minutenlang
+     aus und das Fahrzeug bewegt sich derweil, steht in der Luftlinie eine Strecke,
+     die gar nicht gemessen wurde — im Extremfall ein Vielfaches der gemessenen.
+     Deshalb: die überbrückte Strecke ist keine gemessene Strecke, und wo die
+     Quellen weit auseinanderliegen, entscheidet die Mehrheit, nicht die Rangfolge. */
   const obdDist = stats.distance ? stats.distance.max - stats.distance.min : NaN;
   T.distGps = track ? track.totalDist / 1000 : NaN;
+  T.distGpsTracked = track ? (track.totalDist - track.gapDist) / 1000 : NaN;   // ohne Luftlinien
   T.distInt = distInt / 1000;
   T.distObd = obdDist;
-  T.dist = isFinite(T.distGps) && T.distGps > 0.2 ? T.distGps
-         : isFinite(T.distInt) && T.distInt > 0.2 ? T.distInt : obdDist;
-  T.distSource = T.dist === T.distGps ? 'GPS' : T.dist === T.distInt ? 'integriert' : 'OBD';
   T.gapDist = track ? track.gapDist / 1000 : 0;
+
+  const cand = [];
+  if (isFinite(obdDist) && obdDist > 0.2) cand.push({ v: obdDist, src: 'OBD-Zähler' });
+  if (isFinite(T.distInt) && T.distInt > 0.2) cand.push({ v: T.distInt, src: 'integriert' });
+  if (isFinite(T.distGps) && T.distGps > 0.2) cand.push({ v: T.distGps, src: 'GPS' });
+  // Stimmen zwei Quellen auf 15 % überein, ist das die belastbare Zahl.
+  let pick = null;
+  for (let i = 0; i < cand.length && !pick; i++)
+    for (let j = i + 1; j < cand.length && !pick; j++)
+      if (Math.abs(cand[i].v - cand[j].v) / Math.max(cand[i].v, cand[j].v) < 0.15)
+        pick = cand[i].v <= cand[j].v ? cand[i] : cand[j];
+  if (!pick) pick = cand.find(c => c.src === 'GPS') || cand[0] || null;
+  T.dist = pick ? pick.v : NaN;
+  T.distSource = pick ? pick.src : '';
+  // Weichen die Quellen weit ab, muss das sichtbar werden statt still gewählt zu sein.
+  const vals = cand.map(c => c.v);
+  T.distSpread = vals.length > 1 ? (Math.max.apply(null, vals) - Math.min.apply(null, vals)) / Math.max.apply(null, vals) : 0;
+  T.distDisputed = T.distSpread > 0.15;
+  T.distCands = cand;
 
   T.speedMax = stats.speed_mix ? stats.speed_mix.max : NaN;
   T.speedAvgMoving = moving > 0 ? (distInt / moving) * 3.6 : NaN;

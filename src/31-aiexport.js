@@ -235,7 +235,10 @@ function buildAiPrompt(detailKey) {
     ['Leerlaufzeit', T.idleTime, 's', SPD],
     ['Zeit ohne Geschwindigkeitsdaten', T.unknownTime, 's', GES],
     ['Strecke', T.dist, 'km', TRK],
-    ['davon Luftlinie über GPS-Lücken', T.gapDist, 'km', TRK],
+    ['davon Luftlinie über GPS-Lücken (nicht gemessen)', T.gapDist, 'km', TRK],
+    ['Strecke laut GPS-Track', T.distGps, 'km', TRK],
+    ['Strecke laut Geschwindigkeits-Integration', T.distInt, 'km', SPD],
+    ['Strecke laut OBD-Zähler', T.distObd, 'km', GES],
     ['Strecke im Zeitraum mit Geschwindigkeitsdaten', T.distInt, 'km', SPD],
     ['Durchschnittsgeschwindigkeit in Bewegung', T.speedAvgMoving, 'km/h', SPD],
     ['Höchstgeschwindigkeit', T.speedMax, 'km/h', SPD],
@@ -256,6 +259,11 @@ function buildAiPrompt(detailKey) {
     ['Höhenmeter bergauf', T.ascent, 'm', TRK], ['Höhenmeter bergab', T.descent, 'm', TRK]
   ];
   p('<fahrt hinweis="Achtung beim Nachrechnen: die Kennzahlen haben unterschiedliche Bezugszeiträume, siehe Attribut bezug. Geschwindigkeit und Strecke decken nicht denselben Zeitraum ab.">');
+  if (T.distDisputed)
+    p('  <warnung betrifft="Strecke">Die Streckenquellen widersprechen sich um ' +
+      round(T.distSpread * 100, 0) + ' %. Der GPS-Track überbrückt Datenlücken mit einer Luftlinie – diese Strecke ' +
+      'wurde nicht gemessen, sondern nur zwischen zwei Fixen gerade durchgezogen. Stütze keine Strecken- oder ' +
+      'Verbrauchsaussage auf eine einzelne Quelle, ohne die anderen daneben zu stellen.</warnung>');
   K.forEach(([n, v, u, bez]) => {
     if (!isFinite(v)) return;
     const dec = u === '%' ? 1 : u === 'bar' ? 2 : u === 's' ? 0 : undefined;

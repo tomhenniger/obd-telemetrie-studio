@@ -173,8 +173,31 @@ const DIAG_RULES = [
       note: 'Der Motor war beim Aufzeichnungsstart bereits warm (' + fmt(start, 0) + ' °C) – das Warmlaufverhalten lässt sich aus dieser Fahrt nicht bewerten.' };
     let t85 = NaN;
     for (let i = i0; i < c.N; i++) if (co[i] >= 85) { t85 = c.grid[i] - c.grid[i0]; break; }
-    if (!isFinite(t85)) return { status: S.CRIT, value: NaN,
-      text: 'Der Motor hat in der gesamten Aufzeichnung nie 85 °C erreicht. Thermostat prüfen.' };
+    if (!isFinite(t85)) {
+      /* "Nie 85 °C erreicht" ist nur dann ein Befund, wenn der Motor auch lange genug
+         gelaufen ist UND die Messreihe das begleitet hat. Vier Sekunden Kühlmitteldaten
+         vom Aufzeichnungsstart sagen nichts über ein Thermostat — daraus eine Werkstatt-
+         empfehlung abzuleiten ist schlimmer als gar keine Aussage. */
+      const covered = c.dur(c.mask(i => co[i] === co[i]));
+      const ran = c.dur(c.masks.engineOn);
+      const last = c.agg('coolant', c.mask(i => co[i] === co[i]), 'max');
+      if (covered < 300 || ran < 600)
+        return { status: S.UNCLEAR,
+          note: 'Zu wenig Daten für eine Aussage zum Warmlauf: Kühlmitteltemperatur liegt nur über ' +
+                fmtDur(covered) + ' vor, der Motor lief in der Aufzeichnung ' + fmtDur(ran) +
+                '. Für eine Bewertung wird ein Kaltstart mit durchgehender Aufzeichnung gebraucht, ' +
+                'bis der Motor sein Temperaturplateau erreicht hat.',
+          extra: [['Kühlmitteldaten vorhanden über', fmtDur(covered)],
+                  ['Motorlaufzeit in der Aufzeichnung', fmtDur(ran)],
+                  ['Höchste gemessene Temperatur', fmt(last, 0) + ' °C']] };
+      return { status: S.CRIT, value: NaN,
+        extra: [['Kühlmitteldaten vorhanden über', fmtDur(covered)],
+                ['Höchste gemessene Temperatur', fmt(last, 0) + ' °C']],
+        text: 'Der Motor läuft seit ' + fmtDur(ran) + ' und erreicht nur ' + fmt(last, 0) +
+              ' °C – 85 °C werden in der gesamten Aufzeichnung nie erreicht. Das ist die Signatur eines offen ' +
+              'hängenden oder falschen Thermostats. Folgen: mehr Verbrauch, stärkere Ventilverkokung, Ölverdünnung.',
+        action: ['Thermostat und Temperaturgeber prüfen', 'Kühlmittelstand und Entlüftung kontrollieren'] };
+    }
     const st = t85 < 360 ? S.OK : t85 < 600 ? S.WARN : S.CRIT;
     return { status: st, value: t85 / 60, unit: 'min', dec: 1, ref: '< 6 min', refLo: 0, refHi: 6,
       extra: [['Starttemperatur', fmt(start, 0) + ' °C']],

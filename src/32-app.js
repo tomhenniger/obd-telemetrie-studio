@@ -394,7 +394,9 @@ BUILDERS.overview = function (page) {
   const K = el('div', { class: 'grid kpis' });
   const add = (l, v, u, sub, o) => K.appendChild(kpi(l, v, u, sub, o));
   add('Fahrtdauer', fmtDur(ds.duration), '', 'davon ' + fmtDur(T.movingTime) + ' in Bewegung', { accent: true });
-  add('Strecke', fmt(T.dist, 2), 'km', 'Quelle: ' + T.distSource + (T.gapDist > 0.05 ? ' · ' + fmt(T.gapDist, 1) + ' km über GPS-Lücken' : ''));
+  add('Strecke', fmt(T.dist, 2), 'km', 'Quelle: ' + T.distSource +
+    (T.distDisputed ? ' · Quellen uneinig' : '') +
+    (T.gapDist > 0.05 ? ' · ' + fmt(T.gapDist, 1) + ' km Luftlinie über GPS-Lücken' : ''));
   add('Ø Geschwindigkeit', fmt(T.speedAvgMoving, 1), 'km/h', 'in Bewegung · gesamt ' + fmt(T.speedAvgTotal, 1) + ' km/h',
       { spark: sparkOf('speed_mix'), sparkColor: '#29b6f6' });
   add('Höchstgeschwindigkeit', fmt(T.speedMax, 0), 'km/h', s.speed_mix ? 'bei ' + xFormatter()(s.speed_mix.tMax) : '');
@@ -694,6 +696,7 @@ BUILDERS.map = function (page) {
   const K = el('div', { class: 'grid kpis' });
   K.appendChild(kpi('Streckenlänge', fmt(tr.totalDist / 1000, 2), 'km',
     tr.gaps.length ? 'darin ' + fmt(tr.gapDist / 1000, 1) + ' km Luftlinie über ' + tr.gaps.length + ' GPS-Lücke(n)' : 'ohne Lücken'));
+  { const dn = distDisputeNote(ds); if (dn) page.appendChild(dn); }
   K.appendChild(kpi('Positionen', fmt(tr.n, 0), '', tr.rejected ? fmt(tr.rejected, 0) + ' Ausreißer verworfen' : 'keine Ausreißer'));
   if (isFinite(App.ds.trip.ascent))
     K.appendChild(kpi('Anstieg', fmt(App.ds.trip.ascent, 0), 'm', fmt(App.ds.trip.descent, 0) + ' m Gefälle'));
@@ -1942,9 +1945,24 @@ BUILDERS.ai = function (page) {
 };
 
 /* --- Datenqualität --- */
+/* Widersprechen sich die Streckenquellen, muss das sichtbar sein statt still gewählt. */
+function distDisputeNote(ds) {
+  const T = ds.trip;
+  if (!T.distDisputed) return null;
+  const c = T.distCands || [];
+  return noteBox('warn', 'Die Streckenangaben widersprechen sich um ' + fmt(T.distSpread * 100, 0) + ' %',
+    c.map(x => fmt(x.v, 2) + ' km (' + x.src + ')').join(' · ') +
+    '. Verwendet wird ' + fmt(T.dist, 2) + ' km aus der Quelle „' + T.distSource + '“. ' +
+    (T.gapDist > 0.5
+      ? 'Der GPS-Track überbrückt ' + fmt(T.gapDist, 1) + ' km als Luftlinie über Datenlücken – diese Strecke wurde ' +
+        'nicht gemessen, sondern nur zwischen dem letzten und dem nächsten Fix gerade durchgezogen. Bei langen ' +
+        'Ausfällen ist der GPS-Wert deshalb keine Fahrleistung.'
+      : 'Das deutet darauf hin, dass eine der Quellen nicht die ganze Fahrt abdeckt.'));
+}
 BUILDERS.data = function (page) {
   const ds = App.ds, m = ds.meta;
   page.appendChild(sectionHead('Datenqualität', 'Was tatsächlich in der Datei steht – bevor irgendetwas daraus geschlossen wird.'));
+  { const n = distDisputeNote(ds); if (n) page.appendChild(n); }
 
   page.appendChild(el('div', { class: 'grid kpis' },
     kpi('Datenzeilen', fmt(m.rows, 0), '', m.skipped ? fmt(m.skipped, 0) + ' übersprungen' : 'alle verwertet'),
