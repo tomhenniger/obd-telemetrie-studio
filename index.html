@@ -1311,7 +1311,12 @@ async function parseCSV(text, onProgress) {
             if (!G) { G = { t: [], lat: [], lon: [], alt: [], _la: NaN, _lo: NaN }; gpsBySrc.set(src, G); }
             if (la !== G._la || lo !== G._lo) {
               G.t.push(t); G.lat.push(la); G.lon.push(lo);
+              /* Höhe: aus einer eigenen Spalte, wenn es eine gibt. Im Long-Format liefert
+                 sie aber die PID selbst – "Altitude (GPS)" trägt die Höhe als VALUE. Ohne
+                 diesen Zweig gäbe es für Car-Scanner-Dateien nie Höhenmeter. */
               if (idx.alt !== undefined) G.alt.push(num(String(f[idx.alt] || '').trim()));
+              else if (isLong && /altitude|h(ö|oe)he|elevation/i.test(src))
+                G.alt.push(num(String(f[idx.value]).trim()));
               G._la = la; G._lo = lo;
             }
           }
@@ -1746,6 +1751,14 @@ function medianDt(t, n) {
   if (!ds.length) return 1;
   ds.sort((a, b) => a - b);
   return ds[ds.length >> 1] || 1;
+}
+
+/* Zeitachsen-Beschriftung passend zur Zeitbasis der Datei: Uhrzeit, wenn die
+   Aufzeichnung absolute Zeiten trägt, sonst Sekunden seit Beginn. Liegt hier und
+   nicht in der Oberfläche, weil auch der Export sie braucht. */
+function timeFormatterFor(ds) {
+  const abs = ds.meta.timeFormat === 'daysec' || ds.meta.epochBased;
+  return abs ? (v => fmtClock(v)) : (v => fmtRel(v - ds.t0));
 }
 
 /* ---------- GPS-Track säubern ---------- */
@@ -7913,7 +7926,7 @@ function buildAiPrompt(detailKey) {
   const D = AI_DETAIL[detailKey] || AI_DETAIL.standard;
   const L = [];
   const p = (s) => L.push(s);
-  const xf = ds ? xFormatter() : null;
+  const xf = ds ? timeFormatterFor(ds) : null;
 
   p('<?xml version="1.0" encoding="UTF-8"?>');
   p('<obd-fahrtanalyse version="1" sprache="de" erzeugt-von="OBD Telemetrie Studio">');
@@ -8587,11 +8600,7 @@ function windowed(id) {
   const arr = App.ds.G[id];
   return arr ? arr.subarray(a, b + 1) : null;
 }
-function xFormatter() {
-  const ds = App.ds;
-  const abs = ds.meta.timeFormat === 'daysec' || ds.meta.epochBased;
-  return abs ? (v => fmtClock(v)) : (v => fmtRel(v - ds.t0));
-}
+function xFormatter() { return timeFormatterFor(App.ds); }
 function sparkOf(id, n) {
   const a = App.ds.G[id]; if (!a) return null;
   n = n || 60;

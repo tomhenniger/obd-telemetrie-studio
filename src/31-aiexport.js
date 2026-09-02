@@ -80,7 +80,7 @@ function buildAiPrompt(detailKey) {
   const D = AI_DETAIL[detailKey] || AI_DETAIL.standard;
   const L = [];
   const p = (s) => L.push(s);
-  const xf = ds ? xFormatter() : null;
+  const xf = ds ? timeFormatterFor(ds) : null;
 
   p('<?xml version="1.0" encoding="UTF-8"?>');
   p('<obd-fahrtanalyse version="1" sprache="de" erzeugt-von="OBD Telemetrie Studio">');

@@ -308,7 +308,12 @@ async function parseCSV(text, onProgress) {
             if (!G) { G = { t: [], lat: [], lon: [], alt: [], _la: NaN, _lo: NaN }; gpsBySrc.set(src, G); }
             if (la !== G._la || lo !== G._lo) {
               G.t.push(t); G.lat.push(la); G.lon.push(lo);
+              /* Höhe: aus einer eigenen Spalte, wenn es eine gibt. Im Long-Format liefert
+                 sie aber die PID selbst – "Altitude (GPS)" trägt die Höhe als VALUE. Ohne
+                 diesen Zweig gäbe es für Car-Scanner-Dateien nie Höhenmeter. */
               if (idx.alt !== undefined) G.alt.push(num(String(f[idx.alt] || '').trim()));
+              else if (isLong && /altitude|h(ö|oe)he|elevation/i.test(src))
+                G.alt.push(num(String(f[idx.value]).trim()));
               G._la = la; G._lo = lo;
             }
           }

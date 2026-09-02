@@ -109,3 +109,23 @@ Kühlmitteltemperatur über 7 s. Alle Kennzahlen stimmten überein — bis auf z
 - **„Nicht gefahren“ wird nicht mehr behauptet.** Fehlt ein niedriger Gang, steht jetzt
   „keine feste Übersetzung messbar – im Anfahrbereich schlupft die Kupplung“. Das Werkzeug
   kann nicht unterscheiden, ob ein Gang ungenutzt blieb oder nur nicht messbar war.
+
+## Neue Features (Testsuite)
+
+- **Regressionstests** mit dem eingebauten Node-Testrunner, ohne Abhängigkeiten: 39 Tests
+  für Parser, Einheiten, Statistik, Getriebezuordnung, Diagnoseregeln und XML-Export. Jeder
+  Fehler, der in dieser Sitzung gefunden wurde, ist als Testfall festgenagelt – Mitternacht,
+  Feldübernahme, Dezimalkomma, Phantom-Phasen, Ausfallstrecke, Thermostat-Fehlalarm,
+  Steuerzeichen im XML.
+- **Drei echte Aufzeichnungen** als lokale Referenztests mit den unabhängig nachgerechneten
+  Werten (Strecke, Gänge, Sprints, Stopps, Verbrauch). Laufen nur mit `OBD_REAL=1`, die
+  Dateien bleiben privat.
+- **GitHub Actions** führt die Tests bei jedem Push aus und prüft, ob `index.html` aus `src/`
+  gebaut wurde.
+
+## Bugfixes
+
+- **Höhenmeter fehlten bei Car-Scanner-Dateien.** Im Long-Format liefert die PID „Altitude
+  (GPS)“ die Höhe als Messwert, nicht als eigene Spalte – der Parser hat sie nie übernommen.
+- Der XML-Export hing an einer Funktion der Oberfläche; die Zeitbeschriftung liegt jetzt im
+  Rechenkern.

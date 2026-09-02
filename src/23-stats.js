@@ -53,6 +53,14 @@ function medianDt(t, n) {
   return ds[ds.length >> 1] || 1;
 }
 
+/* Zeitachsen-Beschriftung passend zur Zeitbasis der Datei: Uhrzeit, wenn die
+   Aufzeichnung absolute Zeiten trägt, sonst Sekunden seit Beginn. Liegt hier und
+   nicht in der Oberfläche, weil auch der Export sie braucht. */
+function timeFormatterFor(ds) {
+  const abs = ds.meta.timeFormat === 'daysec' || ds.meta.epochBased;
+  return abs ? (v => fmtClock(v)) : (v => fmtRel(v - ds.t0));
+}
+
 /* ---------- GPS-Track säubern ---------- */
 function cleanTrack(gps, vMaxKmh) {
   vMaxKmh = vMaxKmh || 260;

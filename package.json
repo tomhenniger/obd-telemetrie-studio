@@ -1,0 +1,11 @@
+{
+  "name": "obd-telemetrie-studio",
+  "private": true,
+  "description": "OBD2-CSV-Auswertung als einzelne HTML-Datei",
+  "scripts": {
+    "build": "./build.sh",
+    "test": "node --test test/",
+    "test:real": "OBD_REAL=1 node --test test/real.test.js"
+  },
+  "engines": { "node": ">=20" }
+}

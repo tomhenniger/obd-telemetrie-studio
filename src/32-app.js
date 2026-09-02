@@ -254,11 +254,7 @@ function windowed(id) {
   const arr = App.ds.G[id];
   return arr ? arr.subarray(a, b + 1) : null;
 }
-function xFormatter() {
-  const ds = App.ds;
-  const abs = ds.meta.timeFormat === 'daysec' || ds.meta.epochBased;
-  return abs ? (v => fmtClock(v)) : (v => fmtRel(v - ds.t0));
-}
+function xFormatter() { return timeFormatterFor(App.ds); }
 function sparkOf(id, n) {
   const a = App.ds.G[id]; if (!a) return null;
   n = n || 60;
