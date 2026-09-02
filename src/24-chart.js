@@ -16,7 +16,7 @@ function readTheme() {
     axis:    themeVar('--text-3', '#8b93a1'),
     text:    themeVar('--text-1', '#e8ecf1'),
     text2:   themeVar('--text-2', '#a8b0bd'),
-    accent:  themeVar('--accent', '#4da3ff'),
+    accent:  themeVar('--accent', '#8fb3d6'),
     crosshair: themeVar('--chart-crosshair', 'rgba(255,255,255,.35)'),
     band:    themeVar('--chart-band', 'rgba(77,163,255,.10)'),
     ok:      themeVar('--ok', '#3ddc84'),
@@ -24,7 +24,7 @@ function readTheme() {
     crit:    themeVar('--crit', '#ff5d5d'),
     series:  (themeVar('--series', '') || '').split(',').map(s => s.trim()).filter(Boolean)
   };
-  if (!THEME.series.length) THEME.series = ['#4da3ff','#ff7a59','#3ddc84','#ffc247','#b388ff','#4dd0e1','#f06292','#9ccc65','#ffa726','#7986cb'];
+  if (!THEME.series.length) THEME.series = ['#8fb3d6','#ff7a59','#3ddc84','#ffc247','#b388ff','#4dd0e1','#f06292','#9ccc65','#ffa726','#7986cb'];
   return THEME;
 }
 
@@ -493,5 +493,5 @@ function heatColor(t) {
   }
   return 'rgba(240,80,60,1)';
 }
-const FONT_UI = 'system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
-const FONT_MONO = 'ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace';
+const FONT_UI = '"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
+const FONT_MONO = FONT_UI;   // Skalen in der Geräteschrift; Monospace bleibt der XML-Vorschau vorbehalten

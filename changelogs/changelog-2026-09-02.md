@@ -124,6 +124,7 @@ Kühlmitteltemperatur über 7 s. Alle Kennzahlen stimmten überein — bis auf z
   gebaut wurde.
 
 ## Bugfixes
+- Kaufcheck am Handy: das Bedingungs-Badge drückte den Titel auf null Breite und überlappte ihn – Badge schrumpft jetzt mit Ellipse.
 
 - **Höhenmeter fehlten bei Car-Scanner-Dateien.** Im Long-Format liefert die PID „Altitude
   (GPS)“ die Höhe als Messwert, nicht als eigene Spalte – der Parser hat sie nie übernommen.

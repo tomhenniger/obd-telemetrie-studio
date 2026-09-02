@@ -21,7 +21,7 @@ const SECTIONS = [
   { id: 'buy',      label: 'Kaufcheck',    tab: 'Kaufcheck', icon: 'clip',   sub: 'Gebrauchtwagen prüfen — Sichtprüfung, Probefahrt, Messprotokoll' },
   { id: 'ai',       label: 'KI-Prompt',    tab: 'KI',        icon: 'ai',     sub: 'Auswertung als XML für ChatGPT, Claude und andere Sprachmodelle' },
   { id: 'data',     label: 'Datenqualität',tab: 'Daten',     icon: 'table',  sub: 'Abdeckung, Artefakte, Export', data: true },
-  { id: 'settings', label: 'Einstellungen',tab: 'Optionen',  icon: 'cog',    sub: 'Fahrzeugprofil und Darstellung' }
+  { id: 'settings', label: 'Einstellungen',tab: 'Einstellungen',  icon: 'cog',    sub: 'Fahrzeugprofil und Darstellung' }
 ];
 
 /* ---------- Theme ---------- */
@@ -197,21 +197,37 @@ function buildNav() {
   const nav = $('#nav'), tabs = $('#tabbar');
   nav.innerHTML = ''; tabs.innerHTML = '';
   const haveData = !!App.ds;
-  SECTIONS.forEach(s => {
-    if (s.data && !haveData) return;
+  const secs = SECTIONS.filter(s => !(s.data && !haveData));
+  secs.forEach(s => {
     const bad = s.id === 'diag' && App.diag ? diagBadge() : null;
     nav.appendChild(el('button', { class: 'navitem', type: 'button', 'data-sec': s.id, onclick: () => go(s.id) },
       icon(s.icon), el('span', { class: 'lbl' }, s.label), bad));
-    tabs.appendChild(el('button', { class: 'tabbtn', type: 'button', 'data-sec': s.id, onclick: () => go(s.id) },
-      icon(s.icon), el('span', {}, s.tab || s.label)));
   });
+  /* Handy: vier feste Kanäle, der Rest liegt im Fach „Mehr“ – eine versteckte Scroll-Leiste ist keine Navigation */
+  const prim = secs.filter(s => TAB_PRIMARY.includes(s.id)), rest = secs.filter(s => !TAB_PRIMARY.includes(s.id));
+  prim.forEach(s => tabs.appendChild(el('button', { class: 'tabbtn', type: 'button', 'data-sec': s.id, onclick: () => go(s.id) },
+    icon(s.icon), el('span', {}, s.tab || s.label))));
+  if (rest.length) tabs.appendChild(el('button', { class: 'tabbtn', type: 'button', id: 'tab-more', 'aria-haspopup': 'true',
+    onclick: () => toggleTabMore(rest) }, icon('more'), el('span', {}, 'Mehr')));
   $('#new-file-lbl').textContent = haveData ? 'Andere CSV' : 'CSV laden';
+}
+const TAB_PRIMARY = ['overview', 'series', 'diag', 'buy'];
+function closeTabMore() { $$('.tabmore, .tabmore-bd').forEach(n => n.remove()); const m = $('#tab-more'); if (m) m.setAttribute('aria-expanded', 'false'); }
+function toggleTabMore(rest) {
+  if ($('.tabmore')) { closeTabMore(); return; }
+  const bd = el('div', { class: 'tabmore-bd', onclick: closeTabMore });
+  const box = el('div', { class: 'tabmore', role: 'menu' },
+    ...rest.map(s => el('button', { type: 'button', role: 'menuitem', 'data-sec': s.id, onclick: () => go(s.id),
+      'aria-current': App.current === s.id ? 'page' : null },
+      icon(s.icon), el('span', {}, s.tab || s.label), s.id === 'diag' && App.diag ? diagBadge() : null)));
+  document.body.append(bd, box);
+  $('#tab-more').setAttribute('aria-expanded', 'true');
 }
 function diagBadge() {
   const t = App.diag.tally;
   if (t.crit) return el('span', { class: 'badge crit' }, String(t.crit));
   if (t.warn) return el('span', { class: 'badge warn' }, String(t.warn));
-  return el('span', { class: 'badge ok' }, '✓');
+  return el('span', { class: 'badge ok', 'aria-label': 'alles unauffällig' }, icon('check'));
 }
 
 function go(id, force) {
@@ -224,6 +240,13 @@ function go(id, force) {
   App.current = id;
   $$('.navitem, .tabbtn').forEach(b =>
     b.getAttribute('data-sec') === id ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  closeTabMore();
+  const more = $('#tab-more');
+  if (more) {                                  /* liegt der Bereich im Fach, zeigt „Mehr“ seinen Namen und leuchtet */
+    const inMore = !TAB_PRIMARY.includes(id);
+    if (inMore) more.setAttribute('aria-current', 'page'); else more.removeAttribute('aria-current');
+    more.querySelector('span').textContent = inMore ? (sec.tab || sec.label) : 'Mehr';
+  }
   $('#page-title').textContent = sec.label;
   $('#page-sub').textContent = sec.sub;
   const pages = $('#pages');
@@ -337,7 +360,7 @@ class Brush {
     if (!THEME) readTheme();
     const ctx = this.ctx, ds = App.ds;
     ctx.clearRect(0, 0, this.w, this.h);
-    ctx.fillStyle = themeVar('--surface-2', '#171d27');
+    ctx.fillStyle = themeVar('--surface-2', '#1f2327');
     ctx.fillRect(0, 0, this.w, this.h);
     const src = ds.G.speed_mix || ds.G.rpm || ds.G[App.ts[0]];
     if (src) {
@@ -406,7 +429,7 @@ BUILDERS.overview = function (page) {
     (T.distDisputed ? ' · Quellen uneinig' : '') +
     (T.gapDist > 0.05 ? ' · ' + fmt(T.gapDist, 1) + ' km Luftlinie über GPS-Lücken' : ''));
   add('Ø Geschwindigkeit', fmt(T.speedAvgMoving, 1), 'km/h', 'in Bewegung · gesamt ' + fmt(T.speedAvgTotal, 1) + ' km/h',
-      { spark: sparkOf('speed_mix'), sparkColor: '#29b6f6' });
+      { spark: sparkOf('speed_mix'), sparkColor: '#7aa4c4' });
   add('Höchstgeschwindigkeit', fmt(T.speedMax, 0), 'km/h', s.speed_mix ? 'bei ' + xFormatter()(s.speed_mix.tMax) : '');
   if (isFinite(T.consAvg)) add('Verbrauch', fmt(T.consAvg, 1), 'L/100km',
       App.profile.specs.consNEDC ? 'Werk NEFZ ' + fmt(App.profile.specs.consNEDC, 1) + ' L' : '');
@@ -415,13 +438,13 @@ BUILDERS.overview = function (page) {
   if (isFinite(T.co2)) add('CO₂', fmt(T.co2, 2), 'kg', fmt(T.co2PerKm, 0) + ' g/km');
   if (isFinite(T.rpmMax)) add('Höchstdrehzahl', fmt(T.rpmMax, 0), 'min⁻¹',
       App.profile.specs.redline ? fmt(T.rpmMax / App.profile.specs.redline * 100, 0) + ' % des Begrenzers' : '',
-      { spark: sparkOf('rpm'), sparkColor: '#ff5c47' });
+      { spark: sparkOf('rpm'), sparkColor: '#e06b62' });
   if (isFinite(T.rpmAvg)) add('Ø Drehzahl', fmt(T.rpmAvg, 0), 'min⁻¹', 'zeitgewichtet');
   if (isFinite(T.boostMax)) add('Ladedruck max.', fmt(T.boostMax, 2), 'bar',
       fmt(T.boostMax * 14.5038, 1) + ' psi' + (ds.boostDerived ? ' · Rechenwert' : ''));
   if (isFinite(T.loadMax)) add('Motorlast max.', fmt(T.loadMax, 0), '%', 'absolute Last');
   if (isFinite(T.coolantMax)) add('Kühlmittel max.', fmt(T.coolantMax, 0), '°C',
-      'Start bei ' + fmt(T.coolantStart, 0) + ' °C', { spark: sparkOf('coolant'), sparkColor: '#ef5350' });
+      'Start bei ' + fmt(T.coolantStart, 0) + ' °C', { spark: sparkOf('coolant'), sparkColor: '#e06b62' });
   if (s.cac_mean) add('Ladeluft max.', fmt(s.cac_mean.max, 0), '°C',
       s.ambient ? fmt(s.cac_mean.max - s.ambient.median, 0) + ' K über Außenluft' : '');
   if (isFinite(T.wotShare)) add('Volllastanteil', fmt(T.wotShare * 100, 1), '%', T.wotSignal || '');
@@ -1090,10 +1113,10 @@ BUILDERS.fields = function (page) {
         foot: 'Anders als der Momentanverbrauch der App ist das eine echte, streckenbezogene Rechnung. Klassen mit unter drei Sekunden Verweildauer sind ausgelassen.'
       }, { type: 'timeseries', syncHover: false });
       const yv = Float64Array.from(ys), xv = Float64Array.from(xs);
-      cc.chart.axes = [{ unit: 'L/100km', lo: 0, hi: maxOf(ys) * 1.1, color: '#a1887f' }];
-      cc.chart.setData({ series: [{ x: xv, y: yv, n: xv.length, color: '#a1887f', axis: 0, fill: true, label: 'Verbrauch', unit: 'L/100km' }],
+      cc.chart.axes = [{ unit: 'L/100km', lo: 0, hi: maxOf(ys) * 1.1, color: '#b39a8e' }];
+      cc.chart.setData({ series: [{ x: xv, y: yv, n: xv.length, color: '#b39a8e', axis: 0, fill: true, label: 'Verbrauch', unit: 'L/100km' }],
         bands: null, xRange: [xv[0], xv[xv.length - 1]], xFormat: v => fmt(v, 0) + ' km/h' });
-      legendItems(cc.legend, [{ color: '#a1887f', label: 'Verbrauch je Geschwindigkeitsklasse', unit: 'L/100km' }]);
+      legendItems(cc.legend, [{ color: '#b39a8e', label: 'Verbrauch je Geschwindigkeitsklasse', unit: 'L/100km' }]);
       page.appendChild(cc.node);
     }
   }
@@ -1775,11 +1798,11 @@ function checkRow(c, insp, persist, rerender) {
     el('summary', { class: 'chk-h' },
       el('div', { class: 'chk-marks' },
         el('button', { class: 'mk ok', type: 'button', 'aria-pressed': mark === 'ok' ? 'true' : 'false',
-          title: 'in Ordnung', onclick: e => { e.preventDefault(); e.stopPropagation(); set('ok'); } }, '✓'),
+          title: 'in Ordnung', 'aria-label': 'in Ordnung', onclick: e => { e.preventDefault(); e.stopPropagation(); set('ok'); } }, icon('check')),
         el('button', { class: 'mk bad', type: 'button', 'aria-pressed': mark === 'bad' ? 'true' : 'false',
-          title: 'Befund', onclick: e => { e.preventDefault(); e.stopPropagation(); set('bad'); } }, '▲'),
+          title: 'Befund', 'aria-label': 'Befund', onclick: e => { e.preventDefault(); e.stopPropagation(); set('bad'); } }, icon('tri')),
         el('button', { class: 'mk na', type: 'button', 'aria-pressed': mark === 'na' ? 'true' : 'false',
-          title: 'übersprungen', onclick: e => { e.preventDefault(); e.stopPropagation(); set('na'); } }, '–')),
+          title: 'übersprungen', 'aria-label': 'übersprungen', onclick: e => { e.preventDefault(); e.stopPropagation(); set('na'); } }, icon('minus'))),
       el('div', { class: 'chk-t' },
         el('b', {}, c.title),
         el('span', {}, c.what.length > 92 ? c.what.slice(0, 91) + '…' : c.what)),
@@ -2602,7 +2625,7 @@ BUILDERS.akte = function (page) {
           el('td', {}, el('input', { class: 'inp', type: 'text', value: r.notes || '', placeholder: 'z. B. nach Ölwechsel', style: { width: '160px' },
             onchange: e => { r.notes = e.target.value; aktePut(r); } })),
           el('td', {}, el('button', { class: 'btn', type: 'button', title: 'Fahrt aus der Akte entfernen',
-            onclick: async () => { if (confirm('Diese Fahrt aus der Akte entfernen?')) { await akteDelete(r.id); render(); } } }, '×')))))))));
+            'aria-label': 'Fahrt entfernen', onclick: async () => { if (confirm('Diese Fahrt aus der Akte entfernen?')) { await akteDelete(r.id); render(); } } }, icon('x'))))))))));
 
     /* Matrix Regel × Fahrt */
     const cols = shown.slice(-10);
@@ -2615,7 +2638,7 @@ BUILDERS.akte = function (page) {
       if (!d) return el('td', { class: 'akte-c none' }, '');
       const t = d.value !== null && d.value !== undefined ? fmt(d.value, 2) + (d.unit ? ' ' + d.unit : '') : STATUS_TXT[d.status] || d.status;
       return el('td', { class: 'akte-c ' + d.status, title: ruleTitle(id) + ': ' + t + (d.ref ? ' (Soll ' + d.ref + ')' : '') },
-        el('span', { class: 'akte-dot' }, STATUS_SYM[d.status] || '·'),
+        el('span', { class: 'akte-dot' }, statusSym(d.status)),
         d.value !== null && d.value !== undefined ? el('span', { class: 'akte-v' }, fmt(d.value, d.unit === '%' || d.unit === 'K' ? 1 : 0)) : null);
     };
     const matrix = el('table', { class: 'tbl akte-m' },
@@ -2839,7 +2862,7 @@ function baseName() {
 /* ---------- Start ---------- */
 (function init() {
   const saved = store.get('theme', null);
-  applyTheme(saved || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+  applyTheme(saved || 'dark');   // das Gerät ist dunkel; hell nur auf ausdrückliche Wahl
   $('#theme').addEventListener('click', () =>
     applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
 
@@ -2922,8 +2945,5 @@ function baseName() {
     });
   }).catch(() => {});
 
-  matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
-    if (!store.get('theme', null)) applyTheme(matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-  });
   window.addEventListener('resize', debounce(() => { Chart.all.forEach(c => { c.resize(); c.draw(); }); if (App.map) { App.map.resize(); App.map.draw(); } }, 140));
 })();

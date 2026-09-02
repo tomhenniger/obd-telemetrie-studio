@@ -22,9 +22,9 @@ function infoPanel(info) {
   const rows = [];
   if (info.read) rows.push(el('p', {}, info.read));
   if (info.good) rows.push(el('div', { class: 'iv ok' },
-    el('span', { class: 'iv-m' }, '✓'), el('div', {}, el('b', {}, 'Unauffällig: '), info.good)));
+    el('span', { class: 'iv-m' }, icon('check')), el('div', {}, el('b', {}, 'Unauffällig: '), info.good)));
   if (info.bad) rows.push(el('div', { class: 'iv bad' },
-    el('span', { class: 'iv-m' }, '▲'), el('div', {}, el('b', {}, 'Auffällig: '), info.bad)));
+    el('span', { class: 'iv-m' }, icon('tri')), el('div', {}, el('b', {}, 'Auffällig: '), info.bad)));
   if (info.note) rows.push(el('p', { class: 'dim2' }, info.note));
   return el('div', { class: 'info-panel', hidden: true }, rows);
 }
@@ -70,7 +70,14 @@ function kpi(label, value, unit, sub, opts) {
   return n;
 }
 
-const STATUS_SYM = { ok: '✓', warn: '!', crit: '▲', unklar: '?', missing: '–' };
+const STATUS_SYM = { ok: '✓', warn: '!', crit: '▲', unklar: '?', missing: '–' };   // Textform (Export, Titel)
+/* Gezeichnete Form für die Anzeige: Haken und Dreieck aus dem Sprite, Zeichen nur wo es Zeichen sind */
+function statusSym(st) {
+  if (st === 'ok') return icon('check');
+  if (st === 'crit') return icon('tri');
+  if (st === 'missing') return icon('minus');
+  return STATUS_SYM[st] || '·';
+}
 const STATUS_TXT = { ok: 'unauffällig', warn: 'grenzwertig', crit: 'auffällig',
                      unklar: 'nicht bewertbar', missing: 'PID fehlt' };
 
@@ -141,7 +148,7 @@ function findingCard(r) {
 
   return el('details', { class: 'finding acc ' + st, open: st === 'crit' || st === 'warn' },
     el('summary', { class: 'f-h' },
-      el('div', { class: 'f-sym ' + st }, STATUS_SYM[st]),
+      el('div', { class: 'f-sym ' + st }, statusSym(st)),
       el('div', { class: 'f-t' },
         el('h4', {}, r.title),
         el('div', { class: 'f-grp' }, r.group + ' · ' + STATUS_TXT[st])),
@@ -196,7 +203,7 @@ let PALETTE = null;
 function palette() {
   if (!PALETTE) PALETTE = (getComputedStyle(document.documentElement).getPropertyValue('--series') || '')
     .split(',').map(s => s.trim()).filter(Boolean);
-  return PALETTE.length ? PALETTE : ['#4da3ff', '#ff8a5c', '#34d399', '#fbbf24', '#c084fc', '#22d3ee'];
+  return PALETTE.length ? PALETTE : ['#8fb3d6', '#ff8a5c', '#34d399', '#fbbf24', '#c084fc', '#22d3ee'];
 }
 function metricColor(m, i) {
   if (m && m.color) return m.color;

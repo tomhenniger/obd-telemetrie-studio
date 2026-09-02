@@ -7,6 +7,7 @@ OUT=index.html
   cat src/01-head.html
   echo '<style>'
   cat src/02-theme.css
+  cat src/02a-fonts.css
   cat src/03-layout.css
   cat src/04-components.css
   echo '</style>'

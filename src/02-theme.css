@@ -1,109 +1,113 @@
-/* ===== Design-Tokens ============================================== */
+/* ===== Design-Tokens: Prüfstand ===================================
+   Welt: ein Messgerät auf der Werkstattbank. Graphitgehäuse, gravierte
+   Beschriftung, dunkle Anzeigefenster mit warmweißen Ziffern, Status als
+   LED. Farbe nur dort, wo ein Gerät sie hätte: an den Zustands-LEDs und
+   an der einen Funktionstaste. Alles andere ist Gehäuse und Skala.
+   ================================================================== */
 :root {
   --is-dark: 1;
-  /* Flächen */
-  --bg:        #0a0c11;
-  --bg-2:      #0e1218;
-  --surface:   #12171f;
-  --surface-2: #171d27;
-  --surface-3: #1e2631;
-  --overlay:   rgba(10,12,17,.86);
-  --map-bg:    #0d1117;
-  /* Linien */
-  --border:    #232c39;
-  --border-2:  #2e3947;
-  --border-hi: #3d4b5c;
-  /* Text */
-  --text-1: #e9eef5;
-  --text-2: #a3aebe;
-  --text-3: #6d7a8c;
-  /* Akzent */
-  --accent:      #4da3ff;
-  --accent-2:    #7cc3ff;
-  --accent-soft: rgba(77,163,255,.13);
-  --accent-line: rgba(77,163,255,.38);
-  /* Status */
-  --ok:   #34d399;  --ok-soft:   rgba(52,211,153,.13);  --ok-line:   rgba(52,211,153,.40);
-  --warn: #fbbf24;  --warn-soft: rgba(251,191,36,.13);  --warn-line: rgba(251,191,36,.42);
-  --crit: #f87171;  --crit-soft: rgba(248,113,113,.13); --crit-line: rgba(248,113,113,.42);
-  --info: #818cf8;  --info-soft: rgba(129,140,248,.13);
-  --muted-soft: rgba(148,163,184,.12);
-  /* Diagramme */
-  --chart-grid:        rgba(255,255,255,.055);
-  --chart-grid-strong: rgba(255,255,255,.13);
-  --chart-crosshair:   rgba(255,255,255,.42);
-  --chart-band:        rgba(77,163,255,.10);
-  --series: #4da3ff,#ff8a5c,#34d399,#fbbf24,#c084fc,#22d3ee,#f472b6,#a3e635,#fb923c,#94a3b8;
-  /* Maße */
-  --r-sm: 7px; --r: 12px; --r-lg: 16px; --r-xl: 22px;
-  --rail: 232px;
-  --gap: 14px;
-  --shadow-1: 0 1px 2px rgba(0,0,0,.4);
-  --shadow-2: 0 6px 24px -8px rgba(0,0,0,.65), 0 2px 6px rgba(0,0,0,.35);
-  --shadow-3: 0 24px 60px -18px rgba(0,0,0,.8);
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  /* Gehäuse */
+  --bg:        #121416;
+  --bg-2:      #0e1012;
+  --surface:   #191c1f;
+  --surface-2: #1f2327;
+  --surface-3: #262b30;
+  --overlay:   rgba(18,20,22,.9);
+  --map-bg:    #101214;
+  /* Anzeigefenster (LCD) */
+  --lcd:       #0b0d0f;
+  --lcd-line:  #2b3137;
+  --lcd-text:  #f1efe7;
+  --lcd-dim:   #a9aba3;          /* Einheiten, Erklärtext im Fenster – in beiden Schemata */
+  --lcd-dim2:  #8a8e88;          /* Gravur im Fenster */
+  /* Linien, wie eine Gravur: hell auf dunkel */
+  --border:    #2a2f34;
+  --border-2:  #353b41;
+  --border-hi: #4a525a;
+  /* Text – warmweiß, keine Blaustiche */
+  --text-1: #ecebe4;
+  --text-2: #a9aba3;
+  --text-3: #878b85;
+  /* Funktionstaste: gedeckter Stahlblau */
+  --accent:      #8fb3d6;
+  --accent-2:    #a9c6e3;
+  --accent-soft: rgba(143,179,214,.12);
+  --accent-line: rgba(143,179,214,.42);
+  --key:         #ecebe4;          /* die eine beleuchtete Taste */
+  --key-text:    #121416;
+  /* Kanal-Lampe: „gewählt“ leuchtet warmweiß, nie grün – Grün heißt „in Ordnung“ */
+  --lamp:        #ecebe4;
+  --lamp-glow:   rgba(236,235,228,.45);
+  /* Zustands-LEDs */
+  --ok:   #4fcf92;  --ok-soft:   rgba(79,207,146,.13);  --ok-line:   rgba(79,207,146,.45);
+  --warn: #e9b44c;  --warn-soft: rgba(233,180,76,.13);  --warn-line: rgba(233,180,76,.45);
+  --crit: #ee6b5b;  --crit-soft: rgba(238,107,91,.13);  --crit-line: rgba(238,107,91,.45);
+  --info: #8fb3d6;  --info-soft: rgba(143,179,214,.12);
+  --muted-soft: rgba(169,171,163,.10);
+  /* Skalen in den Diagrammen */
+  --chart-grid:        rgba(236,235,228,.06);
+  --chart-grid-strong: rgba(236,235,228,.14);
+  --chart-crosshair:   rgba(236,235,228,.5);
+  --chart-band:        rgba(79,207,146,.10);
+  --series: #ecebe4,#e9b44c,#4fcf92,#8fb3d6,#c9a0dc,#66c9c2,#ee8fa5,#b8d36a,#f0a06a,#8a9099;
+  /* Maße: Gerätekanten sind eng, Bedienelemente noch enger */
+  --r-sm: 4px; --r: 6px; --r-lg: 8px; --r-xl: 10px;
+  --rail: 236px;
+  --gap: 12px;
+  --shadow-1: none;
+  --shadow-2: 0 10px 24px -10px rgba(0,0,0,.7), 0 2px 6px rgba(0,0,0,.4);
+  --shadow-3: 0 28px 64px -20px rgba(0,0,0,.85), 0 6px 14px -6px rgba(0,0,0,.5);
+  --font: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --ease: cubic-bezier(.22,.61,.36,1);
+  --ease: cubic-bezier(.16,1,.3,1);
+  /* Ältere Bausteine benutzen diese Namen */
+  --panel: var(--surface); --chip: var(--surface-2); --dim: var(--text-2); --dim2: var(--text-3); --fg2: var(--text-2);
   color-scheme: dark;
 }
+/* Hell: dasselbe Gerät im beleuchteten Labor – helles Pulverbeschichtungsgrau,
+   die Anzeigefenster bleiben dunkel. So bleibt das Gerät erkennbar. */
 :root[data-theme="light"] {
   --is-dark: 0;
-  --bg:        #f4f6fa;
-  --bg-2:      #eef1f6;
-  --surface:   #ffffff;
-  --surface-2: #f7f9fc;
-  --surface-3: #eef2f7;
-  --overlay:   rgba(244,246,250,.88);
-  --map-bg:    #e8edf3;
-  --border:    #dde3ec;
-  --border-2:  #cdd6e2;
-  --border-hi: #b4c0d0;
-  --text-1: #0f172a;
-  --text-2: #4a5768;
-  --text-3: #7c8798;
-  --accent:      #0b6fd4;
-  --accent-2:    #0a5db0;
-  --accent-soft: rgba(11,111,212,.10);
-  --accent-line: rgba(11,111,212,.35);
-  --ok:   #0f9d63;  --ok-soft:   rgba(15,157,99,.11);   --ok-line:   rgba(15,157,99,.38);
-  --warn: #b45309;  --warn-soft: rgba(180,83,9,.11);    --warn-line: rgba(180,83,9,.38);
-  --crit: #cc2f2f;  --crit-soft: rgba(204,47,47,.10);   --crit-line: rgba(204,47,47,.38);
-  --info: #4f46e5;  --info-soft: rgba(79,70,229,.10);
-  --muted-soft: rgba(100,116,139,.12);
-  --chart-grid:        rgba(15,23,42,.075);
-  --chart-grid-strong: rgba(15,23,42,.17);
-  --chart-crosshair:   rgba(15,23,42,.45);
-  --chart-band:        rgba(11,111,212,.09);
-  --series: #0b6fd4,#e2622a,#0f9d63,#c08a00,#8b3fd4,#0891b2,#db2777,#5f9c14,#ea7317,#64748b;
-  --shadow-1: 0 1px 2px rgba(15,23,42,.06);
-  --shadow-2: 0 6px 20px -8px rgba(15,23,42,.18), 0 1px 3px rgba(15,23,42,.08);
-  --shadow-3: 0 24px 60px -20px rgba(15,23,42,.28);
+  --bg:        #e4e3de;
+  --bg-2:      #dcdbd5;
+  --surface:   #f2f1ec;
+  --surface-2: #e9e8e2;
+  --surface-3: #dfdeD7;
+  --overlay:   rgba(228,227,222,.92);
+  --map-bg:    #d9d8d2;
+  --lcd:       #15171a;
+  --lcd-line:  #2f3438;
+  --lcd-text:  #f1efe7;
+  --border:    #cdccc4;
+  --border-2:  #bab9b0;
+  --border-hi: #9c9b92;
+  --text-1: #17191c;
+  --text-2: #4b4e52;
+  --text-3: #6f7276;
+  --accent:      #2e5f8f;
+  --accent-2:    #24507a;
+  --accent-soft: rgba(46,95,143,.10);
+  --accent-line: rgba(46,95,143,.38);
+  --key:         #17191c;
+  --key-text:    #f2f1ec;
+  --lamp:        #17191c;
+  --lamp-glow:   rgba(23,25,28,.3);
+  --ok:   #1f8f5f;  --ok-soft:   rgba(31,143,95,.11);   --ok-line:   rgba(31,143,95,.40);
+  --warn: #a86a00;  --warn-soft: rgba(168,106,0,.11);   --warn-line: rgba(168,106,0,.40);
+  --crit: #c43d2f;  --crit-soft: rgba(196,61,47,.10);   --crit-line: rgba(196,61,47,.40);
+  --info: #2e5f8f;  --info-soft: rgba(46,95,143,.10);
+  --muted-soft: rgba(75,78,82,.10);
+  --chart-grid:        rgba(23,25,28,.08);
+  --chart-grid-strong: rgba(23,25,28,.2);
+  --chart-crosshair:   rgba(23,25,28,.5);
+  --chart-band:        rgba(31,143,95,.10);
+  --series: #17191c,#a86a00,#1f8f5f,#2e5f8f,#7a4a9e,#0e7f78,#b5405f,#5f7d14,#c25a17,#6f7276;
+  --shadow-2: 0 10px 24px -12px rgba(23,25,28,.25), 0 2px 5px rgba(23,25,28,.08);
+  --shadow-3: 0 28px 64px -24px rgba(23,25,28,.35), 0 6px 14px -8px rgba(23,25,28,.15);
   color-scheme: light;
 }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --is-dark: 0;
-    --bg:#f4f6fa; --bg-2:#eef1f6; --surface:#fff; --surface-2:#f7f9fc; --surface-3:#eef2f7;
-    --overlay:rgba(244,246,250,.88); --map-bg:#e8edf3;
-    --border:#dde3ec; --border-2:#cdd6e2; --border-hi:#b4c0d0;
-    --text-1:#0f172a; --text-2:#4a5768; --text-3:#7c8798;
-    --accent:#0b6fd4; --accent-2:#0a5db0; --accent-soft:rgba(11,111,212,.10); --accent-line:rgba(11,111,212,.35);
-    --ok:#0f9d63; --ok-soft:rgba(15,157,99,.11); --ok-line:rgba(15,157,99,.38);
-    --warn:#b45309; --warn-soft:rgba(180,83,9,.11); --warn-line:rgba(180,83,9,.38);
-    --crit:#cc2f2f; --crit-soft:rgba(204,47,47,.10); --crit-line:rgba(204,47,47,.38);
-    --info:#4f46e5; --info-soft:rgba(79,70,229,.10);
-    --muted-soft:rgba(100,116,139,.12);
-    --chart-grid:rgba(15,23,42,.075); --chart-grid-strong:rgba(15,23,42,.17);
-    --chart-crosshair:rgba(15,23,42,.45); --chart-band:rgba(11,111,212,.09);
-    --series:#0b6fd4,#e2622a,#0f9d63,#c08a00,#8b3fd4,#0891b2,#db2777,#5f9c14,#ea7317,#64748b;
-    --shadow-1:0 1px 2px rgba(15,23,42,.06);
-    --shadow-2:0 6px 20px -8px rgba(15,23,42,.18), 0 1px 3px rgba(15,23,42,.08);
-    --shadow-3:0 24px 60px -20px rgba(15,23,42,.28);
-    color-scheme: light;
-  }
-}
 
-/* ===== Reset / Basis ============================================= */
+/* ===== Basis ====================================================== */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
@@ -115,25 +119,33 @@ body {
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+  font-variant-numeric: tabular-nums;
 }
 h1,h2,h3,h4,p,figure { margin: 0; }
+h1,h2,h3,h4 { letter-spacing: -.01em; text-wrap: balance; }
 [hidden] { display: none !important; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: 0; padding: 0; }
-a { color: var(--accent); }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
 ::selection { background: var(--accent-soft); }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 
-.num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+/* Ziffern: Messwerte stehen immer tabellarisch, in der Schrift des Geräts */
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
 .mono { font-family: var(--mono); }
 .dim  { color: var(--text-2); }
 .dim2 { color: var(--text-3); }
 .nowrap { white-space: nowrap; }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
 
+/* Gravierte Beschriftung: die eine Konvention für alle Kleinlabels */
+.lbl-eng, .navsec, .card-h .hint, .kpi .k-l, table.tbl th, .plist-h, .pform-s, .mdl-sec, .akte-m .akte-g td, .specs span {
+  font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600; color: var(--text-3);
+}
+
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 6px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 5px; border: 2px solid var(--bg); }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-hi); }
 
 @media (prefers-reduced-motion: reduce) {

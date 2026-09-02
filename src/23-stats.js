@@ -269,13 +269,13 @@ function buildDataset(parsed, profile) {
   const mk = fn => { const a = new Float64Array(N); for (let i = 0; i < N; i++) a[i] = fn(i); return a; };
 
   if (G.speed || G.speed_gps || trackSpeed)
-    addDerived('speed_mix', 'Geschwindigkeit (kombiniert)', 'Tempo', 'km/h', 0, 'drive', '#29b6f6', speedMix,
+    addDerived('speed_mix', 'Geschwindigkeit (kombiniert)', 'Tempo', 'km/h', 0, 'drive', '#7aa4c4', speedMix,
       'OBD-Geschwindigkeit, ergänzt durch GPS wo die OBD-Daten fehlen.');
   if (G.cac_b1 && G.cac_b2) {
     addDerived('cac_delta', 'Ladelufttemperatur Δ Bank 1↔2', 'ΔLLK B1/B2', 'K', 1, 'calc', '#f06292',
       mk(i => G.cac_b1[i] - G.cac_b2[i]),
       'Differenz zwischen beiden Ladeluftkühler-Sensoren. Große Abweichungen deuten auf ungleiche Kühlung oder einen driftenden Sensor.');
-    addDerived('cac_mean', 'Ladelufttemperatur ⌀ beider Bänke', '⌀ LLK', '°C', 1, 'calc', '#4db6ac',
+    addDerived('cac_mean', 'Ladelufttemperatur ⌀ beider Bänke', '⌀ LLK', '°C', 1, 'calc', '#55aca0',
       mk(i => (G.cac_b1[i] + G.cac_b2[i]) / 2));
   }
   const iatRef = G.ambient || G.iat;
@@ -304,7 +304,7 @@ function buildDataset(parsed, profile) {
       mk(i => { const r = G.rpm[i]; return r > 500 ? (G.power[i] * 0.7354988) * 9549 / r : NaN; }),
       'Aus Leistung und Drehzahl gerechnet: M = P[kW] · 9549 / n. Nur so genau wie die Leistungsschätzung der App.');
   if (G.fuel_rate && G.speed_mix)
-    addDerived('cons_calc', 'Verbrauch (berechnet)', 'Verbrauch', 'L/100km', 1, 'calc', '#a1887f',
+    addDerived('cons_calc', 'Verbrauch (berechnet)', 'Verbrauch', 'L/100km', 1, 'calc', '#b39a8e',
       mk(i => { const s = speedMix[i]; return s > 5 ? G.fuel_rate[i] / s * 100 : NaN; }),
       'Kraftstofffluss geteilt durch Geschwindigkeit. Unter 5 km/h nicht definiert – deshalb keine absurden Spitzenwerte.');
   if (G.rpm && G.speed_mix)

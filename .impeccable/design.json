@@ -1,0 +1,1036 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-02T18:20:16.720Z",
+  "title": "Design System: Telemetrie Studio",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Graphitgehäuse",
+        "canonical": "oklch(19.0% 0.005 248)",
+        "light": "#e4e3de",
+        "tonalRamp": [
+          "#090b0d",
+          "#232527",
+          "#404245",
+          "#5f6164",
+          "#808385",
+          "#a3a5a8",
+          "#c7c9cc",
+          "#eceff2"
+        ]
+      },
+      "bg-2": {
+        "role": "neutral",
+        "displayName": "Gehäuse, vertieft",
+        "canonical": "oklch(17.2% 0.005 248)",
+        "light": "#dcdbd5",
+        "tonalRamp": [
+          "#090b0d",
+          "#232528",
+          "#404245",
+          "#5f6164",
+          "#808385",
+          "#a2a5a8",
+          "#c6c9cc",
+          "#eceff2"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Einschub",
+        "canonical": "oklch(22.5% 0.007 248)",
+        "light": "#f2f1ec",
+        "tonalRamp": [
+          "#090b0e",
+          "#222529",
+          "#3f4246",
+          "#5e6265",
+          "#7f8387",
+          "#a1a5a9",
+          "#c5cace",
+          "#ebeff3"
+        ]
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Einschub, Stufe 2",
+        "canonical": "oklch(25.4% 0.010 248)",
+        "light": "#e9e8e2",
+        "tonalRamp": [
+          "#080c0f",
+          "#21262a",
+          "#3e4347",
+          "#5d6267",
+          "#7e8388",
+          "#a0a6ab",
+          "#c4cacf",
+          "#eaeff5"
+        ]
+      },
+      "surface-3": {
+        "role": "neutral",
+        "displayName": "Einschub, gedrückt",
+        "canonical": "oklch(28.6% 0.012 248)",
+        "light": "#dfded7",
+        "tonalRamp": [
+          "#080c10",
+          "#21262b",
+          "#3d4348",
+          "#5c6268",
+          "#7d8389",
+          "#a0a6ac",
+          "#c3cad0",
+          "#e9eff6"
+        ]
+      },
+      "overlay": {
+        "role": "neutral",
+        "displayName": "Kopfzeilen-Milchglas",
+        "canonical": "oklch(19.0% 0.005 248) / 0.9",
+        "light": "#e4e3de @ 0.92",
+        "tonalRamp": [
+          "#090b0d",
+          "#232527",
+          "#404245",
+          "#5f6164",
+          "#808385",
+          "#a3a5a8",
+          "#c7c9cc",
+          "#eceff2"
+        ]
+      },
+      "lcd": {
+        "role": "neutral",
+        "displayName": "Anzeigefenster",
+        "canonical": "oklch(15.8% 0.005 248)",
+        "light": "#15171a",
+        "tonalRamp": [
+          "#090b0d",
+          "#232528",
+          "#404245",
+          "#5f6164",
+          "#808385",
+          "#a2a5a8",
+          "#c6c9cc",
+          "#eceff2"
+        ]
+      },
+      "lcd-line": {
+        "role": "neutral",
+        "displayName": "Fensterrahmen",
+        "canonical": "oklch(31.0% 0.014 248)",
+        "light": "#2f3438",
+        "tonalRamp": [
+          "#070c11",
+          "#20262c",
+          "#3c4349",
+          "#5b6269",
+          "#7c838a",
+          "#9fa6ad",
+          "#c2cad2",
+          "#e8eff7"
+        ]
+      },
+      "lcd-text": {
+        "role": "neutral",
+        "displayName": "Fensterziffern",
+        "canonical": "oklch(95.1% 0.011 95)",
+        "light": "#f1efe7",
+        "tonalRamp": [
+          "#0d0b06",
+          "#27251f",
+          "#44423c",
+          "#63615a",
+          "#84827b",
+          "#a7a59e",
+          "#cbc9c1",
+          "#f1efe7"
+        ]
+      },
+      "lcd-dim": {
+        "role": "neutral",
+        "displayName": "Einheiten im Fenster",
+        "canonical": "oklch(73.7% 0.012 118)",
+        "light": "#a9aba3",
+        "tonalRamp": [
+          "#0b0c07",
+          "#242620",
+          "#41433c",
+          "#60625b",
+          "#81837c",
+          "#a4a69e",
+          "#c8cac2",
+          "#edf0e7"
+        ]
+      },
+      "lcd-dim2": {
+        "role": "neutral",
+        "displayName": "Gravur im Fenster",
+        "canonical": "oklch(64.2% 0.010 135)",
+        "light": "#8a8e88",
+        "tonalRamp": [
+          "#090c08",
+          "#232621",
+          "#40433e",
+          "#5f635d",
+          "#80847e",
+          "#a2a6a0",
+          "#c6cbc4",
+          "#ecf0e9"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Haarlinie",
+        "canonical": "oklch(30.2% 0.011 248)",
+        "light": "#cdccc4",
+        "tonalRamp": [
+          "#080c10",
+          "#21262a",
+          "#3d4348",
+          "#5c6268",
+          "#7d8389",
+          "#a0a6ac",
+          "#c4cad0",
+          "#e9eff6"
+        ]
+      },
+      "border-2": {
+        "role": "neutral",
+        "displayName": "Tastenrahmen",
+        "canonical": "oklch(34.9% 0.013 248)",
+        "light": "#bab9b0",
+        "tonalRamp": [
+          "#070c11",
+          "#20262b",
+          "#3d4349",
+          "#5c6269",
+          "#7c838a",
+          "#9fa6ad",
+          "#c3cad2",
+          "#e8eff7"
+        ]
+      },
+      "border-hi": {
+        "role": "neutral",
+        "displayName": "Rahmen, hervorgehoben",
+        "canonical": "oklch(43.4% 0.017 248)",
+        "light": "#9c9b92",
+        "tonalRamp": [
+          "#060c12",
+          "#1f262d",
+          "#3b434b",
+          "#5a626b",
+          "#7b838c",
+          "#9da6af",
+          "#c1cad4",
+          "#e6f0fa"
+        ]
+      },
+      "text-1": {
+        "role": "neutral",
+        "displayName": "Warmweiße Gravur",
+        "canonical": "oklch(93.9% 0.009 100)",
+        "light": "#17191c",
+        "tonalRamp": [
+          "#0c0b07",
+          "#262520",
+          "#43423d",
+          "#62615b",
+          "#83827c",
+          "#a6a59f",
+          "#cac9c3",
+          "#f0efe8"
+        ]
+      },
+      "text-2": {
+        "role": "neutral",
+        "displayName": "Erklärtext",
+        "canonical": "oklch(73.7% 0.012 118)",
+        "light": "#4b4e52",
+        "tonalRamp": [
+          "#0b0c07",
+          "#242620",
+          "#41433c",
+          "#60625b",
+          "#81837c",
+          "#a4a69e",
+          "#c8cac2",
+          "#edf0e7"
+        ]
+      },
+      "text-3": {
+        "role": "neutral",
+        "displayName": "Gravur, gedeckt",
+        "canonical": "oklch(63.2% 0.010 135)",
+        "light": "#6f7276",
+        "tonalRamp": [
+          "#090c08",
+          "#232621",
+          "#40433e",
+          "#5f635d",
+          "#80847e",
+          "#a2a6a0",
+          "#c6cbc4",
+          "#ecf0e9"
+        ]
+      },
+      "key": {
+        "role": "primary",
+        "displayName": "Beleuchtete Taste",
+        "canonical": "oklch(93.9% 0.009 100)",
+        "light": "#17191c",
+        "tonalRamp": [
+          "#0c0b07",
+          "#262520",
+          "#43423d",
+          "#62615b",
+          "#83827c",
+          "#a6a59f",
+          "#cac9c3",
+          "#f0efe8"
+        ]
+      },
+      "key-text": {
+        "role": "primary",
+        "displayName": "Tastenbeschriftung",
+        "canonical": "oklch(19.0% 0.005 248)",
+        "light": "#f2f1ec",
+        "tonalRamp": [
+          "#090b0d",
+          "#232527",
+          "#404245",
+          "#5f6164",
+          "#808385",
+          "#a3a5a8",
+          "#c7c9cc",
+          "#eceff2"
+        ]
+      },
+      "lamp": {
+        "role": "primary",
+        "displayName": "Kanal-Lampe",
+        "canonical": "oklch(93.9% 0.009 100)",
+        "light": "#17191c",
+        "tonalRamp": [
+          "#0c0b07",
+          "#262520",
+          "#43423d",
+          "#62615b",
+          "#83827c",
+          "#a6a59f",
+          "#cac9c3",
+          "#f0efe8"
+        ]
+      },
+      "lamp-glow": {
+        "role": "primary",
+        "displayName": "Lampen-Glimmen",
+        "canonical": "oklch(93.9% 0.009 100) / 0.45",
+        "light": "#17191c @ 0.3",
+        "tonalRamp": [
+          "#0c0b07",
+          "#262520",
+          "#43423d",
+          "#62615b",
+          "#83827c",
+          "#a6a59f",
+          "#cac9c3",
+          "#f0efe8"
+        ]
+      },
+      "accent": {
+        "role": "secondary",
+        "displayName": "Stahlblau",
+        "canonical": "oklch(75.3% 0.064 248)",
+        "light": "#2e5f8f",
+        "tonalRamp": [
+          "#000c1e",
+          "#052742",
+          "#244562",
+          "#436484",
+          "#6486a7",
+          "#85a9cc",
+          "#a9cef2",
+          "#e2f0ff"
+        ]
+      },
+      "accent-2": {
+        "role": "secondary",
+        "displayName": "Hellstahl",
+        "canonical": "oklch(81.5% 0.052 248)",
+        "light": "#24507a",
+        "tonalRamp": [
+          "#000c1d",
+          "#0e273d",
+          "#2b445c",
+          "#4a647e",
+          "#6a85a0",
+          "#8ca8c5",
+          "#b0cdea",
+          "#e2f0ff"
+        ]
+      },
+      "accent-soft": {
+        "role": "secondary",
+        "displayName": "Stahlblau, Füllung",
+        "canonical": "oklch(75.3% 0.064 248) / 0.12",
+        "light": "#2e5f8f @ 0.1",
+        "tonalRamp": [
+          "#000c1e",
+          "#052742",
+          "#244562",
+          "#436484",
+          "#6486a7",
+          "#85a9cc",
+          "#a9cef2",
+          "#e2f0ff"
+        ]
+      },
+      "accent-line": {
+        "role": "secondary",
+        "displayName": "Stahlblau, Rahmen",
+        "canonical": "oklch(75.3% 0.064 248) / 0.42",
+        "light": "#2e5f8f @ 0.38",
+        "tonalRamp": [
+          "#000c1e",
+          "#052742",
+          "#244562",
+          "#436484",
+          "#6486a7",
+          "#85a9cc",
+          "#a9cef2",
+          "#e2f0ff"
+        ]
+      },
+      "ok": {
+        "role": "tertiary",
+        "displayName": "LED Grün",
+        "canonical": "oklch(76.8% 0.144 159)",
+        "light": "#1f8f5f",
+        "tonalRamp": [
+          "#001006",
+          "#002e1a",
+          "#034f31",
+          "#16734b",
+          "#209966",
+          "#3cc084",
+          "#68e6a7",
+          "#c3ffdc"
+        ]
+      },
+      "ok-soft": {
+        "role": "tertiary",
+        "displayName": "LED Grün, Füllung",
+        "canonical": "oklch(76.8% 0.144 159) / 0.13",
+        "light": "#1f8f5f @ 0.11",
+        "tonalRamp": [
+          "#001006",
+          "#002e1a",
+          "#034f31",
+          "#16734b",
+          "#209966",
+          "#3cc084",
+          "#68e6a7",
+          "#c3ffdc"
+        ]
+      },
+      "ok-line": {
+        "role": "tertiary",
+        "displayName": "LED Grün, Rahmen",
+        "canonical": "oklch(76.8% 0.144 159) / 0.45",
+        "light": "#1f8f5f @ 0.4",
+        "tonalRamp": [
+          "#001006",
+          "#002e1a",
+          "#034f31",
+          "#16734b",
+          "#209966",
+          "#3cc084",
+          "#68e6a7",
+          "#c3ffdc"
+        ]
+      },
+      "warn": {
+        "role": "tertiary",
+        "displayName": "LED Bernstein",
+        "canonical": "oklch(80.0% 0.134 81)",
+        "light": "#a86a00",
+        "tonalRamp": [
+          "#130900",
+          "#322202",
+          "#573d00",
+          "#7d5a0b",
+          "#a77a12",
+          "#cf9b2e",
+          "#f5c059",
+          "#ffeccc"
+        ]
+      },
+      "warn-soft": {
+        "role": "tertiary",
+        "displayName": "LED Bernstein, Füllung",
+        "canonical": "oklch(80.0% 0.134 81) / 0.13",
+        "light": "#a86a00 @ 0.11",
+        "tonalRamp": [
+          "#130900",
+          "#322202",
+          "#573d00",
+          "#7d5a0b",
+          "#a77a12",
+          "#cf9b2e",
+          "#f5c059",
+          "#ffeccc"
+        ]
+      },
+      "warn-line": {
+        "role": "tertiary",
+        "displayName": "LED Bernstein, Rahmen",
+        "canonical": "oklch(80.0% 0.134 81) / 0.45",
+        "light": "#a86a00 @ 0.4",
+        "tonalRamp": [
+          "#130900",
+          "#322202",
+          "#573d00",
+          "#7d5a0b",
+          "#a77a12",
+          "#cf9b2e",
+          "#f5c059",
+          "#ffeccc"
+        ]
+      },
+      "crit": {
+        "role": "tertiary",
+        "displayName": "LED Rot",
+        "canonical": "oklch(68.4% 0.165 29)",
+        "light": "#c43d2f",
+        "tonalRamp": [
+          "#200000",
+          "#4d0000",
+          "#7f0906",
+          "#ab2c22",
+          "#d35244",
+          "#fb7766",
+          "#fdb4a8",
+          "#ffe9e5"
+        ]
+      },
+      "crit-soft": {
+        "role": "tertiary",
+        "displayName": "LED Rot, Füllung",
+        "canonical": "oklch(68.4% 0.165 29) / 0.13",
+        "light": "#c43d2f @ 0.1",
+        "tonalRamp": [
+          "#200000",
+          "#4d0000",
+          "#7f0906",
+          "#ab2c22",
+          "#d35244",
+          "#fb7766",
+          "#fdb4a8",
+          "#ffe9e5"
+        ]
+      },
+      "crit-line": {
+        "role": "tertiary",
+        "displayName": "LED Rot, Rahmen",
+        "canonical": "oklch(68.4% 0.165 29) / 0.45",
+        "light": "#c43d2f @ 0.4",
+        "tonalRamp": [
+          "#200000",
+          "#4d0000",
+          "#7f0906",
+          "#ab2c22",
+          "#d35244",
+          "#fb7766",
+          "#fdb4a8",
+          "#ffe9e5"
+        ]
+      },
+      "muted-soft": {
+        "role": "neutral",
+        "displayName": "Grau, Füllung",
+        "canonical": "oklch(73.7% 0.012 118) / 0.1",
+        "light": "#4b4e52 @ 0.1",
+        "tonalRamp": [
+          "#0b0c07",
+          "#242620",
+          "#41433c",
+          "#60625b",
+          "#81837c",
+          "#a4a69e",
+          "#c8cac2",
+          "#edf0e7"
+        ]
+      },
+      "chart-grid": {
+        "role": "neutral",
+        "displayName": "Skalenraster",
+        "canonical": "oklch(93.9% 0.009 100) / 0.06",
+        "light": "#17191c @ 0.08",
+        "tonalRamp": [
+          "#0c0b07",
+          "#262520",
+          "#43423d",
+          "#62615b",
+          "#83827c",
+          "#a6a59f",
+          "#cac9c3",
+          "#f0efe8"
+        ]
+      },
+      "chart-grid-strong": {
+        "role": "neutral",
+        "displayName": "Skalenraster, stark",
+        "canonical": "oklch(93.9% 0.009 100) / 0.14",
+        "light": "#17191c @ 0.2",
+        "tonalRamp": [
+          "#0c0b07",
+          "#262520",
+          "#43423d",
+          "#62615b",
+          "#83827c",
+          "#a6a59f",
+          "#cac9c3",
+          "#f0efe8"
+        ]
+      }
+    },
+    "themes": {
+      "default": "dark",
+      "mechanism": "JavaScript setzt beim Start explizit data-theme=\"dark\" (oder den gespeicherten Wert) auf <html>; prefers-color-scheme wird nicht ausgewertet. Hell nur über den Umschalter, gespeichert in localStorage.",
+      "lightNote": "Dasselbe Gerät im beleuchteten Labor: Gehäuse hell pulverbeschichtet, Anzeigefenster (lcd, lcd-line, lcd-text, lcd-dim, lcd-dim2) bleiben dunkel; Taste und Lampe werden nahezu schwarz; LEDs und Stahlblau dunkler für Kontrast."
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Ablesung",
+        "purpose": "Der Wert im Anzeigefenster (.kpi .k-v); Hauptablesung 29 px, Handy 21 px. Einheit 12,5 px/500 in lcd-dim daneben."
+      },
+      "headline": {
+        "displayName": "Seitentitel",
+        "purpose": "Kopfzeile über dem Anzeigefeld; Handy 15 px. Einzige Ausnahme: 21 px im Eingabefenster des Startbildschirms."
+      },
+      "title": {
+        "displayName": "Modultitel",
+        "purpose": "Kopfzeile jedes Einschubs, Befundtitel, Prüfpunkt, Kanalname (500). Sektionsüberschrift 15 px, Dialogtitel 16 px."
+      },
+      "body": {
+        "displayName": "Erklärtext",
+        "purpose": "14 px Basis; in Modulen 12,5–13,5 px bei 1,5–1,6; Hinweise max. 84 ch, Fenstertext max. 48 ch."
+      },
+      "label": {
+        "displayName": "Gravur",
+        "purpose": "Versalien, 0,09 em, text-3 – alle Kleinlabels über eine gemeinsame Selektorliste in 02-theme.css; im Fenster lcd-dim2."
+      },
+      "mono": {
+        "displayName": "Vorschau",
+        "purpose": "Nur XML-Vorschau, Code-Schnipsel und das kursiv-fette „i“ des Erklärknopfs. Diagrammachsen stehen in Barlow (FONT_MONO = FONT_UI)."
+      }
+    },
+    "fonts": [
+      {
+        "family": "Barlow",
+        "weights": [
+          400,
+          500,
+          600
+        ],
+        "embedded": true,
+        "subsets": [
+          "latin",
+          "latin-ext"
+        ],
+        "features": [
+          "tnum"
+        ]
+      }
+    ],
+    "shadows": [
+      {
+        "name": "shadow-1",
+        "value": "none",
+        "purpose": "Ruhezustand aller Module, Tasten, Chips, Hinweise und der Anzeigebank: kein Schatten."
+      },
+      {
+        "name": "shadow-2",
+        "value": "0 10px 24px -10px rgba(0,0,0,.7), 0 2px 6px rgba(0,0,0,.4)",
+        "light": "0 10px 24px -12px rgba(23,25,28,.25), 0 2px 5px rgba(23,25,28,.08)",
+        "purpose": "Die Ablesung, die über der Karte schwebt; am Handy unter der Karte ohne Schatten."
+      },
+      {
+        "name": "shadow-3",
+        "value": "0 28px 64px -20px rgba(0,0,0,.85), 0 6px 14px -6px rgba(0,0,0,.5)",
+        "light": "0 28px 64px -24px rgba(23,25,28,.35), 0 6px 14px -8px rgba(23,25,28,.15)",
+        "purpose": "Fahrzeugdialog und „Mehr“-Fach der Tab-Leiste – was tatsächlich über der Seite liegt."
+      },
+      {
+        "name": "led-glow",
+        "value": "0 0 8px var(--ok-line | --warn-line | --crit-line)",
+        "purpose": "Glimmen der Zustands-LED (Befund-Symbol 8 px, Akte-Punkt 6 px, Typenschild-LED 7 px, Fortschrittsbalken 8 px). Licht, kein Schatten."
+      },
+      {
+        "name": "lamp-glow",
+        "value": "0 0 6px var(--lamp-glow)",
+        "purpose": "Glimmen des LED-Strichs am gewählten Kanal und Tab."
+      },
+      {
+        "name": "chip-lamp",
+        "value": "inset 0 -2px 0 var(--lamp)",
+        "purpose": "Die Lampe als Unterlinie im gedrückten Chip."
+      },
+      {
+        "name": "focus-ring",
+        "value": "outline: 2px solid var(--accent); outline-offset: 2px",
+        "purpose": "Tastaturfokus; Eingabefelder stattdessen Rahmen accent-line plus 0 0 0 2px accent-soft."
+      },
+      {
+        "name": "scrim",
+        "value": "rgba(8,9,10,.62) + backdrop-filter: saturate(120%) blur(6px)",
+        "purpose": "Schleier hinter dem Dialog; hinter der Schublade rgba(8,9,10,.35)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.16,1,.3,1)",
+        "purpose": "Die eine Kurve für alles."
+      },
+      {
+        "name": "page-in",
+        "value": "280ms, opacity 0→1, translateY(4px)→0",
+        "purpose": "Die einzige gestaltete Bewegung: die Seite hebt sich beim Kanalwechsel an."
+      },
+      {
+        "name": "state",
+        "value": "160ms",
+        "purpose": "Zustandswechsel an Tasten, Chips, Kanalzeilen, Erklärknopf."
+      },
+      {
+        "name": "state-fast",
+        "value": "140ms",
+        "purpose": "Prüfmarken und Vorschlagszeilen."
+      },
+      {
+        "name": "caret",
+        "value": "200ms, rotate(90deg)",
+        "purpose": "Aufklapp-Pfeil an Befund und Prüfpunkt."
+      },
+      {
+        "name": "drop-over",
+        "value": "180ms",
+        "purpose": "Eingabefenster beim Überziehen einer Datei: gestrichelt → durchgezogen."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation-duration: .001ms; transition-duration: .001ms",
+        "purpose": "prefers-reduced-motion setzt alle Dauern auf null."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "rail-narrow",
+        "value": "1080px",
+        "purpose": "Seitenleiste wird zur 66 px Icon-Leiste."
+      },
+      {
+        "name": "phone",
+        "value": "760px",
+        "purpose": "Seitenleiste weg, Tab-Leiste unten, einspaltig, Seite 12 px Rand, Ablesungen 21 px, Karte 320 px."
+      },
+      {
+        "name": "sheet",
+        "value": "560px",
+        "purpose": "Dialog als Bodenblatt, Fenstertasten vollbreit, Befundkörper ohne linken Einzug."
+      }
+    ],
+    "layout": {
+      "rail": "236px",
+      "railNarrow": "66px",
+      "topbarMinHeight": "58px",
+      "pageMaxWidth": "1520px",
+      "pagePadding": "18px 22px 28px",
+      "gap": "12px",
+      "gapPhone": "10px",
+      "gridMin": {
+        "g2": "340px",
+        "g3": "280px",
+        "kpis": "176px",
+        "kpisPhone": "140px",
+        "specs": "190px",
+        "facts": "140px",
+        "dropFeat": "150px"
+      },
+      "cellGrid": "Zellen ziehen border-right/border-bottom mit margin: 0 -1px -1px 0; letzte Zelle border-right-color: transparent.",
+      "touchTargets": {
+        "btn": "36px",
+        "btnSmall": "30px",
+        "chip": "34px",
+        "input": "34px",
+        "mark": "34px",
+        "profileRow": "46px",
+        "tabMinWidth": "62px"
+      }
+    },
+    "icons": {
+      "sprite": "SVG <defs> am Anfang von <body>, viewBox 0 0 24 24, stroke 1.8, round caps/joins, currentColor, fill none",
+      "sizes": {
+        "rail": "17px",
+        "tabbar": "21px",
+        "button": "15px",
+        "note": "18px",
+        "led": "12px"
+      },
+      "status": {
+        "ok": "#i-check",
+        "crit": "#i-tri",
+        "missing": "#i-minus",
+        "close": "#i-x",
+        "more": "#i-more"
+      },
+      "textFormsOnlyForExport": [
+        "✓",
+        "!",
+        "▲",
+        "?",
+        "–"
+      ]
+    },
+    "charts": {
+      "font": "Barlow 11px (Achsen, Zeiger), 12px (Ablesung); FONT_MONO = FONT_UI",
+      "tokens": [
+        "--surface",
+        "--chart-grid",
+        "--chart-grid-strong",
+        "--text-3",
+        "--text-1",
+        "--text-2",
+        "--accent",
+        "--chart-crosshair",
+        "--chart-band",
+        "--ok",
+        "--warn",
+        "--crit",
+        "--series"
+      ],
+      "series": [
+        "#ecebe4",
+        "#e9b44c",
+        "#4fcf92",
+        "#8fb3d6",
+        "#c9a0dc",
+        "#66c9c2",
+        "#ee8fa5",
+        "#b8d36a",
+        "#f0a06a",
+        "#8a9099"
+      ],
+      "seriesLight": [
+        "#17191c",
+        "#a86a00",
+        "#1f8f5f",
+        "#2e5f8f",
+        "#7a4a9e",
+        "#0e7f78",
+        "#b5405f",
+        "#5f7d14",
+        "#c25a17",
+        "#6f7276"
+      ],
+      "metricColors": {
+        "rpm": "#e2745f",
+        "load_abs": "#cf905a",
+        "timing": "#9c86c8",
+        "throttle": "#56a4ab",
+        "boost": "#6b9cc0",
+        "map": "#7a86bd",
+        "maf": "#6fbf7d",
+        "coolant": "#e06b62",
+        "oil_temp": "#c98c46",
+        "iat": "#7aa4c4",
+        "ltft_b1": "#cfa858",
+        "stft_b1": "#b7bf5c",
+        "fuel_rate": "#a8887a",
+        "speed": "#7aa4c4",
+        "accel": "#a2c274",
+        "batt": "#cdb86a"
+      },
+      "metricColorNote": "Farbton-Identität je Messgröße bleibt, Sättigung auf die Leuchtdichte der Welt entsättigt. Tabellarische Ziffern über font-variant-numeric am Canvas-Element (Chromium reicht tnum durch)."
+    }
+  },
+  "components": [
+    {
+      "name": "Beleuchtete Taste",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Die eine primäre Taste je Ansicht: warmweiß leuchtend, beim Überfahren Hellstahl, beim Drücken 1 px nach unten.",
+      "html": "<button class=\"ds-btn ds-btn-primary\"><svg viewBox=\"0 0 24 24\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 16V4M8 8l4-4 4 4\"/><path d=\"M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2\"/></svg>CSV auswählen</button>",
+      "css": ".ds-btn { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 13px; min-height: 36px; border-radius: 4px; font-size: 13px; font-weight: 500; background: var(--surface-2, #1f2327); border: 1px solid var(--border-2, #353b41); color: var(--text-1, #ecebe4); cursor: pointer; transition: all .16s cubic-bezier(.16,1,.3,1); } .ds-btn:active { transform: translateY(1px); } .ds-btn:focus-visible { outline: 2px solid var(--accent, #8fb3d6); outline-offset: 2px; } .ds-btn-primary { background: var(--key, #ecebe4); border-color: var(--key, #ecebe4); color: var(--key-text, #121416); font-weight: 600; } .ds-btn-primary:hover { background: var(--accent-2, #a9c6e3); border-color: var(--accent-2, #a9c6e3); }"
+    },
+    {
+      "name": "Gehäusetaste",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Flache Taste mit Haarlinie; beim Überfahren eine Gehäusestufe heller und der Rahmen hervorgehoben.",
+      "html": "<button class=\"ds-btn ds-btn-secondary\"><svg viewBox=\"0 0 24 24\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"7.5\" y=\"3.5\" width=\"9\" height=\"4\" rx=\"1.4\"/><path d=\"M7.5 5.5H6a2 2 0 00-2 2v11a2 2 0 002 2h12a2 2 0 002-2v-11a2 2 0 00-2-2h-1.5\"/><path d=\"M8.5 12h7M8.5 15.5h4.5\"/></svg>Aus Zwischenablage</button>",
+      "css": ".ds-btn { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 13px; min-height: 36px; border-radius: 4px; font-size: 13px; font-weight: 500; background: var(--surface-2, #1f2327); border: 1px solid var(--border-2, #353b41); color: var(--text-1, #ecebe4); cursor: pointer; transition: all .16s cubic-bezier(.16,1,.3,1); } .ds-btn-secondary:hover { background: var(--surface-3, #262b30); border-color: var(--border-hi, #4a525a); } .ds-btn:active { transform: translateY(1px); } .ds-btn:focus-visible { outline: 2px solid var(--accent, #8fb3d6); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost-Taste",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Nur Beschriftung, kein Gehäuse; Rahmen und Fläche erscheinen erst beim Überfahren.",
+      "html": "<button class=\"ds-btn ds-btn-ghost\"><svg viewBox=\"0 0 24 24\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"7.5\" y=\"3.5\" width=\"9\" height=\"4\" rx=\"1.4\"/><path d=\"M7.5 5.5H6a2 2 0 00-2 2v11a2 2 0 002 2h12a2 2 0 002-2v-11a2 2 0 00-2-2h-1.5\"/><path d=\"M8.5 12h7M8.5 15.5h4.5\"/></svg>Kaufcheckliste öffnen — ohne Datei</button>",
+      "css": ".ds-btn { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 13px; min-height: 36px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .16s cubic-bezier(.16,1,.3,1); } .ds-btn-ghost { background: none; border: 1px solid transparent; color: var(--text-2, #a9aba3); } .ds-btn-ghost:hover { background: var(--surface-2, #1f2327); border-color: var(--border, #2a2f34); color: var(--text-1, #ecebe4); } .ds-btn:focus-visible { outline: 2px solid var(--accent, #8fb3d6); outline-offset: 2px; }"
+    },
+    {
+      "name": "Kanal-Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Messgrößenwahl über dem Diagramm; gewählt zeigt die warmweiße Lampe als 2 px Unterlinie, nie Grün.",
+      "html": "<div class=\"ds-chiprow\"><button class=\"ds-chip\" aria-pressed=\"true\"><i class=\"ds-dot\" style=\"background:#e2745f\"></i>Drehzahl</button><button class=\"ds-chip\" aria-pressed=\"false\"><i class=\"ds-dot\" style=\"background:#e06b62\"></i>Kühlmittel</button><button class=\"ds-chip\" aria-pressed=\"false\"><i class=\"ds-dot\" style=\"background:#6b9cc0\"></i>Ladedruck</button></div>",
+      "css": ".ds-chiprow { display: flex; gap: 7px; flex-wrap: wrap; } .ds-chip { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; min-height: 34px; border-radius: 4px; font-size: 12.5px; font-weight: 500; background: var(--surface-2, #1f2327); border: 1px solid var(--border, #2a2f34); color: var(--text-2, #a9aba3); cursor: pointer; white-space: nowrap; transition: all .16s cubic-bezier(.16,1,.3,1); } .ds-chip:hover { border-color: var(--border-hi, #4a525a); color: var(--text-1, #ecebe4); } .ds-chip[aria-pressed=\"true\"] { background: var(--surface-3, #262b30); border-color: var(--border-hi, #4a525a); color: var(--text-1, #ecebe4); box-shadow: inset 0 -2px 0 var(--lamp, #ecebe4); } .ds-chip:focus-visible { outline: 2px solid var(--accent, #8fb3d6); outline-offset: 2px; } .ds-dot { width: 8px; height: 8px; border-radius: 2px; flex: none; }"
+    },
+    {
+      "name": "LED-Badge",
+      "kind": "chip",
+      "refersTo": "badge-ok",
+      "description": "Zustandsschild in den drei LED-Farben plus Info und Grau; Symbol aus der Sprite, 12 px.",
+      "html": "<span class=\"ds-badge ds-ok\"><svg viewBox=\"0 0 24 24\" width=\"12\" height=\"12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 12.5l5.5 5.5L20 7\"/></svg>unauffällig</span> <span class=\"ds-badge ds-warn\">!&nbsp;grenzwertig</span> <span class=\"ds-badge ds-crit\"><svg viewBox=\"0 0 24 24\" width=\"12\" height=\"12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 4.5L21 19.5H3z\"/></svg>auffällig</span> <span class=\"ds-badge ds-info\">Werk</span> <span class=\"ds-badge ds-mute\"><svg viewBox=\"0 0 24 24\" width=\"12\" height=\"12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 12h12\"/></svg>PID fehlt</span>",
+      "css": ".ds-badge { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 5px; padding: 2px 7px; border-radius: 3px; font-size: 10.5px; font-weight: 600; letter-spacing: .03em; border: 1px solid transparent; white-space: nowrap; } .ds-ok { background: var(--ok-soft, rgba(79,207,146,.13)); color: var(--ok, #4fcf92); border-color: var(--ok-line, rgba(79,207,146,.45)); } .ds-warn { background: var(--warn-soft, rgba(233,180,76,.13)); color: var(--warn, #e9b44c); border-color: var(--warn-line, rgba(233,180,76,.45)); } .ds-crit { background: var(--crit-soft, rgba(238,107,91,.13)); color: var(--crit, #ee6b5b); border-color: var(--crit-line, rgba(238,107,91,.45)); } .ds-info { background: var(--accent-soft, rgba(143,179,214,.12)); color: var(--accent, #8fb3d6); border-color: var(--accent-line, rgba(143,179,214,.42)); } .ds-mute { background: var(--muted-soft, rgba(169,171,163,.10)); color: var(--text-2, #a9aba3); border-color: var(--border-2, #353b41); }"
+    },
+    {
+      "name": "Anzeigebank",
+      "kind": "custom",
+      "refersTo": "kpi",
+      "description": "Kennzahlen als Ablesungen im dunklen Fenster; Zellen trennen sich durch Haarlinien, die Hauptablesung ist größer, nicht bunter.",
+      "html": "<div class=\"ds-kpis\"><div class=\"ds-kpi ds-accent\"><div class=\"ds-k-l\">Fahrtdauer</div><div class=\"ds-k-v\">32:14<span class=\"ds-k-u\">min</span></div><div class=\"ds-k-s\">davon 14:56 min in Bewegung</div></div><div class=\"ds-kpi\"><div class=\"ds-k-l\">Ø Geschwindigkeit</div><div class=\"ds-k-v\">61,0<span class=\"ds-k-u\">km/h</span></div><div class=\"ds-k-s\">in Bewegung · gesamt 54,5 km/h</div></div><div class=\"ds-kpi\"><div class=\"ds-k-l\">Höchstdrehzahl</div><div class=\"ds-k-v\">6.319<span class=\"ds-k-u\">min⁻¹</span></div><div class=\"ds-k-s\">90 % des Begrenzers</div></div></div>",
+      "css": ".ds-kpis { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: 0; background: var(--lcd, #0b0d0f); border: 1px solid var(--lcd-line, #2b3137); border-radius: 6px; overflow: hidden; } .ds-kpi { padding: 11px 13px 12px; display: grid; gap: 3px; align-content: start; min-width: 0; border-right: 1px solid var(--lcd-line, #2b3137); border-bottom: 1px solid var(--lcd-line, #2b3137); margin: 0 -1px -1px 0; } .ds-kpi:last-child { border-right-color: transparent; } .ds-k-l { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600; color: var(--lcd-dim2, #8a8e88); } .ds-k-v { font-size: 26px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; white-space: nowrap; color: var(--lcd-text, #f1efe7); } .ds-accent .ds-k-v { font-size: 29px; } .ds-k-u { font-size: 12.5px; color: var(--lcd-dim, #a9aba3); font-weight: 500; margin-left: 3px; letter-spacing: 0; } .ds-k-s { font-size: 11.5px; color: var(--lcd-dim2, #8a8e88); margin-top: 1px; }"
+    },
+    {
+      "name": "Modul (Einschub)",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Jede Karte ist ein Einschub im Gehäuse: Haarlinie, 6 px Kanten, kein Schatten, Kopfzeile mit Titel, Hinweis und dem „i“-Taster.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-h\"><h3>Fahrtverlauf</h3><span class=\"ds-hint\">Geschwindigkeit und Drehzahl über der gesamten Fahrt</span><div class=\"ds-tools\"><button class=\"ds-infobtn\" aria-expanded=\"false\" title=\"Wie lese ich das?\">i</button></div></div><div class=\"ds-card-b\"><p>Der Ladedruck folgt der Motorlast mit R² = 0,9990 exakt linear – die App leitet ihn aus der Last ab, statt den Saugrohrdruck zu messen.</p></div><div class=\"ds-card-f\">Quelle: GPS · Zeitraum: gesamte Fahrt</div></div>",
+      "css": ".ds-card { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; background: var(--surface, #191c1f); border: 1px solid var(--border, #2a2f34); border-radius: 6px; display: flex; flex-direction: column; min-width: 0; overflow: hidden; color: var(--text-1, #ecebe4); } .ds-card-h { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; flex-wrap: wrap; border-bottom: 1px solid var(--border, #2a2f34); } .ds-card-h h3 { margin: 0; font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; } .ds-hint { font-size: 11.5px; font-weight: 500; letter-spacing: .04em; color: var(--text-3, #878b85); } .ds-tools { margin-left: auto; display: flex; gap: 6px; } .ds-infobtn { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border-2, #353b41); background: transparent; color: var(--text-3, #878b85); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 700; font-style: italic; line-height: 1; display: grid; place-items: center; cursor: pointer; transition: all .16s cubic-bezier(.16,1,.3,1); } .ds-infobtn:hover, .ds-infobtn[aria-expanded=\"true\"] { border-color: var(--accent-line, rgba(143,179,214,.42)); color: var(--accent, #8fb3d6); background: var(--accent-soft, rgba(143,179,214,.12)); } .ds-card-b { padding: 12px 14px 14px; font-size: 13px; line-height: 1.6; color: var(--text-2, #a9aba3); } .ds-card-b p { margin: 0; } .ds-card-f { padding: 9px 14px; border-top: 1px solid var(--border, #2a2f34); font-size: 11.5px; color: var(--text-3, #878b85); }"
+    },
+    {
+      "name": "Eingabefeld und Wippschalter",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Man tippt in die Anzeige: Feld und Auswahl sind dunkle Fenster mit Fensterrahmen; der Wippschalter sitzt im selben Fenster.",
+      "html": "<div class=\"ds-row\"><input class=\"ds-inp\" type=\"text\" placeholder=\"Profil suchen …\" value=\"Audi S5 B8.5 3.0 TFSI\"><select class=\"ds-sel\"><option>Automatik (S tronic)</option><option>Schaltgetriebe</option></select><div class=\"ds-seg\"><button aria-pressed=\"true\">Dunkel</button><button aria-pressed=\"false\">Hell</button></div></div>",
+      "css": ".ds-row { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; } .ds-inp, .ds-sel { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; padding: 7px 10px; min-height: 34px; border-radius: 4px; font-size: 12.5px; background: var(--lcd, #0b0d0f); border: 1px solid var(--lcd-line, #2b3137); color: var(--lcd-text, #f1efe7); max-width: 100%; } .ds-inp::placeholder { color: var(--lcd-dim2, #8a8e88); } .ds-inp:focus, .ds-sel:focus { border-color: var(--accent-line, rgba(143,179,214,.42)); outline: none; box-shadow: 0 0 0 2px var(--accent-soft, rgba(143,179,214,.12)); } .ds-sel { padding-right: 26px; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--lcd-dim, #a9aba3) 50%), linear-gradient(135deg, var(--lcd-dim, #a9aba3) 50%, transparent 50%); background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; } .ds-seg { display: inline-flex; background: var(--lcd, #0b0d0f); border: 1px solid var(--lcd-line, #2b3137); border-radius: 4px; padding: 2px; gap: 2px; } .ds-seg button { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; padding: 5px 11px; border-radius: 3px; font-size: 12px; color: var(--lcd-dim, #a9aba3); min-height: 28px; font-weight: 500; background: none; border: 0; cursor: pointer; } .ds-seg button[aria-pressed=\"true\"] { background: var(--surface-3, #262b30); color: var(--text-1, #ecebe4); font-weight: 600; }"
+    },
+    {
+      "name": "Kanalwahl (Seitenleiste)",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Kanalzeilen am linken Gehäuserand; der gewählte Kanal bekommt einen 3 px LED-Strich in der warmweißen Lampe mit Glimmen.",
+      "html": "<nav class=\"ds-rail\"><div class=\"ds-navsec\">Auswertung</div><button class=\"ds-navitem\" aria-current=\"page\"><svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 12l4-4\"/><circle cx=\"12\" cy=\"12\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/></svg><span>Überblick</span></button><button class=\"ds-navitem\"><svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 19V6M4 19h16\"/><path d=\"M7.5 15l3.5-4.5 3 3L19 8\"/></svg><span>Zeitreihen</span></button><button class=\"ds-navitem\"><svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 12.5l5.5 5.5L20 7\"/></svg><span>Diagnose</span><span class=\"ds-badge ds-ok\"><svg viewBox=\"0 0 24 24\" width=\"12\" height=\"12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 12.5l5.5 5.5L20 7\"/></svg></span></button></nav>",
+      "css": ".ds-rail { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; width: 236px; background: var(--bg-2, #0e1012); border-right: 1px solid var(--border, #2a2f34); padding: 14px 10px 12px; display: flex; flex-direction: column; gap: 2px; } .ds-navsec { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600; color: var(--text-3, #878b85); padding: 14px 10px 6px; } .ds-navitem { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; position: relative; display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px 8px 14px; border-radius: 4px; color: var(--text-2, #a9aba3); font-size: 13.5px; font-weight: 500; text-align: left; background: none; border: 0; cursor: pointer; transition: background .16s cubic-bezier(.16,1,.3,1), color .16s cubic-bezier(.16,1,.3,1); } .ds-navitem::before { content: \"\"; position: absolute; left: 4px; top: 50%; width: 3px; height: 14px; margin-top: -7px; border-radius: 2px; background: transparent; transition: background .16s cubic-bezier(.16,1,.3,1), box-shadow .16s cubic-bezier(.16,1,.3,1); } .ds-navitem svg { flex: none; opacity: .8; } .ds-navitem:hover { background: var(--surface, #191c1f); color: var(--text-1, #ecebe4); } .ds-navitem[aria-current=\"page\"] { background: var(--surface-2, #1f2327); color: var(--text-1, #ecebe4); } .ds-navitem[aria-current=\"page\"]::before { background: var(--lamp, #ecebe4); box-shadow: 0 0 6px var(--lamp-glow, rgba(236,235,228,.45)); } .ds-navitem[aria-current=\"page\"] svg { opacity: 1; } .ds-navitem:focus-visible { outline: 2px solid var(--accent, #8fb3d6); outline-offset: 2px; } .ds-badge { margin-left: auto; display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 3px; border: 1px solid transparent; } .ds-ok { background: var(--ok-soft, rgba(79,207,146,.13)); color: var(--ok, #4fcf92); border-color: var(--ok-line, rgba(79,207,146,.45)); }"
+    },
+    {
+      "name": "Befund mit Zeigerskala",
+      "kind": "custom",
+      "refersTo": "finding",
+      "description": "Eine Diagnosezeile: glimmende LED-Scheibe, Titel, tabellarischer Wert, darunter das Sollband mit Zeiger im Anzeigefenster.",
+      "html": "<details class=\"ds-finding\" open><summary class=\"ds-f-h\"><span class=\"ds-f-sym ds-ok\"><svg viewBox=\"0 0 24 24\" width=\"12\" height=\"12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 12.5l5.5 5.5L20 7\"/></svg></span><span class=\"ds-f-t\"><h4>Kühlmitteltemperatur</h4><span class=\"ds-f-grp\">Temperaturen · Werksangabe</span></span><span class=\"ds-f-val\"><b>95</b><span>°C max.</span></span></summary><div class=\"ds-f-b\"><p>Betriebstemperatur nach 6 Minuten erreicht, danach stabil im Sollbereich.</p><div class=\"ds-gauge\"><div class=\"ds-gauge-track\"><div class=\"ds-gauge-band\" style=\"left:38%;width:34%\"></div><div class=\"ds-gauge-mark ds-ok\" style=\"left:58%\"></div></div><div class=\"ds-gauge-lbl\"><span>60 °C</span><span>Soll 85–105 °C</span><span>130 °C</span></div></div></div></details>",
+      "css": ".ds-finding { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; border: 1px solid var(--border, #2a2f34); border-radius: 6px; background: var(--surface, #191c1f); overflow: hidden; color: var(--text-1, #ecebe4); } .ds-f-h { display: flex; align-items: flex-start; gap: 11px; padding: 12px 14px; cursor: pointer; list-style: none; } .ds-f-h::-webkit-details-marker { display: none; } .ds-f-sym { width: 22px; height: 22px; border-radius: 50%; flex: none; display: grid; place-items: center; margin-top: 1px; border: 1px solid transparent; } .ds-f-sym.ds-ok { background: var(--ok-soft, rgba(79,207,146,.13)); color: var(--ok, #4fcf92); border-color: var(--ok-line, rgba(79,207,146,.45)); box-shadow: 0 0 8px var(--ok-line, rgba(79,207,146,.45)); } .ds-f-t { flex: 1; min-width: 0; } .ds-f-t h4 { margin: 0; font-size: 13.5px; font-weight: 600; } .ds-f-grp { font-size: 11px; color: var(--text-3, #878b85); letter-spacing: .03em; } .ds-f-val { text-align: right; flex: none; } .ds-f-val b { font-size: 16px; font-weight: 600; } .ds-f-val span { font-size: 11px; color: var(--text-3, #878b85); display: block; } .ds-f-b { padding: 0 14px 14px; display: grid; gap: 12px; font-size: 13px; color: var(--text-2, #a9aba3); line-height: 1.6; } .ds-f-b p { margin: 0; } .ds-gauge { display: grid; gap: 5px; } .ds-gauge-track { position: relative; height: 24px; border-radius: 3px; background: var(--lcd, #0b0d0f); border: 1px solid var(--lcd-line, #2b3137); overflow: hidden; } .ds-gauge-band { position: absolute; top: 0; bottom: 0; background: var(--ok-soft, rgba(79,207,146,.13)); border-left: 1px solid var(--ok-line, rgba(79,207,146,.45)); border-right: 1px solid var(--ok-line, rgba(79,207,146,.45)); } .ds-gauge-mark { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--lcd-text, #f1efe7); box-shadow: 0 0 0 1px var(--lcd, #0b0d0f); } .ds-gauge-mark.ds-ok { background: var(--ok, #4fcf92); } .ds-gauge-lbl { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-3, #878b85); letter-spacing: .03em; }"
+    },
+    {
+      "name": "Hinweisleiste",
+      "kind": "custom",
+      "refersTo": "note",
+      "description": "Erklärt, was das Gerät nicht messen kann: Symbol aus der Sprite, fetter Titel, Text auf Lesebreite; Stufen färben Rahmen und Füllung.",
+      "html": "<div class=\"ds-note ds-warn\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 4.5L21 19.5H3z\"/></svg><div><b>Ladedruck ist ein Rechenwert, keine Messung</b>Der Ladedruck folgt der Motorlast exakt linear – die App leitet ihn aus der Last ab. Für eine belastbare Diagnose die PID „Intake Manifold Absolute Pressure“ (0x0B) mitloggen.</div></div>",
+      "css": ".ds-note { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; font-variant-numeric: tabular-nums; display: flex; gap: 11px; padding: 11px 14px; border-radius: 6px; border: 1px solid var(--border, #2a2f34); background: var(--surface, #191c1f); font-size: 12.5px; line-height: 1.6; color: var(--text-2, #a9aba3); } .ds-note svg { flex: none; margin-top: 1px; } .ds-note > div { max-width: 84ch; } .ds-note b { display: block; margin-bottom: 2px; color: var(--text-1, #ecebe4); } .ds-note.ds-info { border-color: var(--accent-line, rgba(143,179,214,.42)); background: var(--accent-soft, rgba(143,179,214,.12)); color: var(--text-1, #ecebe4); } .ds-note.ds-warn { border-color: var(--warn-line, rgba(233,180,76,.45)); background: var(--warn-soft, rgba(233,180,76,.13)); color: var(--text-1, #ecebe4); } .ds-note.ds-warn svg { color: var(--warn, #e9b44c); } .ds-note.ds-crit { border-color: var(--crit-line, rgba(238,107,91,.45)); background: var(--crit-soft, rgba(238,107,91,.13)); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Das Messgerät auf der Werkstattbank",
+    "overview": "Telemetrie Studio ist kein Dashboard, sondern ein Prüfgerät. Das Gehäuse ist Graphit, die Beschriftung darauf ist graviert – kleine, gesperrte Versalien in gedecktem Grau –, und jede Ablesung sitzt in einem dunklen Anzeigefenster, das auch im hellen Farbschema dunkel bleibt. Farbe kommt nur dort vor, wo ein Gerät sie hätte: an den Zustands-LEDs (grün, bernstein, rot, jeweils mit schwachem Glimmen) und an der einen beleuchteten Funktionstaste. Alles andere ist Gehäuse, Skala und Linie. Stahlblau existiert, aber nur für Links, den Info-Hinweis und den Fokusring.\n\nDie Dichte ist hoch und ruhig zugleich: Module liegen als Einschübe mit 12 px Abstand im Anzeigefeld, Kennzahlen stehen in einer Anzeigebank, deren Zellen sich mit Haarlinien voneinander trennen, und Diagramme sind Oszilloskopfenster mit Achsenbeschriftung in derselben Schrift wie der Rest des Geräts. Tiefe entsteht ausschließlich durch Linien; nur was wirklich schwebt (der Fahrzeugdialog, das „Mehr“-Fach der Tab-Leiste, die Ablesung über der Karte) darf einen Schatten werfen. Die Welt ist vom Nutzer als bindend gesetzt („Messgerät / Werkstattbank“) und im Build so gelandet, wie der Richtungsvertrag sie beschreibt; die einzige Abweichung ist, dass die Zustands-LED auf dem Typenschild eine einzelne LED „bereit“ ist und keine Reihe.\n\nVerworfen und im Build nicht vorhanden: das schwarz-blaue Dashboard mit Neonakzent, das Kartenraster aus Icon + Titel + Text, Unicode-Glyphen als Icons, Schatten als Ersatz für Ordnung.",
+    "keyCharacteristics": [
+      "Dunkel ist Standard, unabhängig von der Systemeinstellung; hell nur auf ausdrückliche Wahl, im Browser gespeichert.",
+      "Anzeigefenster (`--lcd`) bleiben in beiden Schemata dunkel; Gehäuse und Gravur wechseln.",
+      "Eine Schrift für alles (Barlow 400/500/600, eingebettet), tabellarische Ziffern bis in die Canvas-Diagramme.",
+      "Zustände sind LEDs: Grün/Bernstein/Rot heißen ausschließlich in Ordnung/beobachten/Handlungsbedarf; „gewählt“ leuchtet warmweiß.",
+      "Genau eine beleuchtete Taste pro Ansicht; Stahlblau nur für Links.",
+      "Kanten 3–8 px, Tiefe nur durch Haarlinien; Schatten nur an Schwebendem.",
+      "Eine Icon-Sprite in einer Strichstärke (1,8), keine Glyphen.",
+      "Eine einzige Bewegung: die Seite hebt sich beim Wechsel 4 px an (280 ms)."
+    ],
+    "rules": [
+      {
+        "name": "Die LED-Regel",
+        "body": "Grün, Bernstein und Rot bedeuten ausschließlich Zustand (unauffällig, grenzwertig, auffällig). „Gewählt“, „aktiv“ und „gedrückt“ werden mit der warmweißen Lampe gezeigt – nie mit Grün. Wer ein grünes „aktiv“ einbaut, macht aus einer Auswahl ein Prüfergebnis.",
+        "section": "colors"
+      },
+      {
+        "name": "Die Eine-Taste-Regel",
+        "body": "Pro Ansicht leuchtet genau eine Taste (`key`). Alle anderen Tasten sind Gehäuse mit Linie. Stahlblau ist keine Tastenfarbe; es steht für Links, Info und Fokus.",
+        "section": "colors"
+      },
+      {
+        "name": "Die Fenster-Regel",
+        "body": "Zahlen, die abgelesen werden, stehen in einem dunklen Anzeigefenster (`lcd`) mit eigenen Fensterfarben (`lcd-text`, `lcd-dim`, `lcd-dim2`, `lcd-line`) – in beiden Farbschemata. Das Fenster wechselt nicht mit dem Gehäuse.",
+        "section": "colors"
+      },
+      {
+        "name": "Die Gravur-Regel",
+        "body": "Jede Kleinbeschriftung ist 10,5 px, 600, 0,09 em gesperrt, in Versalien und in `text-3` – über eine gemeinsame Selektorliste in `02-theme.css` (`.lbl-eng, .navsec, .kpi .k-l, table.tbl th, .plist-h, .pform-s, .mdl-sec, .specs span` …). Eine neue Kleinbeschriftung wird an diese Liste gehängt, nicht neu erfunden.",
+        "section": "typography"
+      },
+      {
+        "name": "Die Tabellenziffern-Regel",
+        "body": "Ziffern sind überall tabellarisch: `body` setzt `tabular-nums`, Ablesungen, Tabellenzellen, Zeigerskalen und Canvas-Elemente setzen `tnum` zusätzlich explizit. Eine Zahl, die beim Umschlagen der Ziffer springt, ist ein Fehler.",
+        "section": "typography"
+      },
+      {
+        "name": "Die Eine-Schrift-Regel",
+        "body": "Barlow trägt alles inklusive der Diagrammachsen. Monospace ist der XML-Vorschau und Code vorbehalten; eine zweite Anzeigeschrift oder eine Systemschrift für Überschriften gibt es nicht.",
+        "section": "typography"
+      },
+      {
+        "name": "Die Zellraster-Regel",
+        "body": "Zellen in einer Bank trennen sich durch Haarlinien, nicht durch Lücken oder eigene Karten. Die Linie gehört der Zelle (rechts und unten, −1 px Rand), die letzte Zelle einer Reihe zieht keine rechte Linie.",
+        "section": "layout"
+      },
+      {
+        "name": "Die Linien-Regel",
+        "body": "Ordnung kommt aus Linien und Gehäusestufen, nie aus Schatten. Einen Schatten bekommt nur, was tatsächlich über der Seite schwebt: Dialog, Schublade, Kartenablesung.",
+        "section": "elevation"
+      },
+      {
+        "name": "Die Glimm-Regel",
+        "body": "Ein Leuchten (6–8 px, in der Linienfarbe der LED) ist eine Zustandsanzeige. Es sitzt an LEDs und an der Kanal-Lampe – nie an Tasten, Modulen oder Text.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do Ablesungen in ein `lcd`-Fenster setzen und die Fensterfarben (`lcd-text`, `lcd-dim`, `lcd-dim2`, `lcd-line`) benutzen – sie bleiben in beiden Schemata dunkel.",
+      "Do jede Kleinbeschriftung an die Gravur-Selektorliste hängen (10,5 px, 600, 0,09 em, Versalien, `text-3`) statt eigene Werte zu setzen.",
+      "Do „gewählt“ mit der warmweißen Lampe zeigen (LED-Strich, Unterlinie, `lamp-glow`), Zustand mit den drei LEDs.",
+      "Do pro Ansicht genau eine Taste beleuchten (`key`); alle anderen sind Gehäusetasten mit Haarlinie oder Ghost.",
+      "Do Zellen in Bänken über Zellraster-Linien trennen (rechts/unten, −1 px, letzte Zelle ohne rechte Linie) statt über Lücken.",
+      "Do Symbole aus der Sprite nehmen (Strich 1,8, 12–21 px) und Zustände über `check`/`tri`/`minus` zeigen.",
+      "Do Ziffern tabellarisch setzen, auch auf Canvas (`font-variant-numeric` am Element, `tnum` im Kontext).",
+      "Do Kanten aus der Reihe 3/4/6/8 px wählen: Bedienelemente 4, Module 6, Schwebendes 8.",
+      "Do Diagrammfarben aus `--series` oder der entsättigten Kanalfarbe der Messgröße lesen, nie hart im Zeichencode setzen.",
+      "Do Touch-Ziele mindestens 34 px hoch halten und Rasterkinder mit `min-width: 0` vor seitlichem Überlauf schützen."
+    ],
+    "donts": [
+      "Don't Grün für „aktiv“, „gewählt“ oder „gespeichert“ verwenden – Grün heißt „unauffällig“.",
+      "Don't Stahlblau als Flächen- oder Tastenfarbe einsetzen; es steht für Links, Info und Fokus.",
+      "Don't Schatten an Modulen, Tasten, Chips oder der Anzeigebank – Schatten nur an Dialog, Schublade und schwebender Kartenablesung.",
+      "Don't Unicode-Glyphen (✓ ▲ – ⋯) als Icons im DOM; die Textformen gehören ausschließlich in Export und Fenstertitel.",
+      "Don't eine zweite Schrift oder eine Systemschrift für Überschriften; Monospace nur für XML-Vorschau und Code.",
+      "Don't Karten in Karten: eine Zeile im Dialog ist eine Zeile mit Haarlinie, kein Modul.",
+      "Don't die Anzeigefenster im hellen Schema aufhellen oder das Gerät über `prefers-color-scheme` umschalten – dunkel ist Standard, hell nur auf Wahl.",
+      "Don't Ablesungen einfärben, um Wichtigkeit zu zeigen; die Hauptablesung ist größer (29 px), nicht bunter.",
+      "Don't Kicker, Eyebrows oder Kartenraster aus Icon + Titel + Text; Spezifikationen sind gravierte Zellen.",
+      "Don't neue Bewegungen erfinden; die Seite hebt sich, alles andere sind 140–200 ms Zustandswechsel."
+    ]
+  }
+}
