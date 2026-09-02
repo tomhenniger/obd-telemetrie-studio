@@ -9,7 +9,7 @@ const vm = require('vm');
 const SRC = path.join(__dirname, '..', 'src');
 const FILES = ['20-util.js', '21-parse.js', '22-metrics.js', '23-stats.js',
                '26-profiles.js', '26b-gearbox.js', '27-diag.js', '29-ingest.js',
-               '30-buycheck.js', '31-aiexport.js', '31b-akte.js'];
+               '30-buycheck.js', '31-aiexport.js', '31b-akte.js', '31c-assist.js'];
 
 function makeStorage() {
   const m = new Map();

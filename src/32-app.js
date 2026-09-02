@@ -1162,6 +1162,7 @@ BUILDERS.diag = function (page) {
     kpi('Auffällig', String(t.crit), '', t.crit ? 'Handlungsbedarf' : 'keine'),
     kpi('Nicht bewertbar', String(t.unklar), '', 'Fahrsituation fehlte'),
     kpi('PID fehlt', String(t.missing), '', 'nicht aufgezeichnet')));
+  { const ac = assistCard(); if (ac) page.appendChild(ac); }
 
   page.appendChild(noteBox(t.crit ? 'crit' : t.warn ? 'warn' : 'info',
     t.crit ? 'Es gibt auffällige Befunde' : t.warn ? 'Alles im Rahmen, einzelne Punkte beobachten' : 'Keine Auffälligkeiten',
@@ -2432,6 +2433,37 @@ function openVehicleDialog(opts) {
   if (chooser.focusSearch) setTimeout(() => chooser.focusSearch(), 60);
 }
 
+/* --- Aufzeichnungs-Assistent ----------------------------------------------- */
+function assistCard() {
+  if (!App.ds || !App.diag) return null;
+  const a = buildAssist(App.diag.results, Object.keys(App.ds.G), App.profile);
+  const text = assistText(a, App.profile ? App.profile.name : '');
+  const copyBtn = el('button', { class: 'btn', type: 'button', onclick: async e => {
+    try { await navigator.clipboard.writeText(text); e.target.textContent = 'Kopiert'; setTimeout(() => e.target.textContent = 'Als Text kopieren', 1500); }
+    catch (err) { download('aufzeichnungs-zettel.txt', 'text/plain', text); }
+  } }, 'Als Text kopieren');
+  if (!a.pids.length && !a.situations.length)
+    return card('Nächste Aufzeichnung', { hint: 'nichts offen' },
+      el('p', { class: 'dim' }, 'Diese Aufzeichnung hat alles beantwortet, was das Werkzeug fragen kann – ' + a.answered + ' von ' + a.total + ' Prüfungen wurden bewertet.'));
+  const pidList = a.pids.length ? el('div', { class: 'assist-col' },
+    el('h4', {}, 'In der OBD-App zusätzlich aufzeichnen'),
+    el('ul', { class: 'assist-list' }, a.pids.map(p => el('li', {},
+      el('span', { class: 'assist-box' }, ''),
+      el('div', {}, el('b', {}, p.app), el('span', { class: 'dim' }, (p.code ? p.code + ' · ' : '') +
+        p.rules.length + (p.rules.length === 1 ? ' Prüfung' : ' Prüfungen') + ' hängen daran')))))) : null;
+  const sitList = a.situations.length ? el('div', { class: 'assist-col' },
+    el('h4', {}, 'So fahren – in dieser Reihenfolge'),
+    el('ol', { class: 'assist-steps' }, a.situations.map(s => el('li', {},
+      el('b', {}, s.title), el('span', {}, s.text),
+      s.rules.length ? el('span', { class: 'dim2' }, 'beantwortet: ' + s.rules.map(id => { const r = DIAG_RULES.find(x => x.id === id); return r ? r.title : id; }).join(', ')) : null)))) : null;
+  return card('Damit die nächste Aufzeichnung mehr beantwortet', {
+    hint: a.answered + ' von ' + a.total + ' Prüfungen konnten bewertet werden', tools: copyBtn,
+    info: { read: 'Das Werkzeug weiß nach jeder Datei genau, warum eine Prüfung nichts sagen konnte: entweder fehlt die Messgröße in der App, oder die Fahrsituation kam nicht vor. Beides steht hier als Zettel – die Messgrößen so benannt, wie die App sie anzeigt, die Situationen in der Reihenfolge, in der man sie am besten fährt.',
+            good: 'Eine Aufzeichnung mit Kaltstart, Warmfahrt, einer Minute Leerlauf, zwei Minuten Konstantfahrt und einem Volllastzug beantwortet fast alles.',
+            bad: 'Volllastzüge nur auf freier, trockener Strecke und wo es erlaubt ist. Was hier steht, ist eine Messanleitung, keine Aufforderung.' }
+  }, el('div', { class: 'assist' }, pidList, sitList));
+}
+
 /* --- Fahrzeugakte ---------------------------------------------------------- */
 const AKTE_FMT_DATE = ts => new Date(ts).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
 const AKTE_FMT_TIME = ts => new Date(ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -2449,7 +2481,9 @@ function akteAutoSave() {
 BUILDERS.akte = function (page) {
   page.appendChild(sectionHead('Fahrzeugakte',
     'Jede Fahrt ist eine Momentaufnahme. Erst im Verlauf über mehrere Fahrten wird aus einem Wert eine Aussage.'));
-  const host = el('div', {});
+  // min-width 0: als Rasterkind wuerde der Container sonst auf Tabellenbreite wachsen
+  // und die ganze Seite auf dem Handy seitlich aufziehen
+  const host = el('div', { style: { minWidth: 0 } });
   page.appendChild(host);
   host.appendChild(el('p', { class: 'dim' }, 'Akte wird geladen …'));
 

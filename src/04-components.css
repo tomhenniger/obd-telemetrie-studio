@@ -447,3 +447,19 @@ details.acc > summary::-webkit-details-marker { display: none; }
 .akte-c.crit .akte-dot { background: rgba(248,113,113,.18); color: #f87171; }
 .akte-c.unklar .akte-dot, .akte-c.missing .akte-dot { background: rgba(140,150,170,.12); color: var(--dim2); }
 .akte-c.none { color: var(--dim2); }
+
+/* --- Aufzeichnungs-Assistent --- */
+.assist { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.assist h4 { margin: 0 0 8px; font-size: 13px; }
+.assist-list { list-style: none; margin: 0; padding: 0; }
+.assist-list li { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; border-top: 1px solid var(--border); }
+.assist-list li:first-child { border-top: 0; }
+.assist-list b { display: block; font-size: 13px; }
+.assist-list .dim { display: block; font-size: 11.5px; margin-top: 1px; }
+.assist-box { flex: 0 0 auto; width: 16px; height: 16px; margin-top: 2px; border: 1.5px solid var(--dim2); border-radius: 4px; }
+.assist-steps { margin: 0; padding-left: 22px; }
+.assist-steps li { padding: 6px 0 6px 4px; border-top: 1px solid var(--border); }
+.assist-steps li:first-child { border-top: 0; }
+.assist-steps b { display: block; font-size: 13px; margin-bottom: 2px; }
+.assist-steps span { display: block; font-size: 12.5px; line-height: 1.45; color: var(--fg2); }
+.assist-steps .dim2 { font-size: 11.5px; margin-top: 3px; }

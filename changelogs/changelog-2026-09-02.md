@@ -173,3 +173,19 @@ Kühlmitteltemperatur über 7 s. Alle Kennzahlen stimmten überein — bis auf z
 - **Export/Import als JSON** – der Ersatz für eine Synchronisation: die Akte wandert als
   Datei zwischen Geräten. Beim Einlesen gewinnt je Fahrt der jüngere Stand, Notizen bleiben.
 - Automatisches Speichern nach dem Import lässt sich abschalten.
+
+## Neue Features (Aufzeichnungs-Assistent)
+
+- **„Damit die nächste Aufzeichnung mehr beantwortet“** – eine Karte oben in der Diagnose.
+  Aus jedem „PID fehlt“ wird ein Eintrag mit dem Namen, den die OBD-App anzeigt, und dem
+  OBD-Code; aus jedem „nicht bewertbar“ eine Fahrsituation mit Anleitung, in der Reihenfolge,
+  in der man sie am besten fährt: Kaltstart, Warmfahrt, Leerlauf, Konstantfahrt, Volllastzug.
+  Dazu steht, welche Prüfungen daran hängen. Als Text kopierbar fürs Handy.
+- **Rauchtest im Browser** (`test/smoke.js`, Playwright): lädt eine Datei, öffnet jede Sektion
+  auf Desktop und Handy, sammelt Konsolenfehler, prüft auf seitliches Überlaufen und legt
+  Screenshots ab. Ergänzt die Unit-Tests um das, was nur ein Browser sieht.
+
+## Bugfixes
+
+- Die Fahrzeugakte zog auf dem Handy die ganze Seite auf 833 px auf: ein Rasterkind wächst
+  ohne `min-width: 0` auf Tabellenbreite. Jetzt allgemein für alle Seiteninhalte gesetzt.

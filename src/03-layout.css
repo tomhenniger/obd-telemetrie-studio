@@ -94,3 +94,7 @@ main { min-width: 0; }
   .tabbtn svg { width: 21px; height: 21px; }
   .tabbtn[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
 }
+
+/* Rasterkinder dürfen nie breiter werden als die Seite – sonst zieht eine breite
+   Tabelle auf dem Handy die ganze Seite seitlich auf. */
+.page > * { min-width: 0; }

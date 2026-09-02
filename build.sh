@@ -26,6 +26,7 @@ OUT=index.html
   cat src/30-buycheck.js
   cat src/31-aiexport.js
   cat src/31b-akte.js
+  cat src/31c-assist.js
   cat src/32-app.js
   echo '</script>'
   cat src/99-tail.html
