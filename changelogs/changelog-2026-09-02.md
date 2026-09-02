@@ -73,3 +73,29 @@ Kühlmitteltemperatur über 7 s. Alle Kennzahlen stimmten überein — bis auf z
   werden. Wo die Vorhersage auf tatsächliche Messpunkte trifft, wird der Gang als „schwach
   belegt“ ergänzt; wo nicht, bleibt er weg. In der langen Fahrt kommt so ein fünfter Gang
   bei 21,8 km/h je 1000 min⁻¹ dazu (116 Punkte), in der ersten Fahrt wird nichts erfunden.
+
+## Bugfixes (Getriebewahl)
+
+- **Kennfelder aktualisierten sich nach einer Änderung nicht.** `recompute()` baute nur die
+  gerade sichtbare Seite neu; alle anderen blieben als alter DOM-Stand liegen. Wer das
+  Getriebe in den Einstellungen setzte und dann zu den Kennfeldern wechselte, sah weiter
+  S1–S5 statt der echten Gangnummern. Jetzt werden alle gebauten Seiten verworfen.
+- **Stufenlose Getriebe standen in der Vorschlagsliste.** Ein CVT hat keine festen Gänge –
+  seine „Stufen“ sind Software und passen zufällig zu vielem. Beim Audi S5 rangierte die
+  multitronic mit 1,0 % vor dem tatsächlich verbauten DL501 mit 1,2 %. CVTs sind jetzt
+  ausgeschlossen.
+- **Bei mehreren Varianten wurde die falsche angezeigt.** Es gewann die zuletzt passende
+  statt der mit der größten Übereinstimmung – beim S5 stand deshalb die A6/A7-Variante da.
+- **Das Urteil „eindeutig / mehrdeutig“ ging verloren**, weil es als Eigenschaft am
+  Ergebnis-Array hing und ein `filter()` beim Aufrufer es abschnitt.
+
+## UI-Änderungen (Getriebewahl)
+
+- Die Vorschläge sind jetzt eine **geordnete Liste statt umbrechender Knöpfe**: je Zeile
+  Kennung, Gangzahl, Trägerfahrzeuge und rechts die Bewertung.
+- **Zum gewählten Motorprofil passende Getriebe stehen oben** und tragen ein „passt zum
+  Fahrzeug“. Das ist der eigentliche Hinweis: die Messung kann ähnlich abgestufte Getriebe
+  nicht auseinanderhalten, das Auto schon.
+- Darüber steht ausdrücklich, ob eine Abstufung deutlich besser passt als alle anderen oder
+  ob mehrere in Frage kommen, und darunter, dass Fahrzeugschein, Reparaturleitfaden oder
+  Typschild entscheiden – nicht die Prozentzahl.

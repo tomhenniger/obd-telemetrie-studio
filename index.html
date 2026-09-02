@@ -654,6 +654,30 @@ details.acc > summary::-webkit-details-marker { display: none; }
   .mdl-f { justify-content: stretch; }
   .mdl-f .btn { flex: 1; justify-content: center; }
 }
+
+/* --- Getriebe-Vorschlag --- */
+.sugg { border: 1px solid var(--border); border-radius: 12px; background: var(--chip);
+  padding: 12px 13px; margin-bottom: 12px; }
+.sugg-h { margin-bottom: 9px; }
+.sugg-h b { display: block; font-size: 13px; }
+.sugg-h span { display: block; font-size: 12px; color: var(--dim); margin-top: 2px; line-height: 1.4; }
+.sugg-r { display: flex; gap: 10px; align-items: center; justify-content: space-between;
+  width: 100%; text-align: left; padding: 9px 11px; margin-bottom: 6px; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 9px; color: inherit;
+  font: inherit; transition: border-color .12s, background .12s; }
+.sugg-r:hover { border-color: var(--accent); }
+.sugg-r.top { border-color: color-mix(in oklab, var(--accent) 55%, var(--border)); }
+.sugg-t { min-width: 0; }
+.sugg-t b { display: block; font-size: 13px; }
+.sugg-t span { display: block; font-size: 11.5px; color: var(--dim); margin-top: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sugg-m { display: flex; gap: 5px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.sugg-f { font-size: 11.5px; color: var(--dim2); line-height: 1.5; margin: 8px 0 0; }
+@media (max-width: 560px) {
+  .sugg-r { flex-direction: column; align-items: stretch; gap: 6px; }
+  .sugg-m { justify-content: flex-start; }
+  .sugg-t span { white-space: normal; }
+}
 </style>
 </head>
 <body class="no-data">
@@ -4726,12 +4750,15 @@ function suggestFirstGear(lowestKmhPer1000, redline, gears, measuredCount) {
    ihn zu kennen. Das ist ein Vorschlag, kein Befund: mehrere Getriebe können
    ähnlich abgestuft sein, und wer nur drei Gänge gefahren ist, hat zu wenig
    Fingerabdruck für eine Entscheidung. */
-function suggestGearboxes(measuredKmh, rollCircum, limit) {
+function suggestGearboxes(measuredKmh, rollCircum, limit, profile) {
   /* Getriebe mit identischem Radsatz unterscheiden sich nur im Achsantrieb — sie
-     ergeben denselben Fingerabdruck und dürfen nicht als getrennte Treffer
-     erscheinen. Welche Variante es ist, entscheidet das Modell, nicht die Messung. */
+     ergeben denselben Fingerabdruck und dürfen nicht als getrennte Treffer erscheinen.
+     Welche Variante es ist, entscheidet das Modell, nicht die Messung. */
   const groups = new Map();
   for (const gb of GEARBOXES) {
+    // Ein stufenloses Getriebe hat keine festen Gänge; seine „Stufen“ sind Software.
+    // Dass sie zufällig zu einer Messung passen, sagt nichts.
+    if (gb.kind === 'cvt') continue;
     const fit = fitFinalDrive(measuredKmh, gb.ratios, rollCircum);
     if (!fit) continue;
     const key = gb.ratios.map(r => r.toFixed(3)).join('|');
@@ -4742,8 +4769,34 @@ function suggestGearboxes(measuredKmh, rollCircum, limit) {
     if (fit.worst < g.worst) { g.worst = fit.worst; g.final = fit.final; }
   }
   const hits = Array.from(groups.values());
-  hits.forEach(h => { h.gb = h.variants[0]; });
-  hits.sort((a, b) => a.worst - b.worst);
+  /* Zum gewählten Fahrzeug passende Getriebe nach vorn. Die Messung kann ähnlich
+     abgestufte Getriebe nicht auseinanderhalten — welches verbaut ist, entscheidet
+     das Auto. Genau deshalb ist das hier das stärkere Kriterium als der Prozentwert. */
+  const tok = t => String(t || '').toLowerCase().split(/[^a-z0-9äöüß.]+/).filter(x => x.length > 1);
+  const pTok = profile ? tok(profile.models).concat(tok(profile.brand)) : [];
+  hits.forEach(h => {
+    h.gb = h.variants[0];
+    let aff = 0, bestScore = -1;
+    for (const v of h.variants) {
+      const vt = tok(v.models);
+      // Nicht die zuletzt passende Variante nehmen, sondern die mit der groessten
+      // Ueberschneidung — sonst gewinnt bei zwei Audi-Eintraegen der falsche.
+      const score = pTok.filter(x => x.length > 2 && vt.indexOf(x) >= 0).length;
+      if (score > 0) aff = Math.max(aff, 2);
+      else if (profile && profile.brand && vt.indexOf(String(profile.brand).toLowerCase()) >= 0) aff = Math.max(aff, 1);
+      if (score > bestScore) { bestScore = score; h.gb = v; }
+    }
+    h.affinity = aff;
+  });
+  hits.sort((a, b) => (b.affinity - a.affinity) || (a.worst - b.worst));
+  // Eindeutig ist es nur, wenn der Beste deutlich besser passt als der Nächstbeste.
+  const byFit = hits.slice().sort((a, b) => a.worst - b.worst);
+  const clear = byFit.length > 0 && byFit[0].worst <= 0.012 &&
+                (byFit.length < 2 || byFit[1].worst > byFit[0].worst * 2);
+  const verdict = { clear, best: byFit[0] || null, second: byFit[1] || null };
+  // Das Urteil an jeden Treffer haengen: ein .filter() beim Aufrufer wuerde eine
+  // Eigenschaft am Array selbst verlieren.
+  hits.forEach(h => { h.verdict = verdict; });
   return hits.slice(0, limit || 5);
 }
 
@@ -8441,6 +8494,13 @@ function openShell(section) {
 
 function recompute() {
   if (!App.ds) return;
+  /* Alle bereits gebauten Seiten verwerfen, nicht nur die sichtbare. go() nimmt eine
+     vorhandene Seite unveraendert aus dem DOM — nach einer Aenderung an Profil, Getriebe
+     oder Abrollumfang zeigten die uebrigen Sektionen sonst weiter den alten Stand. */
+  Chart.all.slice().forEach(c => c.destroy());
+  Chart.hoverListeners = [];
+  App.map = null;
+  const pg = $('#pages'); if (pg) pg.innerHTML = '';
   App.gears = computeGears(App.ds, rollCircumNow(), resolveGearbox(App.profile, rollCircumNow()),
                            resolveSpecs(App.profile).specs.redline);
   App.diag = runDiagnostics(App.ds, App.profile);
@@ -10369,24 +10429,38 @@ function gearboxCard() {
       // Fingerabdruck, den der Achsantrieb nicht veraendert.
       if (App.gears && App.gears.gears.length >= 4 && GEARBOXES.length) {
         const meas = App.gears.gears.map(g => g.kmhPer1000).sort((a, b) => a - b);
-        const sug = suggestGearboxes(meas, rc, 4).filter(h => h.worst <= 0.06);
+        const sug = suggestGearboxes(meas, rc, 4, App.profile).filter(h => h.worst <= 0.06);
         if (sug.length) {
-          const box = el('div', { class: 'note', style: { marginBottom: '10px' } },
+          const box = el('div', { class: 'sugg' });
+          box.appendChild(el('div', { class: 'sugg-h' },
             el('b', {}, 'Aus der Messung vorgeschlagen'),
-            el('div', { class: 'chiprow', style: { flexWrap: 'wrap', marginTop: '6px' } },
-              sug.map(h => el('button', { class: 'btn' + (h.worst <= 0.025 ? ' primary' : ''), type: 'button',
-                onclick: () => {
-                  // Bei mehreren Achsantrieb-Varianten die Auswahl auf sie eingrenzen,
-                  // statt eine zu raten – welche es ist, entscheidet das Modell.
-                  if (h.variants.length > 1) { q.value = h.gb.kennung; paint(); q.scrollIntoView({ block: 'nearest' }); return; }
-                  setGearboxSetting({ mode: 'catalog', id: h.gb.id, final: 0 }); render(); recompute();
-                } },
-                h.gb.kennung + ' · ' + fmt(h.worst * 100, 1) + ' %' +
-                (h.variants.length > 1 ? ' · ' + h.variants.length + ' Varianten' : ' · Achse ' + fmt(h.final, 2))))),
-            el('p', { class: 'dim2', style: { fontSize: '12px', marginTop: '6px' } },
-              'Verglichen werden nur die Abstände der Gänge – dafür muss der Achsantrieb nicht bekannt sein. ' +
-              'Unter etwa 1 % ist die Übereinstimmung eindeutig; darüber können mehrere Getriebe ähnlich abgestuft sein. ' +
-              'Das ersetzt keinen Blick in die Papiere.'));
+            el('span', {}, sug[0].verdict && sug[0].verdict.clear
+              ? 'Eine Abstufung passt deutlich besser als alle anderen.'
+              : 'Mehrere Getriebe sind ähnlich abgestuft – die Messung allein entscheidet das nicht.')));
+          sug.forEach((h, i) => {
+            const gut = h.worst <= 0.012;
+            box.appendChild(el('button', { class: 'sugg-r' + (i === 0 ? ' top' : ''), type: 'button',
+              onclick: () => {
+                if (h.variants.length > 1) { q.value = h.gb.kennung; paint(); q.scrollIntoView({ block: 'nearest' }); return; }
+                setGearboxSetting({ mode: 'catalog', id: h.gb.id, final: 0 }); render(); recompute();
+              } },
+              el('div', { class: 'sugg-t' },
+                el('b', {}, h.gb.kennung + ' · ' + h.gb.gears + ' Gänge'),
+                el('span', {}, h.gb.models || '')),
+              el('div', { class: 'sugg-m' },
+                h.affinity === 2 ? el('span', { class: 'badge ok' }, 'passt zum Fahrzeug') : null,
+                el('span', { class: 'badge ' + (gut ? 'ok' : 'mute') }, fmt(h.worst * 100, 1) + ' % Abweichung'),
+                h.variants.length > 1
+                  ? el('span', { class: 'badge mute' }, h.variants.length + ' Varianten')
+                  : el('span', { class: 'badge mute' }, 'Achse ' + fmt(h.final, 2)))));
+          });
+          box.appendChild(el('p', { class: 'sugg-f' },
+            'Verglichen werden nur die Abstände der Gänge – dafür muss der Achsantrieb nicht bekannt sein. ' +
+            'Unter 1 % passt die Abstufung sehr genau, darüber kommen mehrere Getriebe in Frage. ' +
+            'Welches verbaut ist, entscheidet aber nicht die Messung, sondern dein Auto: Fahrzeugschein, ' +
+            'Reparaturleitfaden oder das Typschild am Getriebe. Steht „passt zum Fahrzeug“, deckt sich der ' +
+            'Eintrag mit dem gewählten Motorprofil – das ist der belastbarste Hinweis hier. Stufenlose ' +
+            'Getriebe stehen bewusst nicht in der Liste: ihre Stufen sind Software und passen zufällig zu vielem.'));
           wrap.appendChild(box);
         }
       }

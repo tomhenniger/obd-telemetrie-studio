@@ -224,12 +224,15 @@ function suggestFirstGear(lowestKmhPer1000, redline, gears, measuredCount) {
    ihn zu kennen. Das ist ein Vorschlag, kein Befund: mehrere Getriebe können
    ähnlich abgestuft sein, und wer nur drei Gänge gefahren ist, hat zu wenig
    Fingerabdruck für eine Entscheidung. */
-function suggestGearboxes(measuredKmh, rollCircum, limit) {
+function suggestGearboxes(measuredKmh, rollCircum, limit, profile) {
   /* Getriebe mit identischem Radsatz unterscheiden sich nur im Achsantrieb — sie
-     ergeben denselben Fingerabdruck und dürfen nicht als getrennte Treffer
-     erscheinen. Welche Variante es ist, entscheidet das Modell, nicht die Messung. */
+     ergeben denselben Fingerabdruck und dürfen nicht als getrennte Treffer erscheinen.
+     Welche Variante es ist, entscheidet das Modell, nicht die Messung. */
   const groups = new Map();
   for (const gb of GEARBOXES) {
+    // Ein stufenloses Getriebe hat keine festen Gänge; seine „Stufen“ sind Software.
+    // Dass sie zufällig zu einer Messung passen, sagt nichts.
+    if (gb.kind === 'cvt') continue;
     const fit = fitFinalDrive(measuredKmh, gb.ratios, rollCircum);
     if (!fit) continue;
     const key = gb.ratios.map(r => r.toFixed(3)).join('|');
@@ -240,8 +243,34 @@ function suggestGearboxes(measuredKmh, rollCircum, limit) {
     if (fit.worst < g.worst) { g.worst = fit.worst; g.final = fit.final; }
   }
   const hits = Array.from(groups.values());
-  hits.forEach(h => { h.gb = h.variants[0]; });
-  hits.sort((a, b) => a.worst - b.worst);
+  /* Zum gewählten Fahrzeug passende Getriebe nach vorn. Die Messung kann ähnlich
+     abgestufte Getriebe nicht auseinanderhalten — welches verbaut ist, entscheidet
+     das Auto. Genau deshalb ist das hier das stärkere Kriterium als der Prozentwert. */
+  const tok = t => String(t || '').toLowerCase().split(/[^a-z0-9äöüß.]+/).filter(x => x.length > 1);
+  const pTok = profile ? tok(profile.models).concat(tok(profile.brand)) : [];
+  hits.forEach(h => {
+    h.gb = h.variants[0];
+    let aff = 0, bestScore = -1;
+    for (const v of h.variants) {
+      const vt = tok(v.models);
+      // Nicht die zuletzt passende Variante nehmen, sondern die mit der groessten
+      // Ueberschneidung — sonst gewinnt bei zwei Audi-Eintraegen der falsche.
+      const score = pTok.filter(x => x.length > 2 && vt.indexOf(x) >= 0).length;
+      if (score > 0) aff = Math.max(aff, 2);
+      else if (profile && profile.brand && vt.indexOf(String(profile.brand).toLowerCase()) >= 0) aff = Math.max(aff, 1);
+      if (score > bestScore) { bestScore = score; h.gb = v; }
+    }
+    h.affinity = aff;
+  });
+  hits.sort((a, b) => (b.affinity - a.affinity) || (a.worst - b.worst));
+  // Eindeutig ist es nur, wenn der Beste deutlich besser passt als der Nächstbeste.
+  const byFit = hits.slice().sort((a, b) => a.worst - b.worst);
+  const clear = byFit.length > 0 && byFit[0].worst <= 0.012 &&
+                (byFit.length < 2 || byFit[1].worst > byFit[0].worst * 2);
+  const verdict = { clear, best: byFit[0] || null, second: byFit[1] || null };
+  // Das Urteil an jeden Treffer haengen: ein .filter() beim Aufrufer wuerde eine
+  // Eigenschaft am Array selbst verlieren.
+  hits.forEach(h => { h.verdict = verdict; });
   return hits.slice(0, limit || 5);
 }
 
