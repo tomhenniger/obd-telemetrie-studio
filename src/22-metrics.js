@@ -148,7 +148,8 @@ const METRICS = [
     // "AFR" ist das 14,7-fache von Lambda. Ohne Umrechnung stuende hier λ = 14,7 bei Sollgemisch.
     a:[/^lambda/, /equivalence\s*ratio/, /^afr(\s*ratio)?$/, /air[\s-]*fuel\s*ratio/] },
   { id:'o2_b1s1', label:'O₂-Sonde B1S1', u:'V', d:3, g:'fuel', p:6,
-    a:[/o2.*b1.*s1/, /oxygen.*bank\s*1.*sensor\s*1/, /lambdasonde.*1.*1/] },
+    // Bank und Sensor kommen je nach App in beliebiger Reihenfolge ("O2 Sensor 1 Bank 1", "O2 B1S1")
+    a:[/^(o2|oxygen)(?=.*(b1\b|bank\s*1))(?=.*(s1\b|sensor\s*1))(?!.*(wide|equivalence|current))/, /lambdasonde.*1.*1/] },
   { id:'o2_b2s1', label:'O₂-Sonde B2S1', u:'V', d:3, g:'fuel', p:6,
     a:[/o2.*b2.*s1/, /oxygen.*bank\s*2.*sensor\s*1/] },
   { id:'fuel_press', label:'Kraftstoffdruck', u:'kPa', d:0, g:'fuel', p:6,

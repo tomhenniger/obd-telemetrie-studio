@@ -202,7 +202,7 @@ const DIAG_RULES = [
        gilt sonst fuer den 45-°C-Start genauso wie fuer den Winterkaltstart bei -10 °C —
        und macht aus einem gesunden Motor im Januar einen Thermostatschaden. Grob: ein
        Grundbedarf plus rund 4,5 s je Kelvin Temperaturhub. */
-    const allow = 180 + (85 - start) * 4.5;
+    const allow = (180 + (85 - start) * 4.5) * ((c.profile && c.profile.fuel === 'diesel') ? 1.3 : 1);
     const st = t85 < allow ? S.OK : t85 < allow * 1.7 ? S.WARN : S.CRIT;
     return { status: st, value: t85 / 60, unit: 'min', dec: 1,
       ref: '< ' + fmt(allow / 60, 1) + ' min ab ' + fmt(start, 0) + ' °C',
@@ -245,11 +245,13 @@ const DIAG_RULES = [
   requires: ['cac_over_amb'], confidence: 'mittel', provenance: 'gemessen',
   run(c) {
     const m = c.combine(c.masks.partLoad, c.masks.moving);
+    const viaIat = c.ds.cacRefSource === 'iat';
     const d = c.dur(m);
     if (d < 60) return { status: S.UNCLEAR, note: 'Zu wenig konstante Teillastfahrt (' + fmtDur(d) + ') für eine belastbare Aussage.' };
     const med = c.agg('cac_over_amb', m, 'median');
     const st = band(med, 20, 30, true);
-    return { status: st, value: med, unit: 'K', dec: 1, ref: '≤ 20 K', refLo: 0, refHi: 20,
+    return { status: st, confidence: viaIat ? 'niedrig' : 'mittel',
+      cond: viaIat ? 'Referenz: Ansauglufttemperatur (keine Außentemperatur im Log)' : 'Referenz: Außentemperatur', value: med, unit: 'K', dec: 1, ref: '≤ 20 K', refLo: 0, refHi: 20,
       extra: [['Bewertete Zeit', fmtDur(d)]],
       text: st === S.OK
         ? 'Im Teillastbetrieb liegt die Ladeluft im Median nur ' + fmt(med, 1) + ' K über der Außenluft – der Kühlkreis kühlt sauber zurück, die Zusatzwasserpumpe fördert.'
@@ -375,7 +377,7 @@ const DIAG_RULES = [
       text: st === S.OK
         ? 'Die Gemischkorrektur beträgt ' + fmt(lo, 2) + ' % bei niedriger und ' + fmt(hi, 2) + ' % bei hoher Last' +
           (diff < -0.5
-            ? ' – sie steigt also mit der Last, statt zu fallen. Genau umgekehrt verhält sich Falschluft: eine konstante Leckluftmenge fällt bei kleiner Füllung relativ stark ins Gewicht und verschwindet unter Last. Ein mit der Last zunehmender Korrekturbedarf zeigt stattdessen auf etwas, das proportional zur eingespritzten Menge wirkt – Kraftstoffsorte (E10 braucht rund 3 % mehr Masse), Einspritzmenge oder Luftmassenmesser.'
+            ? ' – sie steigt also mit der Last, statt zu fallen. Genau umgekehrt verhält sich Falschluft: eine konstante Leckluftmenge fällt bei kleiner Füllung relativ stark ins Gewicht und verschwindet unter Last. Ein mit der Last zunehmender Korrekturbedarf zeigt stattdessen auf etwas, das proportional zur eingespritzten Menge wirkt – Kraftstoffsorte (E10 braucht rund 1–2 % mehr Masse als E5), Einspritzmenge oder Luftmassenmesser.'
             : '. Falschluft würde bei niedriger Last deutlich stärker korrigiert werden – dieses Muster liegt hier nicht vor.')
         : diff > 0
           ? 'Bei niedriger Last wird um ' + fmt(diff, 2) + ' %-Punkte stärker korrigiert als bei hoher Last. Genau so verhält sich Falschluft: die Leckluftmenge ist absolut konstant und fällt bei kleiner Füllung relativ stark ins Gewicht.'
@@ -516,12 +518,19 @@ const DIAG_RULES = [
     const ev = c.ds.events.wot.filter(w => w.dur >= 1.5 && w.rpmMax > 3000)
                  .slice().sort((a, b) => a.t0 - b.t0);
     if (ev.length < 3) return { status: S.UNCLEAR, note: 'Weniger als drei vergleichbare Volllastzüge in dieser Fahrt.' };
-    const tim = c.V('timing');
-    const vals = ev.map(w => { let s = 0, n = 0; for (let i = w.i0; i <= w.i1; i++) if (tim[i] === tim[i]) { s += tim[i]; n++; } return n ? s / n : NaN; }).filter(isFinite);
-    if (vals.length < 3) return { status: S.UNCLEAR, note: 'Zu wenig auswertbare Züge.' };
+    const tim = c.V('timing'), rpm = c.V('rpm');
+    /* Der mittlere Zündwinkel eines Zugs hängt am Drehzahlbereich: ein Zug bis 6300 min⁻¹
+       liegt im Mittel Grad höher als einer bis 3900. Nur das gemeinsame Fenster vergleichen,
+       sonst wird aus verschiedenen Gängen ein "Trend". */
+    const LO = 3000, HI = 4500;
+    const vals = ev.map(w => { let s = 0, n = 0;
+      for (let i = w.i0; i <= w.i1; i++) if (tim[i] === tim[i] && rpm && rpm[i] >= LO && rpm[i] <= HI) { s += tim[i]; n++; }
+      return n >= 3 ? s / n : NaN; }).filter(isFinite);
+    if (vals.length < 3) return { status: S.UNCLEAR, note: 'Weniger als drei Volllastzüge decken das Vergleichsfenster 3000–4500 min⁻¹ ab.' };
     const drop = vals[0] - vals[vals.length - 1];
     const st = band(drop, 3, 6, true);
     return { status: st, value: drop, unit: '°KW', dec: 1, ref: '≤ 3 ° Abnahme', refLo: -10, refHi: 3,
+      cond: 'Volllast, 3000–4500 min⁻¹',
       extra: [['Züge', String(vals.length)], ['erster / letzter', fmt(vals[0], 1) + ' ° / ' + fmt(vals[vals.length - 1], 1) + ' °']],
       text: st === S.OK
         ? 'Der Zündwinkel bleibt über die Volllastzüge hinweg stabil (' + fmt(drop, 1) + ' ° Veränderung). Weder ein thermisches Problem noch eine sich erwärmende Zündanlage.'
@@ -615,6 +624,16 @@ const DIAG_RULES = [
   run(c) {
     const T = c.ds.trip;
     if (!isFinite(T.consAvg)) return { status: S.MISSING, missing: ['Kraftstoffzähler oder Streckenangabe'] };
+    /* Zähler und Strecke müssen dieselbe Zeit abdecken. Läuft der Kraftstoffzähler durch,
+       die Streckenquelle aber nur einen Teil der Fahrt, entsteht ein Verbrauch, der mit dem
+       Motor nichts zu tun hat – und daraus wurde bisher ein kritischer Befund. */
+    const covFuel = (c.ds.coverage && (c.ds.coverage.fuel_used || c.ds.coverage.fuel_rate)) || 0;
+    const covDist = (T.distCands || []).reduce((a, x) => Math.max(a, (x.deckung || 0) / 100), 0);
+    if (covFuel > 0 && covDist > 0 && Math.abs(covFuel - covDist) > 0.25)
+      return { status: S.UNCLEAR, value: T.consAvg, unit: 'L/100km', dec: 1,
+        note: 'Kraftstoffzähler und Streckenquelle decken verschiedene Zeiträume ab (' + fmt(covFuel * 100, 0) + ' % gegen ' +
+              fmt(covDist * 100, 0) + ' % der Fahrt). Ein Verbrauch aus zwei ungleichen Zeiträumen ist keine Aussage über den Motor.',
+        extra: [['Abdeckung Kraftstoff', fmt(covFuel * 100, 0) + ' %'], ['Abdeckung Strecke', fmt(covDist * 100, 0) + ' %']] };
     const ref = c.P.consNEDC;
     if (T.dist < 5) return { status: S.UNCLEAR, value: T.consAvg, unit: 'L/100km', dec: 1,
       note: 'Die Fahrt ist mit ' + fmt(T.dist, 1) + ' km zu kurz für einen belastbaren Verbrauchsvergleich.' };
@@ -648,14 +667,20 @@ const DIAG_RULES = [
     const use = c.dur(m) > 0.5 ? m : c.masks.wot;
     if (c.dur(use) < 1) return { status: S.UNCLEAR, note: 'Kein Volllastzug für eine Leistungsabschätzung.' };
     const rate = c.agg('fuel_rate', use, 'max');
-    const kgh = rate * 0.745;
-    const lo = kgh / 0.40, mid = kgh / 0.36, hi = kgh / 0.33;   // kW über BSFC-Spanne
+    /* Dichte und spezifischer Verbrauch sind kraftstoffabhängig. Mit Ottowerten wird ein
+       Diesel um rund 40 % unterschätzt – und der Text stellt die Zahl dann neben die
+       Werksangabe, als wäre da ein Leistungsdefizit. */
+    const diesel = c.profile && c.profile.fuel === 'diesel';
+    const dens = diesel ? 0.83 : 0.745;
+    const bsfc = diesel ? [0.24, 0.22, 0.20] : [0.40, 0.36, 0.33];
+    const kgh = rate * dens;
+    const lo = kgh / bsfc[0], mid = kgh / bsfc[1], hi = kgh / bsfc[2];   // kW über BSFC-Spanne
     const ref = c.P.powerKW;
     return { status: S.UNCLEAR, value: mid, unit: 'kW', dec: 0,
       ref: ref ? fmt(ref, 0) + ' kW / ' + fmt(c.P.powerPS, 0) + ' PS' : null, refLo: ref, refHi: ref,
       extra: [['Spanne', fmt(lo, 0) + '–' + fmt(hi, 0) + ' kW (' + fmt(lo * 1.35962, 0) + '–' + fmt(hi * 1.35962, 0) + ' PS)'],
               ['Spitzen-Kraftstofffluss', fmt(rate, 1) + ' L/h'],
-              ['Angenommener spez. Verbrauch', '0,33–0,40 kg/kWh']],
+              ['Angenommener spez. Verbrauch', diesel ? '0,20–0,24 kg/kWh (Diesel)' : '0,33–0,40 kg/kWh (Otto)']],
       text: 'Aus dem Spitzen-Kraftstofffluss von ' + fmt(rate, 1) + ' L/h ergibt sich eine Leistung von ' + fmt(lo, 0) + '–' + fmt(hi, 0) + ' kW (' + fmt(lo * 1.35962, 0) + '–' + fmt(hi * 1.35962, 0) + ' PS)' +
             (ref ? ', Werk sind ' + fmt(ref, 0) + ' kW / ' + fmt(c.P.powerPS, 0) + ' PS' : '') + '. ' +
             'Bewusst ohne Ampel und nur als Spanne: der Kraftstofffluss ist in dieser App selbst ein Rechenwert aus Luftmasse und Last, und der angenommene spezifische Verbrauch geht direkt linear ein. Die Abschätzung kann ein Leistungsdefizit weder belegen noch ausschließen. Der von der App gemeldete Momentanwert „Instant engine power“ überschätzt systematisch und ist als Absolutwert unbrauchbar – nur sein Verlauf ist aussagekräftig.' };
@@ -691,7 +716,379 @@ const DIAG_RULES = [
         ? 'Der Pedalgeber meldet im Ruhezustand ' + fmt(pIdle, 1) + ' % und bei Vollgas ' + fmt(pMax, 1) + ' %. VAG nutzt den elektrischen Sensorbereich bewusst nicht voll aus – ' + fmt(pMax, 1) + ' % sind hier echtes Vollgas, nicht Teillast. Im Sekundenfenster um dieses Pedalmaximum liegt die Motorlast bei ' + fmt(lNear, 0) + ' %, was das bestätigt.'
         : 'Bei Volllast (' + fmt(lMax, 0) + ' % Motorlast) erreicht der Pedalgeber nur ' + fmt(pMax, 1) + ' %. Kennlinie des Gebers prüfen.' };
   }
-}
+},
+/* ================= Bisher ungenutzte Messgrößen =================
+   Die Registry erkennt 53 Größen, die Regeln oben fragen 16 davon ab. Was folgt,
+   sind Werkstatt-Faustwerte (sollwert_quelle "regelwerk"), keine Werksangaben – jede
+   Regel sagt, unter welcher Bedingung sie misst, und tritt bei dünner Datenlage
+   lieber zurück, als etwas zu behaupten. */
+{
+  id: 'oil_temp', group: 'Kühlkreis', title: 'Öltemperatur im Betrieb',
+  requires: ['oil_temp'], confidence: 'hoch', provenance: 'gemessen',
+  run(c) {
+    const m = c.combine(c.masks.warm, c.masks.engineOn);
+    const d = c.dur(m);
+    if (d < 300) return { status: S.UNCLEAR, note: 'Zu wenig warme Betriebszeit (' + fmtDur(d) + ') für eine Öltemperatur-Bewertung.' };
+    const med = c.agg('oil_temp', m, 'median'), mx = c.agg('oil_temp', m, 'max');
+    const co = c.V('coolant') ? c.agg('coolant', m, 'median') : NaN;
+    let st = mx > 135 ? S.CRIT : mx > 125 ? S.WARN : S.OK;
+    if (med < 70) st = S.WARN;
+    return { status: st, value: med, unit: '°C', dec: 0, ref: '80–120 °C, Spitze ≤ 125 °C', refLo: 80, refHi: 120,
+      cond: 'Kühlmittel ≥ 80 °C und Motor läuft',
+      extra: [['Maximum', fmt(mx, 0) + ' °C'], isFinite(co) ? ['Kühlmittel dabei', fmt(co, 0) + ' °C'] : null, ['Bewertete Zeit', fmtDur(d)]],
+      text: st === S.OK
+        ? 'Das Öl liegt im warmen Betrieb bei ' + fmt(med, 0) + ' °C (Spitze ' + fmt(mx, 0) + ' °C) – im Bereich, in dem Kondensat und Kraftstoffeintrag ausdampfen und die Viskosität stimmt.'
+        : med < 70
+          ? 'Das Öl erreicht mit ' + fmt(med, 0) + ' °C keine Betriebstemperatur. Bei Kurzstrecke normal; ist die Fahrt lang, verdünnt sich das Öl mit Kraftstoff und Wasser.'
+          : 'Das Öl erreicht ' + fmt(mx, 0) + ' °C. Ab etwa 130 °C altert es beschleunigt; Ölkühler, Thermostat des Ölkreises und den Ölstand prüfen.',
+      action: st === S.OK ? null : ['Ölstand und Ölzustand prüfen', 'Öl-Wasser-Wärmetauscher bzw. Ölkühler auf Durchfluss prüfen'] };
+  }
+},
+{
+  id: 'cat_temp', group: 'Abgas', title: 'Katalysatortemperatur',
+  requires: ['cat_temp_b1'], confidence: 'mittel', provenance: 'gemessen',
+  run(c) {
+    const m = c.combine(c.masks.warm, c.masks.moving);
+    const d = c.dur(m);
+    if (d < 180) return { status: S.UNCLEAR, note: 'Zu wenig warme Fahrzeit für eine Katalysator-Bewertung.' };
+    const med = c.agg('cat_temp_b1', m, 'median'), mx = c.agg('cat_temp_b1', m, 'max');
+    const hot = c.dur(c.combine(m, c.mask(i => { const v = c.V('cat_temp_b1'); return v && v[i] > 900; })));
+    let st = hot > 20 ? S.CRIT : hot > 3 ? S.WARN : S.OK;
+    if (med < 300) st = S.WARN;
+    let delta = NaN;
+    if (c.V('cat_temp_b2')) delta = Math.abs(c.agg('cat_temp_b1', m, 'median') - c.agg('cat_temp_b2', m, 'median'));
+    if (isFinite(delta) && delta > 100 && st === S.OK) st = S.WARN;
+    return { status: st, value: med, unit: '°C', dec: 0, ref: '350–800 °C, über 900 °C nur sekundenweise', refLo: 350, refHi: 800,
+      cond: 'Kühlmittel ≥ 80 °C, in Bewegung',
+      extra: [['Maximum', fmt(mx, 0) + ' °C'], ['Zeit über 900 °C', fmtDur(hot)],
+              isFinite(delta) ? ['Unterschied Bank 1/2', fmt(delta, 0) + ' K'] : null],
+      text: st === S.OK
+        ? 'Der Katalysator arbeitet bei ' + fmt(med, 0) + ' °C im Median. Zündaussetzer oder ein zu fettes Gemisch würden ihn deutlich heißer laufen lassen – davon ist nichts zu sehen.'
+        : med < 300
+          ? 'Der Katalysator bleibt mit ' + fmt(med, 0) + ' °C zu kühl für einen guten Umsatz. Bei viel Schubbetrieb oder Kurzstrecke normal; sonst Anspringverhalten und Lambdaregelung prüfen.'
+          : isFinite(delta) && delta > 100
+            ? 'Die beiden Bänke laufen ' + fmt(delta, 0) + ' K auseinander. Eine Bank verbrennt Kraftstoff im Kat nach – Zündaussetzer oder ein undichter Injektor auf dieser Seite.'
+            : 'Der Katalysator lag ' + fmtDur(hot) + ' über 900 °C. Unverbrannter Kraftstoff verbrennt im Kat: Zündaussetzer, zu fettes Gemisch oder eine träge Lambdasonde. Bei anhaltend über 950 °C schmilzt der Träger.',
+      action: st === S.OK ? null : ['Aussetzerzähler je Zylinder auslesen', 'Lambdasonden-Signale auf Schaltfrequenz prüfen', 'Einspritzventile auf Dichtheit prüfen'] };
+  }
+},
+{
+  id: 'stft_bias', fuel: 'petrol', group: 'Gemisch', title: 'Kurzzeit-Gemischkorrektur',
+  requires: ['stft_b1'], confidence: 'mittel', provenance: 'gemessen',
+  run(c) {
+    const m = c.combine(c.masks.warm, c.mask(i => !c.masks.coast[i]), c.masks.engineOn);
+    const d = c.dur(m);
+    if (d < 120) return { status: S.UNCLEAR, note: 'Zu wenig warme, schubfreie Laufzeit (' + fmtDur(d) + ').' };
+    const med = c.agg('stft_b1', m, 'median'), sd = c.agg('stft_b1', m, 'std');
+    const a = Math.abs(med);
+    let st = a <= 5 ? S.OK : a <= 10 ? S.WARN : S.CRIT;
+    const frozen = isFinite(sd) && sd < 0.3;
+    if (frozen && st === S.OK) st = S.WARN;
+    return { status: st, value: med, unit: '%', dec: 2, ref: '−5 bis +5 %, lebendig', refLo: -5, refHi: 5,
+      cond: 'Kühlmittel ≥ 80 °C, kein Schub',
+      extra: [['Streuung (σ)', fmt(sd, 2) + ' %'], ['Bewertete Zeit', fmtDur(d)]],
+      text: frozen
+        ? 'Die Kurzzeitkorrektur steht praktisch still (σ ' + fmt(sd, 2) + ' %). Ein geregeltes Gemisch pendelt ständig um null – ein eingefrorener Wert heißt: die Regelung läuft nicht (offener Regelkreis, Sonde nicht betriebsbereit oder Ersatzwert).'
+        : st === S.OK
+          ? 'Die Kurzzeitkorrektur pendelt um ' + fmt(med, 2) + ' % mit ' + fmt(sd, 2) + ' % Streuung – so sieht eine arbeitende Lambdaregelung aus.'
+          : 'Die Kurzzeitkorrektur liegt dauerhaft bei ' + fmt(med, 2) + ' %. Was die Langzeitkorrektur nicht mehr auffängt, landet hier: ' + (med > 0 ? 'zu mager (Falschluft, Kraftstoffdruck, Sonde)' : 'zu fett (undichter Injektor, Tankentlüftung, Kraftstoffdruck zu hoch)') + '.',
+      action: st === S.OK ? null : (frozen ? ['Lambdasonde auf Betriebsbereitschaft und Heizung prüfen', 'Fehlerspeicher auf Regelkreis-Codes prüfen'] : ['Rauchtest', 'Kraftstoffdruck messen', 'Lambdasonde auf Schaltfrequenz prüfen']) };
+  }
+},
+{
+  id: 'lambda_closed_loop', fuel: 'petrol', group: 'Gemisch', title: 'Lambda in der Teillast',
+  requires: ['lambda'], confidence: 'mittel', provenance: 'gemessen',
+  run(c) {
+    const m = c.masks.partLoad;
+    const d = c.dur(m);
+    if (d < 60) return { status: S.UNCLEAR, note: 'Zu wenig warme Teillastfahrt (' + fmtDur(d) + ').' };
+    const med = c.agg('lambda', m, 'median'), p05 = c.agg('lambda', m, 'p05'), p95 = c.agg('lambda', m, 'p95');
+    // Manche Apps liefern statt Lambda das Verhältnis Luft/Kraftstoff (≈14,7 bei λ = 1)
+    const afr = med > 5;
+    const lam = afr ? med / 14.7 : med;
+    const st = inRange(lam, 0.97, 1.03, 0.03, 0.03);
+    return { status: st, value: lam, unit: 'λ', dec: 3, ref: '0,97–1,03', refLo: 0.97, refHi: 1.03,
+      cond: 'Teillast, warm, kein Schub' + (afr ? ' · Rohwert als Luft/Kraftstoff-Verhältnis geliefert' : ''),
+      extra: [['5.–95. Perzentil', fmt(afr ? p05 / 14.7 : p05, 3) + ' … ' + fmt(afr ? p95 / 14.7 : p95, 3)], ['Bewertete Zeit', fmtDur(d)]],
+      text: st === S.OK
+        ? 'In der Teillast liegt Lambda bei ' + fmt(lam, 3) + ' – stöchiometrisch, wie es der Katalysator braucht.'
+        : 'In der Teillast liegt Lambda bei ' + fmt(lam, 3) + ', also dauerhaft ' + (lam > 1 ? 'mager' : 'fett') + '. Die Regelung müsste das ausgleichen; tut sie es nicht, ist entweder die Sonde träge oder die Korrektur am Anschlag.',
+      action: st === S.OK ? null : ['Langzeit- und Kurzzeitkorrektur daneben legen', 'Lambdasonde prüfen'] };
+  }
+},
+{
+  id: 'o2_switching', fuel: 'petrol', group: 'Gemisch', title: 'Lambdasonde 1 – Schaltverhalten',
+  requires: ['o2_b1s1'], confidence: 'mittel', provenance: 'abgeleitet',
+  run(c) {
+    const v = c.V('o2_b1s1'), s = c.stats.o2_b1s1;
+    // Nur für Sprungsonden (0–1 V). Breitbandsonden liefern Strom oder Lambda – dann keine Aussage.
+    if (!s || s.max > 1.5) return { status: S.UNCLEAR, note: 'Kein Sprungsonden-Signal (0–1 V) – bei einer Breitbandsonde gibt es kein Schaltverhalten zu bewerten.' };
+    const m = c.combine(c.masks.partLoad);
+    const d = c.dur(m);
+    if (d < 60) return { status: S.UNCLEAR, note: 'Zu wenig warme Teillastfahrt (' + fmtDur(d) + ').' };
+    let cross = 0, prev = NaN, lo = Infinity, hi = -Infinity, cnt = 0;
+    for (let i = 0; i < c.N; i++) {
+      if (!m[i] || !(v[i] === v[i])) continue;
+      cnt++; if (v[i] < lo) lo = v[i]; if (v[i] > hi) hi = v[i];
+      if (prev === prev && ((prev < 0.45 && v[i] >= 0.45) || (prev >= 0.45 && v[i] < 0.45))) cross++;
+      prev = v[i];
+    }
+    const hz = cross / d;
+    // Die Abtastrate begrenzt, was zählbar ist: unter 2 Hz Abtastung ist die Frequenz nicht messbar.
+    const rate = cnt / d;
+    if (rate < 2) return { status: S.UNCLEAR, note: 'Die Sonde wird nur mit ' + fmt(rate, 1) + ' Hz geloggt – zu langsam, um ihr Schalten zu sehen. Diese PID allein mit hoher Rate aufzeichnen.' };
+    const stuck = hi < 0.6 || lo > 0.3;
+    const st = stuck ? S.CRIT : hz >= 0.5 ? S.OK : hz >= 0.2 ? S.WARN : S.CRIT;
+    return { status: st, value: hz, unit: 'Hz', dec: 2, ref: '≥ 0,5 Hz, Hub 0,1–0,9 V', refLo: 0.5, refHi: 5,
+      cond: 'Teillast, warm · Abtastung ' + fmt(rate, 1) + ' Hz',
+      extra: [['Signalhub', fmt(lo, 2) + '–' + fmt(hi, 2) + ' V'], ['Wechsel um 0,45 V', String(cross)], ['Bewertete Zeit', fmtDur(d)]],
+      text: stuck
+        ? 'Die Sonde bleibt zwischen ' + fmt(lo, 2) + ' und ' + fmt(hi, 2) + ' V hängen – sie schaltet nicht mehr durch. Eine gealterte oder vergiftete Sprungsonde; die Regelung fährt auf Ersatzwerten.'
+        : st === S.OK
+          ? 'Die Sonde schaltet ' + fmt(hz, 2) + '-mal pro Sekunde zwischen fett und mager mit vollem Hub – eine gesunde Sprungsonde.'
+          : 'Die Sonde schaltet nur ' + fmt(hz, 2) + '-mal pro Sekunde. Eine träge Sonde regelt zu langsam, der Verbrauch steigt und der Katalysator sieht Gemischschwankungen.',
+      action: st === S.OK ? null : ['Lambdasonde 1 erneuern, wenn älter als 120.000 km', 'Sondenheizung und Abgasleck vor der Sonde prüfen'] };
+  }
+},
+{
+  id: 'maf_sanity', group: 'Motor', title: 'Luftmassenmesser – Plausibilität',
+  requires: ['maf', 'rpm'], confidence: 'niedrig', provenance: 'abgeleitet',
+  run(c) {
+    const disp = c.P.displacement ? c.P.displacement / 1000 : NaN;
+    const idle = c.masks.idle;
+    const dIdle = c.dur(idle);
+    const load = c.V('load_abs') || c.V('load_calc');
+    // Korrelation Luftmasse zu Last: ein driftender LMM verliert den Zusammenhang
+    let r = NaN;
+    if (load) {
+      const xs = [], ys = [];
+      const maf = c.V('maf');
+      for (let i = 0; i < c.N; i++) if (maf[i] === maf[i] && load[i] === load[i] && c.masks.engineOn[i]) { xs.push(load[i]); ys.push(maf[i]); }
+      if (xs.length > 200) r = pearson(xs, ys);
+    }
+    const idleMaf = dIdle >= 8 ? c.agg('maf', idle, 'median') : NaN;
+    const perL = isFinite(disp) && isFinite(idleMaf) ? idleMaf / disp : NaN;
+    let st = S.OK;
+    const notes = [];
+    if (isFinite(r) && r < 0.85) { st = S.WARN; notes.push('Die Luftmasse folgt der Last nur lose (r = ' + fmt(r, 2) + ').'); }
+    if (isFinite(perL) && (perL < 1.2 || perL > 6)) { st = S.WARN; notes.push('Im Leerlauf ' + fmt(perL, 1) + ' g/s je Liter Hubraum – außerhalb 1,5–4,5.'); }
+    if (!isFinite(r) && !isFinite(perL)) return { status: S.UNCLEAR, note: 'Weder Leerlauf noch Lastsignal ausreichend für eine Plausibilitätsprüfung.' };
+    return { status: st, value: isFinite(perL) ? perL : r, unit: isFinite(perL) ? 'g/s·L' : 'r', dec: 2,
+      ref: isFinite(perL) ? '1,5–4,5 g/s je Liter im Leerlauf' : 'r ≥ 0,85 zur Last', refLo: isFinite(perL) ? 1.5 : 0.85, refHi: isFinite(perL) ? 4.5 : 1,
+      extra: [isFinite(idleMaf) ? ['Luftmasse im Leerlauf', fmt(idleMaf, 1) + ' g/s'] : null, isFinite(r) ? ['Korrelation zur Last', fmt(r, 3)] : null],
+      text: st === S.OK
+        ? 'Der Luftmassenmesser liefert plausible Werte: ' + (isFinite(perL) ? fmt(perL, 1) + ' g/s je Liter im Leerlauf' : '') + (isFinite(r) ? (isFinite(perL) ? ', ' : '') + 'Korrelation ' + fmt(r, 2) + ' zur Last' : '') + '.'
+        : notes.join(' ') + ' Ein verschmutzter oder driftender Luftmassenmesser zeigt zu wenig – das Steuergerät magert ab, die Gemischkorrektur wandert ins Plus.',
+      action: st === S.OK ? null : ['Luftmassenmesser reinigen oder tauschen', 'Falschluft zwischen LMM und Drosselklappe ausschließen'] };
+  }
+},
+{
+  id: 'fuel_pressure', group: 'Kraftstoff', title: 'Kraftstoffdruck unter Last',
+  requires: ['fuel_press'], confidence: 'mittel', provenance: 'gemessen',
+  run(c) {
+    const s = c.stats.fuel_press;
+    const idle = c.masks.idle, wot = c.masks.wot;
+    const dI = c.dur(idle), dW = c.dur(wot);
+    const isRail = s.median > 2000;                       // Hochdruck-Rail (GDI/Common Rail) statt Vorförderdruck
+    const pI = dI >= 8 ? c.agg('fuel_press', idle, 'median') : NaN;
+    const pW = dW >= 1 ? c.agg('fuel_press', wot, 'p05') : NaN;
+    const sdI = dI >= 8 ? c.agg('fuel_press', idle, 'std') : NaN;
+    if (!isFinite(pI) && !isFinite(pW)) return { status: S.UNCLEAR, note: 'Weder Leerlauf noch Volllast lang genug für eine Druckbewertung.' };
+    let st = S.OK, why = '';
+    if (isFinite(pW) && isFinite(pI)) {
+      const drop = (pI - pW) / pI;
+      if (!isRail && drop > 0.15) { st = drop > 0.25 ? S.CRIT : S.WARN; why = 'Unter Volllast bricht der Druck um ' + fmt(drop * 100, 0) + ' % ein.'; }
+    }
+    if (!isRail && isFinite(sdI) && sdI > 0.08 * pI) { st = st === S.OK ? S.WARN : st; why += ' Im Leerlauf schwankt er um σ ' + fmt(sdI, 0) + ' kPa.'; }
+    if (isRail && isFinite(pW) && isFinite(s.max) && pW < s.max * 0.5) { st = S.WARN; why = 'Unter Volllast fällt der Raildruck auf ' + fmt(pW / 1000, 1) + ' MPa gegen Spitze ' + fmt(s.max / 1000, 1) + ' MPa.'; }
+    return { status: st, value: isFinite(pW) ? pW : pI, unit: 'kPa', dec: 0,
+      ref: isRail ? 'Raildruck unter Last ≥ 50 % der Spitze' : 'Einbruch unter Last ≤ 15 %', refLo: 0, refHi: s.max,
+      cond: isRail ? 'Hochdruck-Rail' : 'Vorförderdruck',
+      extra: [isFinite(pI) ? ['Leerlauf', fmt(pI, 0) + ' kPa'] : null, isFinite(pW) ? ['Volllast (p05)', fmt(pW, 0) + ' kPa'] : null, ['Spitze', fmt(s.max, 0) + ' kPa']],
+      text: st === S.OK
+        ? 'Der Kraftstoffdruck hält unter Last (' + (isFinite(pW) ? fmt(pW, 0) : fmt(pI, 0)) + ' kPa). Förderpumpe und Druckregler liefern.'
+        : why + ' Das ist die Signatur einer schwächelnden Kraftstoffpumpe, eines verstopften Filters oder eines undichten Druckreglers.',
+      action: st === S.OK ? null : ['Kraftstofffilter-Wechselintervall prüfen', 'Förderdruck mit Manometer gegenmessen', 'Druckregler auf Dichtheit prüfen'] };
+  }
+},
+{
+  id: 'batt_voltage', group: 'Elektrik', title: 'Bordspannung bei laufendem Motor',
+  requires: ['batt', 'rpm'], confidence: 'hoch', provenance: 'gemessen',
+  run(c) {
+    const m = c.mask(i => { const r = c.V('rpm'); return r && r[i] > 500; });
+    const d = c.dur(m);
+    if (d < 60) return { status: S.UNCLEAR, note: 'Zu wenig Laufzeit für eine Aussage zur Ladespannung.' };
+    const med = c.agg('batt', m, 'median'), p05 = c.agg('batt', m, 'p05'), mx = c.agg('batt', m, 'max');
+    let st = med >= 13.4 && med <= 15.0 ? S.OK : med >= 13.0 ? S.WARN : S.CRIT;
+    if (mx > 15.3) st = S.CRIT;
+    return { status: st, value: med, unit: 'V', dec: 2, ref: '13,4–15,0 V', refLo: 13.4, refHi: 15.0,
+      cond: 'Motor läuft',
+      extra: [['5. Perzentil', fmt(p05, 2) + ' V'], ['Maximum', fmt(mx, 2) + ' V'], ['Bewertete Zeit', fmtDur(d)]],
+      text: st === S.OK
+        ? 'Die Bordspannung liegt bei laufendem Motor bei ' + fmt(med, 2) + ' V – Generator und Regler laden. Moderne Fahrzeuge senken die Spannung bewusst ab, wenn die Batterie voll ist; Werte um 13,5 V sind deshalb kein Mangel.'
+        : mx > 15.3
+          ? 'Die Spannung erreicht ' + fmt(mx, 2) + ' V. Ein Regler, der über 15,3 V lässt, kocht die Batterie und gefährdet Steuergeräte.'
+          : 'Die Bordspannung liegt bei laufendem Motor nur bei ' + fmt(med, 2) + ' V. Der Generator lädt nicht ausreichend: Keilrippenriemen, Regler oder Generator selbst. Beim Gebrauchtwagen ein Kostenpunkt.',
+      action: st === S.OK ? null : ['Generatorspannung an den Batteriepolen gegenmessen', 'Riemen und Spanner prüfen', 'Massekabel Motor–Karosserie prüfen'] };
+  }
+},
+{
+  id: 'knock_retard_pid', fuel: 'petrol', group: 'Zündung', title: 'Klopfregelung (herstellerspezifische PID)',
+  requires: ['knock_retard'], confidence: 'hoch', provenance: 'gemessen',
+  run(c) {
+    const m = c.combine(c.masks.warm, c.mask(i => { const l = c.V('load_abs') || c.V('load_calc'); return l && l[i] > (c.loadIsAbs ? 100 : 60); }));
+    const d = c.dur(m);
+    if (d < 20) return { status: S.UNCLEAR, note: 'Zu wenig warme Lastfahrt (' + fmtDur(d) + ') für eine Aussage zur Klopfregelung.' };
+    const mx = c.agg('knock_retard', m, 'max'), p95 = c.agg('knock_retard', m, 'p95');
+    const st = band(p95, 3, 6, true);
+    return { status: st, value: p95, unit: '°KW', dec: 1, ref: '≤ 3 ° (p95), Spitze ≤ 8 °', refLo: 0, refHi: 3,
+      cond: 'Kühlmittel ≥ 80 °C, hohe Last',
+      extra: [['Spitze', fmt(mx, 1) + ' °'], ['Bewertete Zeit', fmtDur(d)]],
+      text: st === S.OK
+        ? 'Die Klopfregelung greift unter Last nur mit ' + fmt(p95, 1) + ' ° ein (Spitze ' + fmt(mx, 1) + ' °) – das ist die normale Arbeit der Regelung, kein Klopfen.'
+        : 'Die Klopfregelung nimmt unter Last regelmäßig ' + fmt(p95, 1) + ' ° zurück (Spitze ' + fmt(mx, 1) + ' °). Ursachen in dieser Reihenfolge: Kraftstoffqualität, Ladelufttemperatur, Ablagerungen im Brennraum, ein defekter Klopfsensor.',
+      action: st === S.OK ? null : ['Mit ROZ 98/100 gegenfahren', 'Ladelufttemperatur unter Last prüfen', 'Brennraum endoskopieren'] };
+  }
+},
+{
+  id: 'trans_temp', group: 'Getriebe', title: 'Getriebeöltemperatur',
+  requires: ['trans_temp'], confidence: 'hoch', provenance: 'gemessen',
+  run(c) {
+    const m = c.masks.engineOn;
+    const d = c.dur(m);
+    if (d < 300) return { status: S.UNCLEAR, note: 'Zu wenig Laufzeit für eine Getriebeöl-Bewertung.' };
+    const med = c.agg('trans_temp', c.masks.warm, 'median'), mx = c.agg('trans_temp', m, 'max');
+    const st = mx > 130 ? S.CRIT : mx > 115 ? S.WARN : S.OK;
+    return { status: st, value: mx, unit: '°C', dec: 0, ref: 'Spitze ≤ 115 °C', refLo: 60, refHi: 115,
+      extra: [['Median warm', fmt(med, 0) + ' °C'], ['Bewertete Zeit', fmtDur(d)]],
+      text: st === S.OK
+        ? 'Das Getriebeöl bleibt mit maximal ' + fmt(mx, 0) + ' °C im Rahmen. Bei Doppelkupplung und Wandler altert das Öl ab etwa 120 °C sprunghaft.'
+        : 'Das Getriebeöl erreicht ' + fmt(mx, 0) + ' °C. Anhänger, Berg, Stau oder ein zugesetzter Getriebeölkühler – bei Doppelkupplungsgetrieben ist das die häufigste Vorstufe zu Mechatronik- und Kupplungsschäden.',
+      action: st === S.OK ? null : ['Getriebeölkühler und Thermostat prüfen', 'Ölwechselintervall des Getriebes einhalten'] };
+  }
+},
+{
+  id: 'iat_heat_soak', group: 'Ladeluft', title: 'Ansauglufttemperatur gegen Außenluft',
+  requires: ['iat', 'ambient'], confidence: 'mittel', provenance: 'gemessen',
+  run(c) {
+    if (c.has('cac_b1')) return { status: S.UNCLEAR, note: 'Bei gemessener Ladelufttemperatur ist diese Prüfung durch die Ladeluft-Regeln abgedeckt.' };
+    const m = c.combine(c.masks.moving, c.mask(i => { const s = c.V('speed_mix'); return s && s[i] > 50; }));
+    const d = c.dur(m);
+    if (d < 120) return { status: S.UNCLEAR, note: 'Zu wenig Fahrt über 50 km/h für eine Aussage.' };
+    const iat = c.agg('iat', m, 'median'), amb = c.agg('ambient', m, 'median');
+    const delta = iat - amb;
+    const st = band(delta, 15, 25, true);
+    return { status: st, value: delta, unit: 'K', dec: 1, ref: '≤ 15 K über Außenluft', refLo: 0, refHi: 15,
+      cond: 'über 50 km/h',
+      extra: [['Ansaugluft', fmt(iat, 0) + ' °C'], ['Außenluft', fmt(amb, 0) + ' °C']],
+      text: st === S.OK
+        ? 'Die Ansaugluft liegt bei Fahrt nur ' + fmt(delta, 1) + ' K über der Außenluft – die Ansaugung zieht Frischluft, keine Motorraumluft.'
+        : 'Die Ansaugluft liegt bei Fahrt ' + fmt(delta, 1) + ' K über der Außenluft. Heiße Ansaugluft kostet Leistung und provoziert Klopfen: Ansaugweg, Luftfilterkasten und Abschirmung zum Krümmer prüfen.',
+      action: st === S.OK ? null : ['Ansaugweg auf Motorraum-Ansaugung prüfen', 'Hitzeschild und Dichtungen des Luftfilterkastens prüfen'] };
+  }
+},
+
+/* ================= Diesel =================
+   Diesel kennt weder Zündwinkel noch Lambda-Regelung. Was ihn krank macht – AGR-
+   Versottung, DPF-Beladung, Ladedruckregelung – zeigt sich in anderen Größen. */
+{
+  id: 'dpf_regen', fuel: 'diesel', group: 'Abgas', title: 'Partikelfilter – Regeneration und Temperatur',
+  requires: ['dpf_temp'], confidence: 'mittel', provenance: 'abgeleitet',
+  run(c) {
+    const v = c.V('dpf_temp');
+    const on = c.masks.engineOn;
+    const d = c.dur(on);
+    if (d < 300) return { status: S.UNCLEAR, note: 'Zu wenig Laufzeit für eine Aussage zum Partikelfilter.' };
+    // Regeneration: zusammenhängend über 550 °C
+    let regen = 0, i = 0, longest = 0;
+    while (i < c.N) {
+      if (on[i] && v[i] > 550) { let j = i; while (j + 1 < c.N && v[j + 1] > 550) j++;
+        const len = (j - i + 1) * c.step; if (len >= 30) { regen += len; if (len > longest) longest = len; } i = j + 1; }
+      else i++;
+    }
+    const mx = c.agg('dpf_temp', on, 'max');
+    const share = regen / d;
+    let st = mx > 800 ? S.CRIT : share > 0.25 ? S.WARN : S.OK;
+    return { status: st, value: mx, unit: '°C', dec: 0, ref: 'Regeneration 550–700 °C, Spitze ≤ 800 °C', refLo: 0, refHi: 800,
+      extra: [['Zeit in Regeneration', fmtDur(regen) + ' (' + fmt(share * 100, 0) + ' %)'], ['Längste Regeneration', fmtDur(longest)]],
+      text: mx > 800
+        ? 'Der Partikelfilter erreicht ' + fmt(mx, 0) + ' °C. Über 800 °C ist die Regeneration außer Kontrolle – meist eine Regeneration, die durch Motorstopp oder Schubbetrieb abgebrochen wurde und im Filter weiterbrennt.'
+        : share > 0.25
+          ? 'Der Filter regeneriert ' + fmt(share * 100, 0) + ' % der Fahrzeit. Sehr häufige Regenerationen heißen hohe Rußbeladung: Kurzstrecke, defekter Differenzdrucksensor oder ein Motor, der zu viel Ruß erzeugt (AGR, Injektoren).'
+          : regen > 0
+            ? 'In dieser Fahrt lief ' + fmtDur(regen) + ' Regeneration (Spitze ' + fmt(mx, 0) + ' °C) – planmäßig. Wichtig: eine laufende Regeneration nicht durch Abstellen unterbrechen.'
+            : 'Keine Regeneration in dieser Fahrt, Spitze ' + fmt(mx, 0) + ' °C. Für die Beladung des Filters braucht es die herstellerspezifischen Werte Rußmasse und Aschemasse.',
+      action: st === S.OK ? null : ['Differenzdruck und Rußmasse im Steuergerät auslesen', 'Regenerationsintervall über mehrere Fahrten beobachten'] };
+  }
+},
+{
+  id: 'egr_plausibility', fuel: 'diesel', group: 'Abgas', title: 'Abgasrückführung – Plausibilität',
+  requires: ['egr'], confidence: 'niedrig', provenance: 'gemessen',
+  run(c) {
+    const wot = c.masks.wot, part = c.masks.partLoad;
+    const dW = c.dur(wot), dP = c.dur(part);
+    if (dP < 60) return { status: S.UNCLEAR, note: 'Zu wenig Teillastfahrt für eine AGR-Bewertung.' };
+    const eP = c.agg('egr', part, 'median');
+    const eW = dW >= 1 ? c.agg('egr', wot, 'p95') : NaN;
+    let st = S.OK, why = '';
+    if (isFinite(eW) && eW > 8) { st = S.WARN; why = 'Unter Volllast steht die AGR noch bei ' + fmt(eW, 0) + ' % – dort gehört sie zu.'; }
+    if (eP < 2) { st = S.WARN; why += ' In der Teillast bleibt sie bei ' + fmt(eP, 0) + ' % – entweder abgeschaltet, versottet oder stillgelegt.'; }
+    return { status: st, value: eP, unit: '%', dec: 0, ref: 'Teillast 5–40 %, Volllast ≈ 0 %', refLo: 5, refHi: 40,
+      cond: 'Teillast warm · Volllast',
+      extra: [['AGR in der Teillast', fmt(eP, 0) + ' %'], isFinite(eW) ? ['AGR unter Volllast (p95)', fmt(eW, 0) + ' %'] : null],
+      text: st === S.OK
+        ? 'Die Abgasrückführung arbeitet in der Teillast (' + fmt(eP, 0) + ' %) und schließt unter Volllast' + (isFinite(eW) ? ' (' + fmt(eW, 0) + ' %)' : '') + '. Diese PID zeigt meist den Sollwert, nicht die Ventilstellung – ein versottetes Ventil bleibt hier unsichtbar.'
+        : why + ' Diese PID zeigt meist den Sollwert; für die Ist-Stellung und die Regelabweichung braucht es die herstellerspezifischen Messwerte.',
+      action: st === S.OK ? null : ['AGR-Ventil und Ansaugbrücke endoskopieren', 'Fehlerspeicher auf AGR-Regelabweichung prüfen', 'Stilllegung ausschließen (Kaufcheck)'] };
+  }
+},
+{
+  id: 'boost_diesel_map', fuel: 'diesel', group: 'Aufladung', title: 'Ladedruck bei Volllast (Saugrohrdruck)',
+  requires: ['map', 'rpm'], confidence: 'mittel', provenance: 'gemessen',
+  run(c) {
+    const m = c.combine(c.masks.wot, c.mask(i => { const r = c.V('rpm'); return r && r[i] > 2000 && r[i] < 3800; }));
+    const d = c.dur(m);
+    if (d < 2) return { status: S.UNCLEAR, note: 'Kein Volllastzug zwischen 2000 und 3800 min⁻¹ – dort liegt der Ladedruck eines Diesels.' };
+    const p95 = c.agg('map', m, 'p95'), mx = c.agg('map', m, 'max');
+    const baro = c.stats.baro ? c.stats.baro.median : 100;
+    const boost = (p95 - baro) / 100;                    // bar Überdruck
+    const G = c.P.boostWotGreen;
+    let st = G ? inRange(boost, G[0], G[1], 0.2, 0.3) : (boost >= 0.8 ? S.OK : boost >= 0.5 ? S.WARN : S.CRIT);
+    return { status: st, value: boost, unit: 'bar', dec: 2,
+      ref: G ? G[0] + '–' + G[1] + ' bar' : '≥ 0,8 bar Überdruck', refLo: G ? G[0] : 0.8, refHi: G ? G[1] : 2.0,
+      cond: 'Volllast, 2000–3800 min⁻¹',
+      extra: [['Saugrohrdruck p95', fmt(p95, 0) + ' kPa'], ['Spitze', fmt(mx, 0) + ' kPa'], ['Umgebungsdruck', fmt(baro, 0) + ' kPa'], ['Bewertete Zeit', fmtDur(d)]],
+      text: st === S.OK
+        ? 'Unter Volllast baut der Lader ' + fmt(boost, 2) + ' bar Überdruck auf – die Ladedruckregelung erreicht ihr Soll.'
+        : 'Unter Volllast kommen nur ' + fmt(boost, 2) + ' bar Überdruck zustande. Beim Diesel die Klassiker: verstellte oder verkokte VTG-Leitschaufeln, ein undichter Ladeluftschlauch, ein hängendes Unterdruckventil – oder ein Notlauf nach Überschreiten des Ladedrucks.',
+      action: st === S.OK ? null : ['Fehlerspeicher auf Ladedruck-Regelabweichung prüfen', 'Ladeluftstrecke abdrücken', 'VTG-Verstellung auf Gängigkeit prüfen'] };
+  }
+},
+{
+  id: 'maf_diesel_idle', fuel: 'diesel', group: 'Abgas', title: 'Luftmasse im Leerlauf (AGR-Hinweis)',
+  requires: ['maf'], confidence: 'niedrig', provenance: 'abgeleitet',
+  run(c) {
+    const disp = c.P.displacement ? c.P.displacement / 1000 : NaN;
+    if (!isFinite(disp)) return { status: S.UNCLEAR, note: 'Ohne Hubraum im Profil lässt sich die Luftmasse nicht einordnen.' };
+    const idle = c.masks.idle;
+    const d = c.dur(idle);
+    if (d < 12) return { status: S.UNCLEAR, note: 'Zu wenig warmer Leerlauf (' + fmtDur(d) + ').' };
+    const maf = c.agg('maf', idle, 'median');
+    const perL = maf / disp;
+    // Beim Diesel ist die Luftmasse im Leerlauf ohne AGR hoch (keine Drosselklappe); mit
+    // aktiver AGR sinkt sie. Sehr hohe Werte heißen: AGR bringt nichts. Sehr niedrige: hängt offen.
+    const st = perL < 1.5 ? S.WARN : perL > 9 ? S.WARN : S.OK;
+    return { status: st, value: perL, unit: 'g/s·L', dec: 2, ref: '2–8 g/s je Liter (warm, AGR aktiv)', refLo: 2, refHi: 8,
+      cond: 'warmer Leerlauf',
+      extra: [['Luftmasse', fmt(maf, 1) + ' g/s'], ['Hubraum', fmt(disp, 1) + ' L'], ['Leerlaufzeit', fmtDur(d)]],
+      text: st === S.OK
+        ? 'Im warmen Leerlauf gehen ' + fmt(perL, 1) + ' g/s je Liter Hubraum durch den Luftmassenmesser – plausibel für einen Diesel mit arbeitender Abgasrückführung.'
+        : perL < 1.5
+          ? 'Im Leerlauf misst der Luftmassenmesser nur ' + fmt(perL, 1) + ' g/s je Liter. Entweder hängt die AGR offen und verdrängt die Frischluft, oder der Messer selbst zeigt zu wenig – beides typische Diesel-Ursachen für Ruß und Leistungsmangel.'
+          : 'Im Leerlauf misst der Luftmassenmesser ' + fmt(perL, 1) + ' g/s je Liter – so viel, als würde die AGR gar nicht zurückführen. Ventil klemmt geschlossen oder ist stillgelegt.',
+      action: st === S.OK ? null : ['AGR-Regelabweichung im Steuergerät prüfen', 'Luftmassenmesser gegen Sollwert im Leerlauf prüfen'] };
+  }
+},
 ];
 
 function ltftRule(c, id, bankLabel) {

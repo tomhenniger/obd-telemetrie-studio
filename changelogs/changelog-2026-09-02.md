@@ -129,3 +129,33 @@ Kühlmitteltemperatur über 7 s. Alle Kennzahlen stimmten überein — bis auf z
   (GPS)“ die Höhe als Messwert, nicht als eigene Spalte – der Parser hat sie nie übernommen.
 - Der XML-Export hing an einer Funktion der Oberfläche; die Zeitbeschriftung liegt jetzt im
   Rechenkern.
+
+## Neue Features (Diagnose-Ausbau)
+
+- **15 neue Regeln.** Die Registry kannte 53 Messgrößen, die Diagnose fragte 16 davon ab.
+  Neu bewertet werden Öltemperatur, Katalysatortemperatur (inkl. Bankvergleich),
+  Kurzzeit-Gemischkorrektur (auch „eingefroren“ als Befund), Lambda in der Teillast,
+  Schaltverhalten der Sprungsonde, Plausibilität des Luftmassenmessers, Kraftstoffdruck
+  unter Last (Vorförder- und Hochdruck), Bordspannung, herstellerspezifische Klopfregelung,
+  Getriebeöltemperatur und Ansaugluft gegen Außenluft.
+- **Erster Diesel-Satz:** Partikelfilter (Regeneration erkennen, Übertemperatur),
+  AGR-Plausibilität, Ladedruck aus dem Saugrohrdruck, Luftmasse im Leerlauf als AGR-Hinweis.
+  Benzinregeln werden beim Diesel übersprungen und umgekehrt – jeweils mit Begründung.
+- Damit 38 Regeln. Alle neuen tragen `sollwert_quelle="regelwerk"` – Werkstatt-Faustwerte,
+  keine Werksangaben – und nennen ihre Bedingung.
+
+## Bugfixes (Diagnose)
+
+- **Leistungsschätzung** rechnete beim Diesel mit Otto-Dichte und Otto-Verbrauch und
+  unterschätzte ihn um rund 40 %.
+- **Verbrauch gegen Werksangabe** prüft jetzt, ob Kraftstoffzähler und Streckenquelle
+  denselben Zeitraum abdecken – sonst entstand aus zwei ungleichen Zeiträumen ein
+  kritischer Befund über einen gesunden Motor.
+- **Zündwinkel-Trend** vergleicht Volllastzüge nur noch im gemeinsamen Fenster
+  3000–4500 min⁻¹; vorher wurde aus verschiedenen Gängen ein „Trend“.
+- Die adaptive **Volllastschwelle** erfand Volllast, wenn nie Vollgas gefahren wurde.
+- **Ladeluft über Außentemperatur** sagt jetzt, ob es die Außen- oder die
+  Ansauglufttemperatur als Referenz benutzt hat.
+- E10-Hinweis: 1–2 % mehr Masse gegenüber E5, nicht 3 %.
+- „Engine RPM ×1000“ als einzige Drehzahlquelle wird mit 1000 skaliert.
+- Die Lambdasonden-Aliasse fanden „O2 Sensor 1 Bank 1“ nicht (Reihenfolge).

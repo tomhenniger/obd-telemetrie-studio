@@ -128,6 +128,14 @@ function buildDataset(parsed, profile) {
   const map = mapSeries(parsed.series);
   const metrics = new Map();
   for (const [id, m] of map.assigned) metrics.set(id, m);
+  if (metrics.has('rpm_k') && !metrics.has('rpm')) {
+    // "Engine RPM x1000" ist die einzige Drehzahl in der Datei: mit 1000 skaliert
+    // als rpm einführen, sonst bleibt die Diagnose ohne Drehzahl, obwohl sie da ist.
+    const k = metrics.get('rpm_k');
+    const v = new Float64Array(k.n); for (let i = 0; i < k.n; i++) v[i] = k.v[i] * 1000;
+    metrics.set('rpm', Object.assign({}, k, { id: 'rpm', label: 'Drehzahl (aus ×1000)', short: 'Drehzahl',
+      unit: 'rpm', v, decimals: 0, derived: true, converted: true, srcUnit: '×1000 min⁻¹' }));
+  }
   map.extras.forEach((e, i) => { const m = buildFreeMetric(e.raw, e.s, i); metrics.set(m.id, m); });
 
   const t0 = parsed.meta.tMin, t1 = parsed.meta.tMax;
@@ -271,6 +279,7 @@ function buildDataset(parsed, profile) {
       mk(i => (G.cac_b1[i] + G.cac_b2[i]) / 2));
   }
   const iatRef = G.ambient || G.iat;
+  const cacRefSource = G.ambient ? 'ambient' : (G.iat ? 'iat' : null);
   if (G.cac_mean && iatRef)
     addDerived('cac_over_amb', 'Ladeluft über Außentemperatur', 'ΔLLK/Außen', 'K', 1, 'calc', '#ff8a65',
       mk(i => G.cac_mean[i] - iatRef[i]),
@@ -346,7 +355,7 @@ function buildDataset(parsed, profile) {
 
   const ds = {
     parsed, meta: parsed.meta, metrics, stats, grid, G, N, step, t0, t1, duration,
-    track, coverage, speedSrc, notices, scoped: map.scoped, profile,
+    track, coverage, speedSrc, notices, scoped: map.scoped, profile, cacRefSource,
     boostDerived: boostR2 > 0.998, boostR2
   };
   computeTrip(ds);
@@ -535,6 +544,12 @@ function wotSignal(ds) {
   for (const id of ['pedal', 'throttle', 'load_calc', 'load_abs']) {
     const s = stats[id];
     if (!G[id] || !s) continue;
+    /* Erreicht das Signal nie die Nähe seines Vollausschlags, gab es keine Volllast –
+       dann darf die Schwelle nicht auf "die obersten 5 % der beobachteten Werte" fallen,
+       sonst gilt jede zurückhaltende Fahrt als Volllastfahrt. VAG-Pedale enden bei
+       ~67 %, darum 55 % als Untergrenze fürs Pedal, 85 % für berechnete Last. */
+    const floor = (id === 'pedal' || id === 'throttle') ? 55 : 85;
+    if (s.max < floor) continue;
     const thr = s.max >= 90 ? 80 : Math.max(s.p95, s.max * 0.85);
     return { arr: G[id], thr, label: (METRIC_BY_ID[id] ? METRIC_BY_ID[id].label : id) + ' ≥ ' + fmt(thr, 0) + ' %', id };
   }
