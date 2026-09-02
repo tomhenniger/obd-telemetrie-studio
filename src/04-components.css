@@ -166,9 +166,9 @@ select.sel option { background: var(--surface); color: var(--text-1); }
          font-size: 11px; font-weight: 700; margin-top: 1px; border: 1px solid transparent; }
 .f-sym svg, .akte-dot svg, .badge svg, .iv-m svg { width: 12px; height: 12px; }
 .akte-dot svg { vertical-align: -2px; }
-.f-sym.ok   { background: var(--ok-soft);   color: var(--ok);   border-color: var(--ok-line);   box-shadow: 0 0 8px var(--ok-line); }
-.f-sym.warn { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-line); box-shadow: 0 0 8px var(--warn-line); }
-.f-sym.crit { background: var(--crit-soft); color: var(--crit); border-color: var(--crit-line); box-shadow: 0 0 8px var(--crit-line); }
+.f-sym.ok   { background: var(--ok-soft);   color: var(--ok);   border-color: var(--ok-line);   box-shadow: 0 0 5px var(--ok-line); }
+.f-sym.warn { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-line); box-shadow: 0 0 5px var(--warn-line); }
+.f-sym.crit { background: var(--crit-soft); color: var(--crit); border-color: var(--crit-line); box-shadow: 0 0 5px var(--crit-line); }
 .f-sym.unklar  { background: var(--muted-soft); color: var(--text-3); border-color: var(--border-2); }
 .f-sym.missing { background: transparent; color: var(--text-3); border-color: var(--border-2); border-style: dashed; }
 .f-t { flex: 1; min-width: 0; }
@@ -463,11 +463,12 @@ details.acc > summary::-webkit-details-marker { display: none; }
 .akte-m td, .akte-m th { white-space: nowrap; }
 .akte-m .akte-g td { padding-top: 10px; border-bottom: 0; }
 .akte-c { text-align: center; font-variant-numeric: tabular-nums; }
-.akte-c .akte-dot { display: inline-block; width: 20px; height: 20px; line-height: 20px; border-radius: 50%; font-size: 11px; font-weight: 700; }
-.akte-c .akte-v { display: block; font-size: 10.5px; color: var(--text-2); margin-top: 2px; }
-.akte-c.ok .akte-dot { background: var(--ok-soft); color: var(--ok); box-shadow: 0 0 6px var(--ok-line); }
-.akte-c.warn .akte-dot { background: var(--warn-soft); color: var(--warn); box-shadow: 0 0 6px var(--warn-line); }
-.akte-c.crit .akte-dot { background: var(--crit-soft); color: var(--crit); box-shadow: 0 0 6px var(--crit-line); }
+.akte-c .akte-dot { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  font-size: 11px; font-weight: 700; line-height: 1; border: 1px solid var(--border-2); color: var(--text-3); background: var(--muted-soft); }
+.akte-c .akte-v { display: block; font-size: 10.5px; color: var(--text-2); margin-top: 3px; }
+.akte-c.ok .akte-dot   { background: var(--ok-soft);   color: var(--ok);   border-color: var(--ok-line);   box-shadow: 0 0 4px var(--ok-line); }
+.akte-c.warn .akte-dot { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-line); box-shadow: 0 0 4px var(--warn-line); }
+.akte-c.crit .akte-dot { background: var(--crit-soft); color: var(--crit); border-color: var(--crit-line); box-shadow: 0 0 4px var(--crit-line); }
 .akte-c.unklar .akte-dot, .akte-c.missing .akte-dot { background: var(--muted-soft); color: var(--text-3); }
 .akte-c.none { color: var(--text-3); }
 
