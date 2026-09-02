@@ -904,7 +904,7 @@ BUILDERS.fields = function (page) {
     const cc = chartCard('Gangerkennung: Geschwindigkeit × Drehzahl', {
       hint: fmt(g.coverage * 100, 0) + ' % der auswertbaren Punkte zugeordnet', height: 300,
       info: {
-        read: 'Bei geschlossenem Kraftschluss ist das Verhältnis Drehzahl zu Geschwindigkeit in jedem Gang konstant — deshalb liegen die Punkte auf Geraden durch den Nullpunkt, eine je Gang. Die gestrichelten Linien sind aus den Daten selbst geschätzt, nicht aus einer Tabelle übernommen.',
+        read: 'Bei geschlossenem Kraftschluss ist das Verhältnis Drehzahl zu Geschwindigkeit in jedem Gang konstant — deshalb liegen die Punkte auf Geraden durch den Nullpunkt, eine je Gang. Kräftig gezeichnet ist jede Gerade nur über den Geschwindigkeitsbereich, in dem dieser Gang tatsächlich gefahren wurde; der blasse Strich davor zeigt nur, dass sie durch den Nullpunkt läuft. Dort unten liegt kein Messpunkt, weil der Motor im Leerlauf weiterdreht und beim Anfahren die Kupplung schlupft. Eine mit „?" markierte Gerade wurde aus der Abstufung der übrigen Gänge erschlossen und ist nur schwach belegt.',
         good: 'Klar getrennte, dicht besetzte Geraden. Punkte dazwischen sind Schaltvorgänge und völlig normal.',
         bad: 'Streuen die Punkte breit um eine Gerade oder wandern nach oben ab, überträgt die Kupplung nicht sauber — bei einem Automatikgetriebe der wichtigste Hinweis überhaupt. Beim Gebrauchtwagenkauf lohnt hier der genaue Blick, besonders bei der multitronic.'
       },
@@ -926,15 +926,23 @@ BUILDERS.fields = function (page) {
       ctx.save(); ctx.beginPath(); ctx.rect(P.x, P.y, P.w, P.h); ctx.clip();
       g.gears.forEach((gr, i) => {
         const col = palette()[i % palette().length];
-        ctx.beginPath();
-        ctx.moveTo(X(0), Y(0));
         const vEnd = Math.min(X.hi, sr.max / gr.k);
-        ctx.lineTo(X(vEnd), Y(gr.k * vEnd));
-        ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+        /* Die Gerade gilt nur dort, wo dieser Gang auch gefahren wurde. Bis zum Nullpunkt
+           durchgezogen behauptet sie, man wäre damit angefahren — dort liegt aber kein
+           einziger Messpunkt, weil der Motor im Leerlauf dreht und die Kupplung schlupft. */
+        const vA = Math.max(X.lo, Math.min(gr.vMin, vEnd));
+        const vB = Math.min(vEnd, Math.max(gr.vMax, vA));
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 1; ctx.globalAlpha = .28; ctx.setLineDash([2, 5]);
+        ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(vA), Y(gr.k * vA)); ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = gr.weak ? 1.2 : 1.8; ctx.setLineDash(gr.weak ? [3, 3] : [6, 4]);
+        ctx.beginPath(); ctx.moveTo(X(vA), Y(gr.k * vA)); ctx.lineTo(X(vB), Y(gr.k * vB)); ctx.stroke();
+        ctx.setLineDash([]);
         ctx.font = '11px ' + FONT_MONO; ctx.fillStyle = col;
         ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-        const lx = Math.min(X(vEnd) - 26, P.x + P.w - 30);
-        ctx.fillText(gr.label, lx, Y(gr.k * X.inv(lx)) - 3);
+        const lx = Math.min(X(vB) - 26, P.x + P.w - 30);
+        ctx.fillText(gr.label + (gr.weak ? ' ?' : ''), lx, Y(gr.k * X.inv(lx)) - 3);
       });
       ctx.restore();
     };
@@ -974,10 +982,13 @@ BUILDERS.fields = function (page) {
       hint: 'aus ' + fmt(g.usable, 0) + ' Messpunkten geclustert' +
             (named ? ' · Gangnummern aus ' + gi.label : '')
     }, el('div', { class: 'tblwrap' }, el('table', { class: 'tbl', style: { minWidth: '600px' } },
-      el('thead', {}, el('tr', {}, [named ? 'Gang' : 'Stufe', 'km/h je 1000 min⁻¹',
+      el('thead', {}, el('tr', {}, [named ? 'Gang' : 'Stufe (S = nach Übersetzung)', 'km/h je 1000 min⁻¹',
         gi.mode === 'table' ? 'Soll' : 'Gesamtübersetzung', 'genutzt bei', 'max. Drehzahl', 'Zeit'].map(h => el('th', {}, h)))),
       el('tbody', {}, rows.map(r => r.m ? el('tr', {},
-        el('td', {}, r.m.label),
+        el('td', {}, r.m.label, r.m.weak
+          ? el('span', { class: 'badge mute', style: { marginLeft: '6px' },
+              title: 'Aus der Abstufung der übrigen Gänge erschlossen und nur durch wenige Messpunkte gestützt.' }, 'schwach belegt')
+          : null),
         el('td', { class: 'n' }, fmt(r.m.kmhPer1000, 1)),
         el('td', { class: 'n' }, gi.mode === 'table'
           ? (isFinite(r.m.refKmhPer1000) ? fmt(r.m.refKmhPer1000, 1) +
@@ -1008,12 +1019,17 @@ BUILDERS.fields = function (page) {
                   : 'Die Gangnummern stammen aus deiner Angabe, nicht aus den Daten. ')
               : 'Die Zuordnung stammt aus dem Vergleich mit den hinterlegten Werksübersetzungen' +
                 (isFinite(gi.worst) ? ' (größte Abweichung ' + fmt(gi.worst * 100, 1) + ' %)' : '') + '. ')
-          : 'Erkannt werden ' + g.gears.length + ' Übersetzungen, nummeriert von kurz nach lang – das sind Stufen, ' +
-            'keine Gangnummern. Unter Einstellungen lässt sich das Getriebe angeben, dann stehen hier echte ' +
-            'Gangnummern und es ist ersichtlich, welcher Gang nicht gefahren wurde. ') +
+          : 'Erkannt werden ' + g.gears.length + ' Übersetzungen. Das „S“ steht für Stufe: durchnummeriert von der ' +
+            'kürzesten zur längsten Übersetzung, in der Reihenfolge, in der sie in den Daten liegen. Das sind ' +
+            'ausdrücklich KEINE Gangnummern – ob S1 wirklich der erste Gang ist, weiß das Werkzeug nicht. ' +
+            'Unter Einstellungen lässt sich das Getriebe angeben, dann stehen hier echte Gangnummern und es ist ' +
+            'ersichtlich, welcher Gang nicht gefahren wurde. ') +
         'Eine Übersetzung taucht nur auf, wenn sie lange genug bei geschlossenem Kraftschluss gehalten wurde. ' +
         'Der höchste Gang fehlt meist, weil er auf der Strecke nicht gebraucht wurde; der niedrigste, weil beim ' +
-        'Anfahren die Kupplung schleift und dabei gar kein festes Verhältnis vorliegt. ' +
+        'Anfahren die Kupplung schleift und dabei gar kein festes Verhältnis vorliegt. Kurz durchfahrene ' +
+        'Zwischengänge streuen zu stark, um einen eigenen Gipfel zu bilden – besonders wenn die Geschwindigkeit ' +
+        'nur vom GPS kommt und beim Beschleunigen hinterherhinkt; wo die Abstufung der übrigen Gänge sie ' +
+        'vorhersagt und Messpunkte an der Stelle liegen, werden sie als „schwach belegt“ nachgetragen. ' +
         (g.spread.every((x, i) => i === 0 || x <= g.spread[i - 1] + 0.02)
           ? 'Die Stufensprünge werden hier von Stufe zu Stufe kleiner, wie bei den meisten Getrieben – das spricht dafür, dass alle erkannten Stufen echt sind.'
           : 'Die Stufensprünge werden nicht durchgehend kleiner. Das ist kein sicheres Fehlerzeichen: mehrere verbreitete Wandlerautomaten (ZF 8HP, Mercedes 9G-Tronic) haben rund um den Direktgang bewusst gestauchte Nachbarstufen. Passt es nicht zu deinem Getriebe, könnte aber eine Stufe fehlen oder eine erfunden sein.'))));

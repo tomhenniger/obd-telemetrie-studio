@@ -52,3 +52,24 @@ Kühlmitteltemperatur über 7 s. Alle Kennzahlen stimmten überein — bis auf z
 - **Warmlaufschwelle skaliert mit der Starttemperatur.** Feste sechs Minuten galten vorher
   für den 45-°C-Start wie für den Winterkaltstart. Ein Kaltstart bei 33 °C mit 6:33 min bis
   85 °C war damit „grenzwertig", ist jetzt unauffällig.
+
+## UI-Änderungen (Gangerkennung)
+
+- **Die Geraden im Gangdiagramm laufen nicht mehr bis zum Nullpunkt durch.** Kräftig
+  gezeichnet ist jede nur noch über den Geschwindigkeitsbereich, in dem der Gang tatsächlich
+  gefahren wurde; davor bleibt ein blasser Strich, der zeigt, dass die Gerade durch den
+  Nullpunkt läuft. Bis 0 durchgezogen behauptete sie, man sei mit diesem Gang angefahren –
+  dort liegt aber kein Messpunkt, weil der Motor im Leerlauf weiterdreht und die Kupplung
+  beim Anfahren schlupft.
+- **Das „S“ wird jetzt erklärt.** Spaltenkopf „Stufe (S = nach Übersetzung)“ und ein
+  ausdrücklicher Hinweis, dass S1 keine Gangnummer ist.
+
+## Neue Features (Gangerkennung)
+
+- **Kurz durchfahrene Gänge werden nachgetragen.** Ein Gang, der nur beim Beschleunigen
+  durchfahren wird, streut zu stark für einen eigenen Gipfel — besonders wenn die
+  Geschwindigkeit nur mit 1 Hz vom GPS kommt. Die gefundenen Gänge verraten ihn trotzdem:
+  eine Getriebeabstufung ist eine geometrische Folge, deren Stufensprünge nach unten größer
+  werden. Wo die Vorhersage auf tatsächliche Messpunkte trifft, wird der Gang als „schwach
+  belegt“ ergänzt; wo nicht, bleibt er weg. In der langen Fahrt kommt so ein fünfter Gang
+  bei 21,8 km/h je 1000 min⁻¹ dazu (116 Punkte), in der ersten Fahrt wird nichts erfunden.

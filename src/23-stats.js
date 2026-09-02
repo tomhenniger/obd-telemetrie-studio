@@ -880,6 +880,47 @@ function computeGears(ds, rollCircumM, gbx, redline) {
                  time: g.length * step, vMin, vMax, rpmMax: rMax,
                  ratio: rollCircumM ? (60 * rollCircumM) / (1000 / kMed) : null });
   });
+  /* Kurz benutzte Gänge nachtragen.
+
+     Ein Gang, der nur beim Beschleunigen durchfahren wird, hinterlässt zu wenig und zu
+     stark gestreute Punkte für einen eigenen Gipfel — besonders wenn die Geschwindigkeit
+     nur mit 1 Hz vom GPS kommt und beim Beschleunigen hinterherhinkt. Die gefundenen
+     Gänge verraten ihn trotzdem: eine Getriebeabstufung ist eine geometrische Folge,
+     deren Stufensprünge nach unten größer werden. Die Vorhersage bekommt aber nur dann
+     einen Gang, wenn an der vorhergesagten Stelle auch wirklich Messpunkte liegen —
+     sonst würde hier ein Gang erfunden statt gefunden. */
+  if (gears.length >= 3) {
+    const asc = gears.slice().sort((a, b) => a.k - b.k);        // absteigend in km/h je 1000
+    const kmh = gears.slice().sort((x, y) => x.kmhPer1000 - y.kmhPer1000).map(x => x.kmhPer1000);
+    const steps = [];
+    for (let i = 1; i < kmh.length; i++) steps.push(kmh[i] / kmh[i - 1]);
+    // wie schnell wachsen die Stufensprünge nach unten?
+    const grow = steps.length > 1 ? clamp(steps[0] / steps[1], 1.0, 1.15) : 1.05;
+    let low = kmh[0], r = steps[0];
+    for (let add = 0; add < 2; add++) {
+      r = clamp(r * grow, 1.1, 1.95);
+      const pred = low / r;
+      if (!(pred > 3)) break;
+      let n = 0;
+      for (const kk of ks) { const c = 1000 / kk; if (Math.abs(c - pred) / pred < 0.04) n++; }
+      if (n < 20 || n < ks.length * 0.004) break;               // keine Stütze in den Daten
+      // Median der tatsächlichen Punkte statt der Vorhersage verwenden
+      const near = [];
+      for (let j = 0; j < ks.length; j++) { const c = 1000 / ks[j];
+        if (Math.abs(c - pred) / pred < 0.04) near.push({ k: ks[j], i: idxs[j] }); }
+      const kk2 = near.map(x => x.k).sort((a, b) => a - b);
+      const kMed = quantileSorted(kk2, .5);
+      let vMin = Infinity, vMax = -Infinity, rMax = -Infinity;
+      for (const x of near) { const v = sp[x.i], q = rpm[x.i];
+        if (v < vMin) vMin = v; if (v > vMax) vMax = v; if (q > rMax) rMax = q; }
+      gears.push({ idx: 90 + add, k: kMed, kmhPer1000: 1000 / kMed, samples: near.length,
+                   time: near.length * step, vMin, vMax, rpmMax: rMax, weak: true,
+                   ratio: rollCircumM ? (60 * rollCircumM) / (1000 / kMed) : null });
+      near.forEach(x => { if (assign[x.i] < 0) assign[x.i] = 90 + add; });
+      low = 1000 / kMed;
+    }
+  }
+
   gears.sort((a, b) => b.k - a.k);
   gears.forEach((g, i) => { g.gear = i + 1; g.label = 'S' + (i + 1); });
   const res = { gears, assign, remap: {}, coverage: assigned / Math.max(1, ks.length),
