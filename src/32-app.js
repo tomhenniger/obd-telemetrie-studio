@@ -110,6 +110,8 @@ async function ingest(src) {
     $('#app').hidden = false;
     document.body.classList.remove('no-data');
     if (location.hash || location.search) history.replaceState(null, '', location.pathname);
+    // Direkt nach dem Import fragen, welches Fahrzeug das ist. Alles Weitere haengt daran.
+    setTimeout(() => openVehicleDialog(), 120);
   } catch (e) { loadFailed(e); }
 }
 const loadFile = file => ingest({ kind: 'file', file });
@@ -1274,7 +1276,7 @@ function profileChooser(onPick, opts) {
       if (item.brand && !item.id) { results.appendChild(el('div', { class: 'plist-h' }, item.brand)); continue; }
       const sel = App.profile && App.profile.id === item.id;
       results.appendChild(el('button', { class: 'prow', type: 'button', 'aria-pressed': sel ? 'true' : 'false',
-        onclick: () => onPick(item) },
+        onclick: () => { rememberProfile(item.id); onPick(item); } },
         el('div', { class: 'prow-t' },
           el('b', {}, item.name),
           el('span', {}, profileSpecLine(item) || item.engine || '')),
@@ -1951,7 +1953,7 @@ function distDisputeNote(ds) {
   if (!T.distDisputed) return null;
   const c = T.distCands || [];
   return noteBox('warn', 'Die Streckenangaben widersprechen sich um ' + fmt(T.distSpread * 100, 0) + ' %',
-    c.map(x => fmt(x.v, 2) + ' km (' + x.src + ')').join(' · ') +
+    c.map(x => fmt(x.v, 2) + ' km (' + x.src + ', sieht ' + x.deckung + ' % der Fahrt)').join(' · ') +
     '. Verwendet wird ' + fmt(T.dist, 2) + ' km aus der Quelle „' + T.distSource + '“. ' +
     (T.gapDist > 0.5
       ? 'Der GPS-Track überbrückt ' + fmt(T.gapDist, 1) + ' km als Luftlinie über Datenlücken – diese Strecke wurde ' +
@@ -2242,9 +2244,128 @@ function gearboxCard() {
   }, wrap);
 }
 
+
+/* --- Fahrzeugabfrage nach dem Import ---------------------------------------
+   Aus den Daten lässt sich die Bauart ablesen, nicht das Modell: Zahl der Bänke,
+   Kraftstoffart, ob aufgeladen, wie hoch gedreht wurde. Für die Sollwerte der
+   Diagnose braucht es aber das konkrete Triebwerk. Deshalb wird gefragt statt
+   geraten — mit Vorschlag, zuletzt benutzten Profilen und Suche.
+--------------------------------------------------------------------------- */
+function recentProfiles() {
+  const r = store.get('recentProfiles', []);
+  return Array.isArray(r) ? r.filter(id => profileById(id)).slice(0, 6) : [];
+}
+function rememberProfile(id) {
+  if (!id) return;
+  const r = recentProfiles().filter(x => x !== id);
+  r.unshift(id);
+  store.set('recentProfiles', r.slice(0, 6));
+}
+
+/* Was die Aufzeichnung über das Fahrzeug hergibt — nur Belegbares. */
+function vehicleEvidence(ds) {
+  const s = ds.stats, e = [];
+  const has = id => !!ds.G[id];
+  const banks = (has('ltft_b2') || has('cac_b2') || has('stft_b2')) ? 2 : 1;
+  e.push({ k: 'Bänke', v: banks === 2 ? 'zwei (getrennte Sensoren je Bank)' : 'eine erkennbar' });
+  const petrol = has('ltft_b1') || has('stft_b1') || has('lambda') || has('timing');
+  e.push({ k: 'Kraftstoff', v: petrol ? 'Benzin (Gemischadaption bzw. Zündwinkel vorhanden)' : 'unklar – keine Zündungs- oder Gemischdaten' });
+  const lmax = s.load_abs ? s.load_abs.max : (s.load_calc ? s.load_calc.max : NaN);
+  if (isFinite(lmax))
+    e.push({ k: 'Aufladung', v: lmax > 115 ? 'aufgeladen (' + fmt(lmax, 0) + ' % absolute Last)' : 'kein Hinweis auf Aufladung (max ' + fmt(lmax, 0) + ' %)' });
+  if (s.rpm) e.push({ k: 'höchste Drehzahl', v: fmt(s.rpm.max, 0) + ' min⁻¹ – der Begrenzer liegt darüber' });
+  if (has('cac_b1')) e.push({ k: 'Ladeluftkühlung', v: 'Ladelufttemperatur wird gemessen' });
+  if (App.gears && App.gears.gears.length)
+    e.push({ k: 'Übersetzungen', v: App.gears.gears.length + ' gemessen, längste ' + fmt(App.gears.gears[App.gears.gears.length - 1].kmhPer1000, 1) + ' km/h je 1000' });
+  return e;
+}
+
+function closeVehicleDialog() { const o = $('#veh-dlg'); if (o) o.remove(); }
+
+function openVehicleDialog(opts) {
+  opts = opts || {};
+  closeVehicleDialog();
+  const ds = App.ds;
+  if (!ds) return;
+  const suggestedId = autoProfile(ds);
+  const suggested = profileById(suggestedId);
+  let chosen = App.profile;
+
+  const body = el('div', { class: 'mdl-b' });
+  const current = el('div', { class: 'note', style: { marginBottom: '12px' } });
+  const paintCurrent = () => {
+    current.innerHTML = '';
+    current.appendChild(el('b', {}, chosen ? chosen.name : 'Kein Profil'));
+    current.appendChild(el('div', { class: 'dim', style: { fontSize: '12.5px', marginTop: '2px' } },
+      chosen ? (profileSpecLine(chosen) || '') : ''));
+    if (chosen) current.appendChild(confBadge(chosen));
+  };
+  paintCurrent();
+  body.appendChild(el('div', { class: 'mdl-sec' }, 'Gewählt'));
+  body.appendChild(current);
+
+  const rec = recentProfiles().map(profileById).filter(Boolean);
+  if (rec.length) {
+    body.appendChild(el('div', { class: 'mdl-sec' }, 'Zuletzt benutzt'));
+    body.appendChild(el('div', { class: 'chiprow', style: { flexWrap: 'wrap' } },
+      rec.map(p => el('button', { class: 'btn', type: 'button',
+        onclick: () => { chosen = p; paintCurrent(); } }, p.name))));
+  }
+
+  if (suggested) {
+    body.appendChild(el('div', { class: 'mdl-sec' }, 'Aus den Daten geschätzt'));
+    body.appendChild(el('div', { class: 'chiprow' },
+      el('button', { class: 'btn primary', type: 'button',
+        onclick: () => { chosen = suggested; paintCurrent(); } }, suggested.name)));
+  }
+  body.appendChild(el('div', { class: 'mdl-sec' }, 'Was in der Aufzeichnung steht'));
+  body.appendChild(el('div', { class: 'evid' },
+    vehicleEvidence(ds).map(x => el('span', {}, x.k + ': ' + x.v))));
+  body.appendChild(el('p', { class: 'dim2', style: { fontSize: '12px', margin: '2px 0 0' } },
+    'Mehr gibt die Datei nicht her – Bauart ja, Modell nein. Für die Sollwerte der Diagnose ' +
+    '(Leerlaufdrehzahl, Kühlmittelband, Begrenzer, Volllastlast, Ladedruck) braucht es das konkrete Triebwerk. ' +
+    'Ohne passendes Profil wird gegen weit gefasste Klassenwerte geprüft, und die erzeugen weder Fehlalarme noch scharfe Befunde.'));
+
+  body.appendChild(el('div', { class: 'mdl-sec' }, 'Suchen'));
+  const chooser = profileChooser(p => { chosen = p; paintCurrent(); });
+  body.appendChild(chooser);
+
+  const apply = () => {
+    if (chosen) {
+      store.set('profile', chosen.id);
+      rememberProfile(chosen.id);
+      App.profile = chosen;
+    }
+    closeVehicleDialog();
+    recompute();
+  };
+  const dlg = el('div', { class: 'mdl-bd', id: 'veh-dlg',
+      onclick: e => { if (e.target === e.currentTarget) closeVehicleDialog(); } },
+    el('div', { class: 'mdl', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Welches Fahrzeug ist das?' },
+      el('div', { class: 'mdl-h' },
+        el('h3', {}, 'Welches Fahrzeug ist das?'),
+        el('p', {}, opts.reason ||
+          'Die Diagnose vergleicht die Messwerte mit den Werksangaben deines Motors. Ohne das richtige Profil ' +
+          'wird gegen Klassenwerte geprüft – das ist bewusst grob und übersieht Grenzfälle.')),
+      body,
+      el('div', { class: 'mdl-f' },
+        el('span', { class: 'spacer dim', style: { fontSize: '12px' } },
+          'Die Wahl lässt sich jederzeit unter Einstellungen ändern.'),
+        el('button', { class: 'btn', type: 'button', onclick: () => closeVehicleDialog() }, 'Später'),
+        el('button', { class: 'btn primary', type: 'button', onclick: apply }, 'Übernehmen'))));
+  document.body.appendChild(dlg);
+  const esc = e => { if (e.key === 'Escape') { closeVehicleDialog(); document.removeEventListener('keydown', esc); } };
+  document.addEventListener('keydown', esc);
+  if (chooser.focusSearch) setTimeout(() => chooser.focusSearch(), 60);
+}
+
 /* --- Einstellungen --- */
 BUILDERS.settings = function (page) {
   const ds = App.ds;
+  page.appendChild(el('div', { class: 'chiprow', style: { marginBottom: '12px' } },
+    el('button', { class: 'btn primary', type: 'button', onclick: () => openVehicleDialog({
+      reason: 'Wähle das Triebwerk, gegen dessen Werksangaben die Diagnose prüfen soll.' }) },
+      'Fahrzeug wählen …')));
   page.appendChild(profilePickerCard());
   page.appendChild(gearboxCard());
 

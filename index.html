@@ -626,6 +626,34 @@ table.tbl tbody tr:hover td:first-child { background: var(--surface-2); }
 
 details.acc > summary { cursor: pointer; list-style: none; }
 details.acc > summary::-webkit-details-marker { display: none; }
+
+/* --- Dialog (Fahrzeugabfrage nach dem Import) --- */
+.mdl-bd { position: fixed; inset: 0; z-index: 90; background: rgba(6, 9, 16, .62);
+  backdrop-filter: saturate(140%) blur(6px); display: flex; align-items: center;
+  justify-content: center; padding: 18px; }
+.mdl { width: min(680px, 100%); max-height: min(86vh, 860px); display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(0,0,0,.55); overflow: hidden; }
+.mdl-h { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); }
+.mdl-h h3 { margin: 0 0 4px; font-size: 16px; letter-spacing: -.01em; }
+.mdl-h p { margin: 0; font-size: 12.5px; color: var(--dim); line-height: 1.45; }
+.mdl-b { padding: 14px 18px; overflow-y: auto; flex: 1; }
+.mdl-f { padding: 12px 18px; border-top: 1px solid var(--border); display: flex;
+  gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+.mdl-f .spacer { margin-right: auto; }
+.mdl-sec { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--dim2); margin: 14px 0 7px; }
+.mdl-sec:first-child { margin-top: 0; }
+.mdl .plist { max-height: 260px; }
+.evid { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 4px; }
+.evid span { font-size: 11.5px; padding: 3px 9px; border-radius: 999px;
+  background: var(--chip); border: 1px solid var(--border); color: var(--fg2); }
+@media (max-width: 560px) {
+  .mdl-bd { padding: 0; align-items: flex-end; }
+  .mdl { width: 100%; max-height: 92vh; border-radius: 16px 16px 0 0; }
+  .mdl-f { justify-content: stretch; }
+  .mdl-f .btn { flex: 1; justify-content: center; }
+}
 </style>
 </head>
 <body class="no-data">
@@ -1743,7 +1771,7 @@ function cleanTrack(gps, vMaxKmh) {
   for (let i = 1; i < m; i++) {
     const d = haversine(lat[i - 1], lon[i - 1], lat[i], lon[i]);
     const dt = t[i] - t[i - 1];
-    if (d > 400 || dt > 20) { gaps.push({ i, d, dt, from: i - 1, to: i }); gapDist += d; }
+    if (d > 400 || dt > 20) { gaps.push({ i, d, dt, from: i - 1, to: i, t0: t[i - 1] }); gapDist += d; }
     total += d;
     dist[i] = total;
     segSpeed[i] = dt > 0.1 ? (d / dt) * 3.6 : segSpeed[i - 1];
@@ -1831,13 +1859,25 @@ function buildDataset(parsed, profile) {
   for (const [id, m] of metrics) {
     const dtMed = medianDt(m.t, m.n);
     const maxAge = Math.max(dtMed * 3, 3);
+    /* Ist die Quelle groeber getaktet als das Raster, wuerde ein blosses Halten des
+       letzten Werts eine Treppe erzeugen: der Wert springt erst dann, wenn der naechste
+       Messpunkt eintrifft. Fuer eine stetige physikalische Groesse ist das falsch — der
+       Schwellenuebertritt landet dadurch bis zu einen Abtastschritt zu spaet, was bei
+       1-Hz-GPS-Geschwindigkeit die Beschleunigungsmessungen um rund eine Sekunde
+       verschiebt. Zwischen zwei Messpunkten wird deshalb linear interpoliert. */
+    const interp = dtMed > step * 1.5;
     const arr = new Float64Array(N);
     let have = 0, j = 0;
     for (let i = 0; i < N; i++) {
       const t = grid[i];
       while (j + 1 < m.n && m.t[j + 1] <= t) j++;
-      if (m.t[j] > t || t - m.t[j] > maxAge) arr[i] = NaN;
-      else { arr[i] = m.v[j]; have++; }
+      if (m.t[j] > t || t - m.t[j] > maxAge) { arr[i] = NaN; continue; }
+      let v = m.v[j];
+      if (interp && j + 1 < m.n) {
+        const dt = m.t[j + 1] - m.t[j];
+        if (dt > 0 && dt <= maxAge) v += (m.v[j + 1] - v) * ((t - m.t[j]) / dt);
+      }
+      arr[i] = v; have++;
     }
     G[id] = arr;
     coverage[id] = have / N;
@@ -2014,23 +2054,56 @@ function computeTrip(ds) {
   T.distObd = obdDist;
   T.gapDist = track ? track.gapDist / 1000 : 0;
 
+  /* Jede der drei Quellen misst nur, was sie beobachtet hat, und sie kann dabei nur zu
+     WENIG zählen: der OBD-Zähler zählt, solange die PID geloggt wurde, die Integration
+     braucht Geschwindigkeit, der GPS-Track braucht Fixe. Deshalb gewinnt die größte Zahl —
+     sie stammt von der Quelle, die am meisten gesehen hat.
+
+     Eine Ausnahme macht der GPS-Track: er überbrückt fehlende Fixe mit einer Luftlinie.
+     Solange die übrigen Kanäle weiterliefen, ist das eine vernünftige Schätzung für eine
+     Strecke, die nachweislich gefahren wurde. Stand die Aufzeichnung dagegen komplett
+     still, wurde dort gar nichts gemessen — dann ist die Luftlinie keine Fahrleistung,
+     sondern nur der Abstand zwischen zwei weit auseinanderliegenden Punkten. */
+  const core = ['rpm', 'load_abs', 'load_calc', 'coolant', 'speed', 'speed_gps'].map(id => G[id]).filter(Boolean);
+  let blackout = 0;
+  const gapInfo = [];
+  for (const g of (track && track.gaps ? track.gaps : [])) {
+    const a = g.t0 !== undefined ? g.t0 : NaN;
+    let inside = 0, total = 0;
+    if (isFinite(a)) {
+      for (let i = 0; i < N; i++) {
+        const t = grid[i];
+        if (t < a || t > a + g.dt) continue;
+        total++;
+        if (core.some(arr => arr[i] === arr[i])) inside++;
+      }
+    }
+    const dark = total > 0 && inside / total < 0.2;
+    if (dark) blackout += g.d;
+    gapInfo.push({ dt: g.dt, d: g.d, dark });
+  }
+  T.gapBlackout = blackout / 1000;
+  T.gaps = gapInfo;
+  const gpsUse = isFinite(T.distGps) ? T.distGps - blackout / 1000 : NaN;
+
   const cand = [];
-  if (isFinite(obdDist) && obdDist > 0.2) cand.push({ v: obdDist, src: 'OBD-Zähler' });
-  if (isFinite(T.distInt) && T.distInt > 0.2) cand.push({ v: T.distInt, src: 'integriert' });
-  if (isFinite(T.distGps) && T.distGps > 0.2) cand.push({ v: T.distGps, src: 'GPS' });
-  // Stimmen zwei Quellen auf 15 % überein, ist das die belastbare Zahl.
-  let pick = null;
-  for (let i = 0; i < cand.length && !pick; i++)
-    for (let j = i + 1; j < cand.length && !pick; j++)
-      if (Math.abs(cand[i].v - cand[j].v) / Math.max(cand[i].v, cand[j].v) < 0.15)
-        pick = cand[i].v <= cand[j].v ? cand[i] : cand[j];
-  if (!pick) pick = cand.find(c => c.src === 'GPS') || cand[0] || null;
+  const odoCov = (ds.coverage && ds.coverage['distance']) || 0;
+  if (isFinite(obdDist) && obdDist > 0.2)
+    cand.push({ v: obdDist, src: 'OBD-Zähler', deckung: Math.round(odoCov * 100) });
+  if (isFinite(T.distInt) && T.distInt > 0.2)
+    cand.push({ v: T.distInt, src: 'integriert',
+                deckung: Math.round((ds.duration > 0 ? known / ds.duration : 0) * 100) });
+  if (isFinite(gpsUse) && gpsUse > 0.2)
+    cand.push({ v: gpsUse, src: blackout > 50 ? 'GPS ohne Ausfallstrecke' : 'GPS',
+                deckung: Math.round((track ? track.n : 0) > 1 ? 100 : 0) });
+
+  const pick = cand.length ? cand.reduce((a, b) => b.v > a.v ? b : a) : null;
   T.dist = pick ? pick.v : NaN;
   T.distSource = pick ? pick.src : '';
-  // Weichen die Quellen weit ab, muss das sichtbar werden statt still gewählt zu sein.
   const vals = cand.map(c => c.v);
-  T.distSpread = vals.length > 1 ? (Math.max.apply(null, vals) - Math.min.apply(null, vals)) / Math.max.apply(null, vals) : 0;
-  T.distDisputed = T.distSpread > 0.15;
+  T.distSpread = vals.length > 1
+    ? (Math.max.apply(null, vals) - Math.min.apply(null, vals)) / Math.max.apply(null, vals) : 0;
+  T.distDisputed = T.distSpread > 0.25;
   T.distCands = cand;
 
   T.speedMax = stats.speed_mix ? stats.speed_mix.max : NaN;
@@ -4912,11 +4985,21 @@ const DIAG_RULES = [
               'hängenden oder falschen Thermostats. Folgen: mehr Verbrauch, stärkere Ventilverkokung, Ölverdünnung.',
         action: ['Thermostat und Temperaturgeber prüfen', 'Kühlmittelstand und Entlüftung kontrollieren'] };
     }
-    const st = t85 < 360 ? S.OK : t85 < 600 ? S.WARN : S.CRIT;
-    return { status: st, value: t85 / 60, unit: 'min', dec: 1, ref: '< 6 min', refLo: 0, refHi: 6,
-      extra: [['Starttemperatur', fmt(start, 0) + ' °C']],
+    /* Die Schwelle muss mit der Starttemperatur wachsen. Eine feste Sechs-Minuten-Grenze
+       gilt sonst fuer den 45-°C-Start genauso wie fuer den Winterkaltstart bei -10 °C —
+       und macht aus einem gesunden Motor im Januar einen Thermostatschaden. Grob: ein
+       Grundbedarf plus rund 4,5 s je Kelvin Temperaturhub. */
+    const allow = 180 + (85 - start) * 4.5;
+    const st = t85 < allow ? S.OK : t85 < allow * 1.7 ? S.WARN : S.CRIT;
+    return { status: st, value: t85 / 60, unit: 'min', dec: 1,
+      ref: '< ' + fmt(allow / 60, 1) + ' min ab ' + fmt(start, 0) + ' °C',
+      refLo: 0, refHi: allow / 60,
+      extra: [['Starttemperatur', fmt(start, 0) + ' °C'],
+              ['Erwartet bei diesem Start', 'bis ' + fmtDur(allow)]],
       text: 'Von ' + fmt(start, 0) + ' °C auf 85 °C in ' + fmtDur(t85) + '. ' +
-            (st === S.OK ? 'Das entspricht einem intakten Thermostat.' : 'Ein deutlich verzögerter Warmlauf spricht für ein offen hängendes Thermostat.') }
+            (st === S.OK
+              ? 'Für diesen Temperaturhub ist das unauffällig – die Erwartung wächst mit der Kälte beim Start.'
+              : 'Das ist deutlich länger als für diesen Temperaturhub zu erwarten und spricht für ein offen hängendes Thermostat.') }
   }
 },
 /* ---------------- Ladeluft ---------------- */
@@ -8251,6 +8334,8 @@ async function ingest(src) {
     $('#app').hidden = false;
     document.body.classList.remove('no-data');
     if (location.hash || location.search) history.replaceState(null, '', location.pathname);
+    // Direkt nach dem Import fragen, welches Fahrzeug das ist. Alles Weitere haengt daran.
+    setTimeout(() => openVehicleDialog(), 120);
   } catch (e) { loadFailed(e); }
 }
 const loadFile = file => ingest({ kind: 'file', file });
@@ -9415,7 +9500,7 @@ function profileChooser(onPick, opts) {
       if (item.brand && !item.id) { results.appendChild(el('div', { class: 'plist-h' }, item.brand)); continue; }
       const sel = App.profile && App.profile.id === item.id;
       results.appendChild(el('button', { class: 'prow', type: 'button', 'aria-pressed': sel ? 'true' : 'false',
-        onclick: () => onPick(item) },
+        onclick: () => { rememberProfile(item.id); onPick(item); } },
         el('div', { class: 'prow-t' },
           el('b', {}, item.name),
           el('span', {}, profileSpecLine(item) || item.engine || '')),
@@ -10092,7 +10177,7 @@ function distDisputeNote(ds) {
   if (!T.distDisputed) return null;
   const c = T.distCands || [];
   return noteBox('warn', 'Die Streckenangaben widersprechen sich um ' + fmt(T.distSpread * 100, 0) + ' %',
-    c.map(x => fmt(x.v, 2) + ' km (' + x.src + ')').join(' · ') +
+    c.map(x => fmt(x.v, 2) + ' km (' + x.src + ', sieht ' + x.deckung + ' % der Fahrt)').join(' · ') +
     '. Verwendet wird ' + fmt(T.dist, 2) + ' km aus der Quelle „' + T.distSource + '“. ' +
     (T.gapDist > 0.5
       ? 'Der GPS-Track überbrückt ' + fmt(T.gapDist, 1) + ' km als Luftlinie über Datenlücken – diese Strecke wurde ' +
@@ -10383,9 +10468,128 @@ function gearboxCard() {
   }, wrap);
 }
 
+
+/* --- Fahrzeugabfrage nach dem Import ---------------------------------------
+   Aus den Daten lässt sich die Bauart ablesen, nicht das Modell: Zahl der Bänke,
+   Kraftstoffart, ob aufgeladen, wie hoch gedreht wurde. Für die Sollwerte der
+   Diagnose braucht es aber das konkrete Triebwerk. Deshalb wird gefragt statt
+   geraten — mit Vorschlag, zuletzt benutzten Profilen und Suche.
+--------------------------------------------------------------------------- */
+function recentProfiles() {
+  const r = store.get('recentProfiles', []);
+  return Array.isArray(r) ? r.filter(id => profileById(id)).slice(0, 6) : [];
+}
+function rememberProfile(id) {
+  if (!id) return;
+  const r = recentProfiles().filter(x => x !== id);
+  r.unshift(id);
+  store.set('recentProfiles', r.slice(0, 6));
+}
+
+/* Was die Aufzeichnung über das Fahrzeug hergibt — nur Belegbares. */
+function vehicleEvidence(ds) {
+  const s = ds.stats, e = [];
+  const has = id => !!ds.G[id];
+  const banks = (has('ltft_b2') || has('cac_b2') || has('stft_b2')) ? 2 : 1;
+  e.push({ k: 'Bänke', v: banks === 2 ? 'zwei (getrennte Sensoren je Bank)' : 'eine erkennbar' });
+  const petrol = has('ltft_b1') || has('stft_b1') || has('lambda') || has('timing');
+  e.push({ k: 'Kraftstoff', v: petrol ? 'Benzin (Gemischadaption bzw. Zündwinkel vorhanden)' : 'unklar – keine Zündungs- oder Gemischdaten' });
+  const lmax = s.load_abs ? s.load_abs.max : (s.load_calc ? s.load_calc.max : NaN);
+  if (isFinite(lmax))
+    e.push({ k: 'Aufladung', v: lmax > 115 ? 'aufgeladen (' + fmt(lmax, 0) + ' % absolute Last)' : 'kein Hinweis auf Aufladung (max ' + fmt(lmax, 0) + ' %)' });
+  if (s.rpm) e.push({ k: 'höchste Drehzahl', v: fmt(s.rpm.max, 0) + ' min⁻¹ – der Begrenzer liegt darüber' });
+  if (has('cac_b1')) e.push({ k: 'Ladeluftkühlung', v: 'Ladelufttemperatur wird gemessen' });
+  if (App.gears && App.gears.gears.length)
+    e.push({ k: 'Übersetzungen', v: App.gears.gears.length + ' gemessen, längste ' + fmt(App.gears.gears[App.gears.gears.length - 1].kmhPer1000, 1) + ' km/h je 1000' });
+  return e;
+}
+
+function closeVehicleDialog() { const o = $('#veh-dlg'); if (o) o.remove(); }
+
+function openVehicleDialog(opts) {
+  opts = opts || {};
+  closeVehicleDialog();
+  const ds = App.ds;
+  if (!ds) return;
+  const suggestedId = autoProfile(ds);
+  const suggested = profileById(suggestedId);
+  let chosen = App.profile;
+
+  const body = el('div', { class: 'mdl-b' });
+  const current = el('div', { class: 'note', style: { marginBottom: '12px' } });
+  const paintCurrent = () => {
+    current.innerHTML = '';
+    current.appendChild(el('b', {}, chosen ? chosen.name : 'Kein Profil'));
+    current.appendChild(el('div', { class: 'dim', style: { fontSize: '12.5px', marginTop: '2px' } },
+      chosen ? (profileSpecLine(chosen) || '') : ''));
+    if (chosen) current.appendChild(confBadge(chosen));
+  };
+  paintCurrent();
+  body.appendChild(el('div', { class: 'mdl-sec' }, 'Gewählt'));
+  body.appendChild(current);
+
+  const rec = recentProfiles().map(profileById).filter(Boolean);
+  if (rec.length) {
+    body.appendChild(el('div', { class: 'mdl-sec' }, 'Zuletzt benutzt'));
+    body.appendChild(el('div', { class: 'chiprow', style: { flexWrap: 'wrap' } },
+      rec.map(p => el('button', { class: 'btn', type: 'button',
+        onclick: () => { chosen = p; paintCurrent(); } }, p.name))));
+  }
+
+  if (suggested) {
+    body.appendChild(el('div', { class: 'mdl-sec' }, 'Aus den Daten geschätzt'));
+    body.appendChild(el('div', { class: 'chiprow' },
+      el('button', { class: 'btn primary', type: 'button',
+        onclick: () => { chosen = suggested; paintCurrent(); } }, suggested.name)));
+  }
+  body.appendChild(el('div', { class: 'mdl-sec' }, 'Was in der Aufzeichnung steht'));
+  body.appendChild(el('div', { class: 'evid' },
+    vehicleEvidence(ds).map(x => el('span', {}, x.k + ': ' + x.v))));
+  body.appendChild(el('p', { class: 'dim2', style: { fontSize: '12px', margin: '2px 0 0' } },
+    'Mehr gibt die Datei nicht her – Bauart ja, Modell nein. Für die Sollwerte der Diagnose ' +
+    '(Leerlaufdrehzahl, Kühlmittelband, Begrenzer, Volllastlast, Ladedruck) braucht es das konkrete Triebwerk. ' +
+    'Ohne passendes Profil wird gegen weit gefasste Klassenwerte geprüft, und die erzeugen weder Fehlalarme noch scharfe Befunde.'));
+
+  body.appendChild(el('div', { class: 'mdl-sec' }, 'Suchen'));
+  const chooser = profileChooser(p => { chosen = p; paintCurrent(); });
+  body.appendChild(chooser);
+
+  const apply = () => {
+    if (chosen) {
+      store.set('profile', chosen.id);
+      rememberProfile(chosen.id);
+      App.profile = chosen;
+    }
+    closeVehicleDialog();
+    recompute();
+  };
+  const dlg = el('div', { class: 'mdl-bd', id: 'veh-dlg',
+      onclick: e => { if (e.target === e.currentTarget) closeVehicleDialog(); } },
+    el('div', { class: 'mdl', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Welches Fahrzeug ist das?' },
+      el('div', { class: 'mdl-h' },
+        el('h3', {}, 'Welches Fahrzeug ist das?'),
+        el('p', {}, opts.reason ||
+          'Die Diagnose vergleicht die Messwerte mit den Werksangaben deines Motors. Ohne das richtige Profil ' +
+          'wird gegen Klassenwerte geprüft – das ist bewusst grob und übersieht Grenzfälle.')),
+      body,
+      el('div', { class: 'mdl-f' },
+        el('span', { class: 'spacer dim', style: { fontSize: '12px' } },
+          'Die Wahl lässt sich jederzeit unter Einstellungen ändern.'),
+        el('button', { class: 'btn', type: 'button', onclick: () => closeVehicleDialog() }, 'Später'),
+        el('button', { class: 'btn primary', type: 'button', onclick: apply }, 'Übernehmen'))));
+  document.body.appendChild(dlg);
+  const esc = e => { if (e.key === 'Escape') { closeVehicleDialog(); document.removeEventListener('keydown', esc); } };
+  document.addEventListener('keydown', esc);
+  if (chooser.focusSearch) setTimeout(() => chooser.focusSearch(), 60);
+}
+
 /* --- Einstellungen --- */
 BUILDERS.settings = function (page) {
   const ds = App.ds;
+  page.appendChild(el('div', { class: 'chiprow', style: { marginBottom: '12px' } },
+    el('button', { class: 'btn primary', type: 'button', onclick: () => openVehicleDialog({
+      reason: 'Wähle das Triebwerk, gegen dessen Werksangaben die Diagnose prüfen soll.' }) },
+      'Fahrzeug wählen …')));
   page.appendChild(profilePickerCard());
   page.appendChild(gearboxCard());
 

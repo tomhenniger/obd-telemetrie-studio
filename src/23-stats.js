@@ -100,7 +100,7 @@ function cleanTrack(gps, vMaxKmh) {
   for (let i = 1; i < m; i++) {
     const d = haversine(lat[i - 1], lon[i - 1], lat[i], lon[i]);
     const dt = t[i] - t[i - 1];
-    if (d > 400 || dt > 20) { gaps.push({ i, d, dt, from: i - 1, to: i }); gapDist += d; }
+    if (d > 400 || dt > 20) { gaps.push({ i, d, dt, from: i - 1, to: i, t0: t[i - 1] }); gapDist += d; }
     total += d;
     dist[i] = total;
     segSpeed[i] = dt > 0.1 ? (d / dt) * 3.6 : segSpeed[i - 1];
@@ -188,13 +188,25 @@ function buildDataset(parsed, profile) {
   for (const [id, m] of metrics) {
     const dtMed = medianDt(m.t, m.n);
     const maxAge = Math.max(dtMed * 3, 3);
+    /* Ist die Quelle groeber getaktet als das Raster, wuerde ein blosses Halten des
+       letzten Werts eine Treppe erzeugen: der Wert springt erst dann, wenn der naechste
+       Messpunkt eintrifft. Fuer eine stetige physikalische Groesse ist das falsch — der
+       Schwellenuebertritt landet dadurch bis zu einen Abtastschritt zu spaet, was bei
+       1-Hz-GPS-Geschwindigkeit die Beschleunigungsmessungen um rund eine Sekunde
+       verschiebt. Zwischen zwei Messpunkten wird deshalb linear interpoliert. */
+    const interp = dtMed > step * 1.5;
     const arr = new Float64Array(N);
     let have = 0, j = 0;
     for (let i = 0; i < N; i++) {
       const t = grid[i];
       while (j + 1 < m.n && m.t[j + 1] <= t) j++;
-      if (m.t[j] > t || t - m.t[j] > maxAge) arr[i] = NaN;
-      else { arr[i] = m.v[j]; have++; }
+      if (m.t[j] > t || t - m.t[j] > maxAge) { arr[i] = NaN; continue; }
+      let v = m.v[j];
+      if (interp && j + 1 < m.n) {
+        const dt = m.t[j + 1] - m.t[j];
+        if (dt > 0 && dt <= maxAge) v += (m.v[j + 1] - v) * ((t - m.t[j]) / dt);
+      }
+      arr[i] = v; have++;
     }
     G[id] = arr;
     coverage[id] = have / N;
@@ -371,23 +383,56 @@ function computeTrip(ds) {
   T.distObd = obdDist;
   T.gapDist = track ? track.gapDist / 1000 : 0;
 
+  /* Jede der drei Quellen misst nur, was sie beobachtet hat, und sie kann dabei nur zu
+     WENIG zählen: der OBD-Zähler zählt, solange die PID geloggt wurde, die Integration
+     braucht Geschwindigkeit, der GPS-Track braucht Fixe. Deshalb gewinnt die größte Zahl —
+     sie stammt von der Quelle, die am meisten gesehen hat.
+
+     Eine Ausnahme macht der GPS-Track: er überbrückt fehlende Fixe mit einer Luftlinie.
+     Solange die übrigen Kanäle weiterliefen, ist das eine vernünftige Schätzung für eine
+     Strecke, die nachweislich gefahren wurde. Stand die Aufzeichnung dagegen komplett
+     still, wurde dort gar nichts gemessen — dann ist die Luftlinie keine Fahrleistung,
+     sondern nur der Abstand zwischen zwei weit auseinanderliegenden Punkten. */
+  const core = ['rpm', 'load_abs', 'load_calc', 'coolant', 'speed', 'speed_gps'].map(id => G[id]).filter(Boolean);
+  let blackout = 0;
+  const gapInfo = [];
+  for (const g of (track && track.gaps ? track.gaps : [])) {
+    const a = g.t0 !== undefined ? g.t0 : NaN;
+    let inside = 0, total = 0;
+    if (isFinite(a)) {
+      for (let i = 0; i < N; i++) {
+        const t = grid[i];
+        if (t < a || t > a + g.dt) continue;
+        total++;
+        if (core.some(arr => arr[i] === arr[i])) inside++;
+      }
+    }
+    const dark = total > 0 && inside / total < 0.2;
+    if (dark) blackout += g.d;
+    gapInfo.push({ dt: g.dt, d: g.d, dark });
+  }
+  T.gapBlackout = blackout / 1000;
+  T.gaps = gapInfo;
+  const gpsUse = isFinite(T.distGps) ? T.distGps - blackout / 1000 : NaN;
+
   const cand = [];
-  if (isFinite(obdDist) && obdDist > 0.2) cand.push({ v: obdDist, src: 'OBD-Zähler' });
-  if (isFinite(T.distInt) && T.distInt > 0.2) cand.push({ v: T.distInt, src: 'integriert' });
-  if (isFinite(T.distGps) && T.distGps > 0.2) cand.push({ v: T.distGps, src: 'GPS' });
-  // Stimmen zwei Quellen auf 15 % überein, ist das die belastbare Zahl.
-  let pick = null;
-  for (let i = 0; i < cand.length && !pick; i++)
-    for (let j = i + 1; j < cand.length && !pick; j++)
-      if (Math.abs(cand[i].v - cand[j].v) / Math.max(cand[i].v, cand[j].v) < 0.15)
-        pick = cand[i].v <= cand[j].v ? cand[i] : cand[j];
-  if (!pick) pick = cand.find(c => c.src === 'GPS') || cand[0] || null;
+  const odoCov = (ds.coverage && ds.coverage['distance']) || 0;
+  if (isFinite(obdDist) && obdDist > 0.2)
+    cand.push({ v: obdDist, src: 'OBD-Zähler', deckung: Math.round(odoCov * 100) });
+  if (isFinite(T.distInt) && T.distInt > 0.2)
+    cand.push({ v: T.distInt, src: 'integriert',
+                deckung: Math.round((ds.duration > 0 ? known / ds.duration : 0) * 100) });
+  if (isFinite(gpsUse) && gpsUse > 0.2)
+    cand.push({ v: gpsUse, src: blackout > 50 ? 'GPS ohne Ausfallstrecke' : 'GPS',
+                deckung: Math.round((track ? track.n : 0) > 1 ? 100 : 0) });
+
+  const pick = cand.length ? cand.reduce((a, b) => b.v > a.v ? b : a) : null;
   T.dist = pick ? pick.v : NaN;
   T.distSource = pick ? pick.src : '';
-  // Weichen die Quellen weit ab, muss das sichtbar werden statt still gewählt zu sein.
   const vals = cand.map(c => c.v);
-  T.distSpread = vals.length > 1 ? (Math.max.apply(null, vals) - Math.min.apply(null, vals)) / Math.max.apply(null, vals) : 0;
-  T.distDisputed = T.distSpread > 0.15;
+  T.distSpread = vals.length > 1
+    ? (Math.max.apply(null, vals) - Math.min.apply(null, vals)) / Math.max.apply(null, vals) : 0;
+  T.distDisputed = T.distSpread > 0.25;
   T.distCands = cand;
 
   T.speedMax = stats.speed_mix ? stats.speed_mix.max : NaN;

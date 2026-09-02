@@ -198,11 +198,21 @@ const DIAG_RULES = [
               'hängenden oder falschen Thermostats. Folgen: mehr Verbrauch, stärkere Ventilverkokung, Ölverdünnung.',
         action: ['Thermostat und Temperaturgeber prüfen', 'Kühlmittelstand und Entlüftung kontrollieren'] };
     }
-    const st = t85 < 360 ? S.OK : t85 < 600 ? S.WARN : S.CRIT;
-    return { status: st, value: t85 / 60, unit: 'min', dec: 1, ref: '< 6 min', refLo: 0, refHi: 6,
-      extra: [['Starttemperatur', fmt(start, 0) + ' °C']],
+    /* Die Schwelle muss mit der Starttemperatur wachsen. Eine feste Sechs-Minuten-Grenze
+       gilt sonst fuer den 45-°C-Start genauso wie fuer den Winterkaltstart bei -10 °C —
+       und macht aus einem gesunden Motor im Januar einen Thermostatschaden. Grob: ein
+       Grundbedarf plus rund 4,5 s je Kelvin Temperaturhub. */
+    const allow = 180 + (85 - start) * 4.5;
+    const st = t85 < allow ? S.OK : t85 < allow * 1.7 ? S.WARN : S.CRIT;
+    return { status: st, value: t85 / 60, unit: 'min', dec: 1,
+      ref: '< ' + fmt(allow / 60, 1) + ' min ab ' + fmt(start, 0) + ' °C',
+      refLo: 0, refHi: allow / 60,
+      extra: [['Starttemperatur', fmt(start, 0) + ' °C'],
+              ['Erwartet bei diesem Start', 'bis ' + fmtDur(allow)]],
       text: 'Von ' + fmt(start, 0) + ' °C auf 85 °C in ' + fmtDur(t85) + '. ' +
-            (st === S.OK ? 'Das entspricht einem intakten Thermostat.' : 'Ein deutlich verzögerter Warmlauf spricht für ein offen hängendes Thermostat.') }
+            (st === S.OK
+              ? 'Für diesen Temperaturhub ist das unauffällig – die Erwartung wächst mit der Kälte beim Start.'
+              : 'Das ist deutlich länger als für diesen Temperaturhub zu erwarten und spricht für ein offen hängendes Thermostat.') }
   }
 },
 /* ---------------- Ladeluft ---------------- */

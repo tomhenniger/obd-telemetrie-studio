@@ -25,3 +25,30 @@ Kühlmitteltemperatur über 7 s. Alle Kennzahlen stimmten überein — bis auf z
 
 - Die Streckenquellen stehen jetzt einzeln im XML-Export, mit einer Warnung, falls sie
   sich widersprechen.
+
+## Neue Features
+
+- **Fahrzeugabfrage nach dem Import.** Direkt nach dem Einlesen fragt ein Dialog, welches
+  Auto das ist: mit Vorschlag aus den Daten, zuletzt benutzten Profilen als Ein-Klick-Auswahl
+  und Suche über den ganzen Katalog. Dazu die Belege, auf die sich die Schätzung stützt
+  (Zahl der Bänke, Kraftstoff, Aufladung, höchste Drehzahl, gemessene Übersetzungen) und der
+  ehrliche Hinweis, dass die Datei die Bauart hergibt, aber nicht das Modell. Über einen Knopf
+  in den Einstellungen jederzeit wieder zu öffnen.
+
+## Bugfixes (durch eine 1,5-Stunden-Fahrt aufgedeckt)
+
+- **Beschleunigungszeiten bei niedrig getakteter Geschwindigkeitsquelle zu kurz.** Das
+  Zeitraster hielt jeden Messwert bis zum nächsten, was aus einer 1-Hz-GPS-Geschwindigkeit
+  eine Treppe macht: der Schwellenübertritt landete bis zu eine Sekunde daneben. 80→120 km/h
+  wurde mit 2,98 s statt 3,35 s gemessen. Zwischen zwei Messpunkten wird jetzt interpoliert,
+  wenn die Quelle gröber getaktet ist als das Raster. Aufzeichnungen mit dichter
+  OBD-Geschwindigkeit ändern sich dadurch nicht.
+- **Streckenwahl neu geordnet.** Alle drei Quellen können nur zu wenig zählen — deshalb
+  gewinnt die größte. Ausnahme ist der GPS-Track: seine Luftlinien über Lücken sind eine
+  vernünftige Schätzung, solange die übrigen Kanäle weiterliefen, aber keine Fahrleistung,
+  wenn die ganze Aufzeichnung stillstand. Solche Ausfallstrecken werden erkannt und
+  abgezogen. Ergebnis über drei Aufzeichnungen: 29,28 km, 10,54 km und 107,67 km — alle
+  unabhängig nachgerechnet.
+- **Warmlaufschwelle skaliert mit der Starttemperatur.** Feste sechs Minuten galten vorher
+  für den 45-°C-Start wie für den Winterkaltstart. Ein Kaltstart bei 33 °C mit 6:33 min bis
+  85 °C war damit „grenzwertig", ist jetzt unauffällig.
