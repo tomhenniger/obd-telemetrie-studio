@@ -22,6 +22,7 @@ Kühlmitteltemperatur über 7 s. Alle Kennzahlen stimmten überein — bis auf z
   Motorlaufzeit, sonst ist sie nicht bewertbar — und sagt, was ihr fehlt.
 
 ## Sonstiges
+- CI: `node --test` bekommt ein Glob (`test/*.test.js`) statt eines Verzeichnisses; Node 22 im GitHub-Runner fand die Tests sonst nicht, und der Workflow schlug seit dem Fehlerspeicher-Commit fehl.
 
 - Die Streckenquellen stehen jetzt einzeln im XML-Export, mit einer Warnung, falls sie
   sich widersprechen.
