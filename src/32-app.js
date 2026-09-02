@@ -17,6 +17,7 @@ const SECTIONS = [
   { id: 'dist',     label: 'Verteilungen', tab: 'Verteilung',icon: 'bars',   sub: 'Histogramme und Statistik je Messgröße', data: true },
   { id: 'fields',   label: 'Kennfelder',   tab: 'Kennfeld',  icon: 'grid',   sub: 'Betriebspunkte, Klopfbild, Gangerkennung', data: true },
   { id: 'diag',     label: 'Diagnose',     tab: 'Diagnose',  icon: 'stetho', sub: 'Messwerte gegen Werksangaben', data: true },
+  { id: 'akte',     label: 'Fahrzeugakte', tab: 'Akte',      icon: 'table',  sub: 'Mehrere Fahrten desselben Fahrzeugs im Verlauf' },
   { id: 'buy',      label: 'Kaufcheck',    tab: 'Kaufcheck', icon: 'clip',   sub: 'Gebrauchtwagen prüfen — Sichtprüfung, Probefahrt, Messprotokoll' },
   { id: 'ai',       label: 'KI-Prompt',    tab: 'KI',        icon: 'ai',     sub: 'Auswertung als XML für ChatGPT, Claude und andere Sprachmodelle' },
   { id: 'data',     label: 'Datenqualität',tab: 'Daten',     icon: 'table',  sub: 'Abdeckung, Artefakte, Export', data: true },
@@ -157,6 +158,7 @@ function initDataset(ds) {
   if (!App.ts.length) App.ts = [Array.from(ds.metrics.keys())[0]];
   App.mapMetric = ds.G.speed_mix ? 'speed_mix' : App.ts[0];
   $('#brand-sub').textContent = App.fileName.replace(/\.[^.]+$/, '');
+  akteAutoSave();
   buildNav();
   go(SECTIONS.find(x => x.id === App.current && (!x.data || true)) ? App.current : 'overview', true);
 }
@@ -186,6 +188,7 @@ function recompute() {
   App.gears = computeGears(App.ds, rollCircumNow(), resolveGearbox(App.profile, rollCircumNow()),
                            resolveSpecs(App.profile).specs.redline);
   App.diag = runDiagnostics(App.ds, App.profile);
+  akteAutoSave();
   go(App.current, true);
 }
 
@@ -1556,7 +1559,6 @@ function openProfileEditor(existing) {
   page.insertBefore(editor, page.children[1] || null);
   editor.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
-function hashCode(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
 
 /* Gemischkorrektur nach Lastklassen – die entscheidende Ansicht für Falschluft vs. Kraftstoff */
 function ltftByLoadCard() {
@@ -2429,6 +2431,152 @@ function openVehicleDialog(opts) {
   document.addEventListener('keydown', esc);
   if (chooser.focusSearch) setTimeout(() => chooser.focusSearch(), 60);
 }
+
+/* --- Fahrzeugakte ---------------------------------------------------------- */
+const AKTE_FMT_DATE = ts => new Date(ts).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
+const AKTE_FMT_TIME = ts => new Date(ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+/* Nach jedem Import und jeder Neubewertung den aktuellen Stand in die Akte schreiben.
+   Gleiche Datei -> gleicher Schlüssel -> Eintrag wird ersetzt, nicht verdoppelt. */
+function akteAutoSave() {
+  if (!App.ds || !App.diag || store.get('akteAuto', true) === false) return;
+  try {
+    const row = driveSummary(App.ds, App.diag, App.gears, App.profile, App.fileName);
+    akteGet(row.id).then(old => { if (old && old.notes) row.notes = old.notes; return aktePut(row); }).catch(() => {});
+  } catch (e) { console.warn('Akte: Speichern fehlgeschlagen', e); }
+}
+
+BUILDERS.akte = function (page) {
+  page.appendChild(sectionHead('Fahrzeugakte',
+    'Jede Fahrt ist eine Momentaufnahme. Erst im Verlauf über mehrere Fahrten wird aus einem Wert eine Aussage.'));
+  const host = el('div', {});
+  page.appendChild(host);
+  host.appendChild(el('p', { class: 'dim' }, 'Akte wird geladen …'));
+
+  const ruleTitle = id => { const r = DIAG_RULES.find(x => x.id === id); return r ? r.title : id; };
+  const ruleGroup = id => { const r = DIAG_RULES.find(x => x.id === id); return r ? r.group : ''; };
+
+  const render = async () => {
+    let rows;
+    try { rows = await akteAll(); } catch (e) { rows = []; }
+    host.innerHTML = '';
+
+    const filterProfile = store.get('akteProfile', App.profile ? App.profile.id : '') || '';
+    const profiles = Array.from(new Set(rows.map(r => r.profileId).filter(Boolean)))
+      .map(id => ({ id, name: (rows.find(r => r.profileId === id) || {}).profileName || id }));
+    const shown = filterProfile ? rows.filter(r => r.profileId === filterProfile) : rows;
+
+    /* Kopfzeile: Filter und Aktionen */
+    const sel = el('select', { class: 'sel', onchange: e => { store.set('akteProfile', e.target.value); render(); } },
+      [el('option', { value: '', selected: !filterProfile ? true : null }, 'alle Fahrzeuge (' + rows.length + ')')]
+        .concat(profiles.map(p => el('option', { value: p.id, selected: p.id === filterProfile ? true : null },
+          p.name + ' (' + rows.filter(r => r.profileId === p.id).length + ')'))));
+    const importInput = el('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' },
+      onchange: async e => {
+        const f = e.target.files[0]; if (!f) return;
+        try {
+          const inc = akteParseImport(await f.text());
+          const m = akteMerge(await akteAll(), inc);
+          for (const r of inc) if (r && r.id) await aktePut(m.rows.find(x => x.id === r.id));
+          host.prepend(noteBox('ok', 'Akte eingelesen', m.added + ' neue Fahrten, ' + m.updated + ' aktualisiert.'));
+          setTimeout(render, 900);
+        } catch (err) { host.prepend(noteBox('crit', 'Das hat nicht geklappt', err.message)); }
+        e.target.value = '';
+      } });
+    host.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center', marginBottom: '12px' } },
+      el('span', { class: 'dim', style: { fontSize: '12.5px' } }, 'Fahrzeug'), sel,
+      App.ds ? el('button', { class: 'btn primary', type: 'button', onclick: () => {
+        store.set('akteAuto', true); akteAutoSave(); setTimeout(render, 300); } }, 'Aktuelle Fahrt speichern') : null,
+      rows.length ? el('button', { class: 'btn', type: 'button', onclick: () =>
+        download('fahrzeugakte-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json', akteExportJson(rows)) },
+        icon('dl'), 'Akte exportieren') : null,
+      el('button', { class: 'btn', type: 'button', onclick: () => importInput.click() }, 'Akte einlesen'),
+      importInput,
+      el('label', { class: 'chip', style: { display: 'inline-flex', gap: '6px', alignItems: 'center' } },
+        el('input', { type: 'checkbox', checked: store.get('akteAuto', true) !== false ? true : null,
+          onchange: e => store.set('akteAuto', !!e.target.checked) }),
+        'nach jedem Import automatisch speichern')));
+
+    if (!shown.length) {
+      host.appendChild(noteBox('info', 'Noch keine Fahrten in der Akte',
+        App.ds
+          ? 'Die aktuelle Fahrt wird nach dem Import automatisch aufgenommen, sobald ein Fahrzeugprofil gewählt ist. Oder oben „Aktuelle Fahrt speichern“.'
+          : 'Eine Aufzeichnung laden – sie landet dann hier. Die Akte bleibt im Browser dieses Geräts; als JSON-Datei nimmst du sie mit auf andere Geräte.'));
+      return;
+    }
+
+    /* Liste der Fahrten */
+    const tally = r => r.tally ? el('span', { class: 'akte-tally' },
+      el('b', { class: 'ok' }, String(r.tally.ok)), el('b', { class: 'warn' }, String(r.tally.warn)),
+      el('b', { class: 'crit' }, String(r.tally.crit))) : el('span', {}, '–');
+    host.appendChild(card('Fahrten', { hint: shown.length + ' gespeichert · nur Auswertungen, keine Rohdaten' },
+      el('div', { class: 'tblwrap' }, el('table', { class: 'tbl' },
+        el('thead', {}, el('tr', {}, ['Datum', 'Datei', 'Dauer', 'Strecke', 'Verbrauch', 'Befunde', 'Notiz', ''].map(h => el('th', {}, h)))),
+        el('tbody', {}, shown.slice().reverse().map(r => el('tr', {},
+          el('td', {}, AKTE_FMT_DATE(r.date) + ' ' + AKTE_FMT_TIME(r.date)),
+          el('td', { class: 'dim', style: { maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, r.file || '–'),
+          el('td', { class: 'n' }, r.duration ? fmtDur(r.duration) : '–'),
+          el('td', { class: 'n' }, r.dist !== null ? fmt(r.dist, 1) + ' km' : '–'),
+          el('td', { class: 'n' }, r.consAvg !== null ? fmt(r.consAvg, 1) + ' L' : '–'),
+          el('td', {}, tally(r)),
+          el('td', {}, el('input', { class: 'inp', type: 'text', value: r.notes || '', placeholder: 'z. B. nach Ölwechsel', style: { width: '160px' },
+            onchange: e => { r.notes = e.target.value; aktePut(r); } })),
+          el('td', {}, el('button', { class: 'btn', type: 'button', title: 'Fahrt aus der Akte entfernen',
+            onclick: async () => { if (confirm('Diese Fahrt aus der Akte entfernen?')) { await akteDelete(r.id); render(); } } }, '×')))))))));
+
+    /* Matrix Regel × Fahrt */
+    const cols = shown.slice(-10);
+    const ruleIds = [];
+    for (const r of cols) for (const d of (r.diag || [])) if (d.status !== 'missing' && ruleIds.indexOf(d.id) < 0) ruleIds.push(d.id);
+    const byGroup = new Map();
+    ruleIds.forEach(id => { const g = ruleGroup(id); if (!byGroup.has(g)) byGroup.set(g, []); byGroup.get(g).push(id); });
+    const cell = (r, id) => {
+      const d = (r.diag || []).find(x => x.id === id);
+      if (!d) return el('td', { class: 'akte-c none' }, '');
+      const t = d.value !== null && d.value !== undefined ? fmt(d.value, 2) + (d.unit ? ' ' + d.unit : '') : STATUS_TXT[d.status] || d.status;
+      return el('td', { class: 'akte-c ' + d.status, title: ruleTitle(id) + ': ' + t + (d.ref ? ' (Soll ' + d.ref + ')' : '') },
+        el('span', { class: 'akte-dot' }, STATUS_SYM[d.status] || '·'),
+        d.value !== null && d.value !== undefined ? el('span', { class: 'akte-v' }, fmt(d.value, d.unit === '%' || d.unit === 'K' ? 1 : 0)) : null);
+    };
+    const matrix = el('table', { class: 'tbl akte-m' },
+      el('thead', {}, el('tr', {}, [el('th', {}, 'Befund')].concat(cols.map(r => el('th', { class: 'n', title: r.file || '' }, AKTE_FMT_DATE(r.date)))))),
+      el('tbody', {}, Array.from(byGroup.entries()).flatMap(([g, ids]) => [
+        el('tr', { class: 'akte-g' }, el('td', { colspan: String(cols.length + 1) }, g))
+      ].concat(ids.map(id => el('tr', {}, [el('td', {}, ruleTitle(id))].concat(cols.map(r => cell(r, id)))))))));
+    host.appendChild(card('Befunde im Verlauf', {
+      hint: cols.length + ' Fahrten, älteste links · Zahl = Messwert, Symbol = Bewertung',
+      info: { read: 'Jede Spalte ist eine Fahrt, jede Zeile ein Befund. Der Wert steht klein daneben, die Farbe ist die Bewertung gegen das Sollband. Ein Befund, der in jeder Fahrt gleich aussieht, ist stabil – ein Befund, der von Fahrt zu Fahrt in eine Richtung wandert, ist der Grund, warum es diese Akte gibt.',
+              good: 'Gleiche Farben in einer Zeile, Werte ohne Richtung. Einzelne „?“ sind Fahrten, in denen die Situation nicht vorkam – kein Befund.',
+              bad: 'Eine Zeile, die von grün über gelb nach rot wandert, oder ein Wert, der jede Fahrt ein Stück weiterläuft, auch wenn er noch grün ist. Das ist die Drift, die eine einzelne Fahrt nie zeigen kann.' }
+    }, el('div', { class: 'tblwrap' }, matrix)));
+
+    /* Verlauf einer Regel */
+    const trendable = akteTrendableRules(cols);
+    if (trendable.length) {
+      const chosen0 = store.get('akteRule', trendable[0]);
+      const chosen = trendable.indexOf(chosen0) >= 0 ? chosen0 : trendable[0];
+      const rsel = el('select', { class: 'sel', onchange: e => { store.set('akteRule', e.target.value); render(); } },
+        trendable.map(id => el('option', { value: id, selected: id === chosen ? true : null }, ruleTitle(id))));
+      const pts = akteTrend(cols, chosen);
+      const ref = pts.find(p => p.refLo !== null || p.refHi !== null) || {};
+      const cc = card('Verlauf: ' + ruleTitle(chosen), { hint: pts[0] && pts[0].unit ? 'in ' + pts[0].unit : '',
+        tools: rsel });
+      const chartHost = el('div', { style: { height: '200px' } });
+      cc.appendChild(chartHost);
+      if (ref.ref) cc.appendChild(el('p', { class: 'card-f', style: { padding: '8px 0 0', borderTop: 0 } }, 'Sollbereich: ' + ref.ref));
+      host.appendChild(cc);
+      const ch = new Chart(chartHost, { type: 'bars', height: 200, labelWidth: 80 });
+      const colorOf = s => s === 'ok' ? '#34d399' : s === 'warn' ? '#fbbf24' : s === 'crit' ? '#f87171' : '#8b95a8';
+      ch.setData({ barData: pts.map(p => ({
+        label: AKTE_FMT_DATE(p.date),
+        value: p.value === null ? 0 : Math.abs(p.value),
+        text: (p.value === null ? '–' : fmt(p.value, 2) + (p.unit ? ' ' + p.unit : '')) + '   ·   ' + (STATUS_TXT[p.status] || p.status),
+        color: colorOf(p.status) })) });
+      ch.draw();
+    }
+  };
+  render();
+};
 
 /* --- Einstellungen --- */
 BUILDERS.settings = function (page) {

@@ -159,3 +159,17 @@ Kühlmitteltemperatur über 7 s. Alle Kennzahlen stimmten überein — bis auf z
 - E10-Hinweis: 1–2 % mehr Masse gegenüber E5, nicht 3 %.
 - „Engine RPM ×1000“ als einzige Drehzahlquelle wird mit 1000 skaliert.
 - Die Lambdasonden-Aliasse fanden „O2 Sensor 1 Bank 1“ nicht (Reihenfolge).
+
+## Neue Features (Fahrzeugakte)
+
+- **Neue Sektion „Fahrzeugakte“.** Jede importierte Fahrt wird als kleine Auswertung
+  (einige Kilobyte, keine Rohdaten) im Browser abgelegt – IndexedDB, kein Server, kein Konto.
+  Dieselbe Datei nochmal eingelesen ersetzt ihren Eintrag statt ihn zu verdoppeln.
+- **Befunde im Verlauf:** Matrix Regel × Fahrt mit Bewertung und Messwert, nach Gruppen
+  geordnet; dazu ein Balkenverlauf je Regel mit dem Sollbereich. Erst so wird sichtbar, ob
+  ein Wert von Fahrt zu Fahrt in eine Richtung wandert.
+- **Fahrtenliste** mit Datum aus dem Dateinamen, Dauer, Strecke, Verbrauch, Ampelzählern
+  und einer Notiz je Fahrt („nach Ölwechsel“).
+- **Export/Import als JSON** – der Ersatz für eine Synchronisation: die Akte wandert als
+  Datei zwischen Geräten. Beim Einlesen gewinnt je Fahrt der jüngere Stand, Notizen bleiben.
+- Automatisches Speichern nach dem Import lässt sich abschalten.

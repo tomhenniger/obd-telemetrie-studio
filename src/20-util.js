@@ -107,6 +107,7 @@ function haversine(lat1, lon1, lat2, lon2) {
 }
 
 /* Binäre Suche: größter Index mit arr[i] <= x  (arr aufsteigend) */
+function hashCode(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
 function minOf(a) { let m = Infinity; for (let i = 0; i < a.length; i++) if (a[i] < m) m = a[i]; return m; }
 function maxOf(a) { let m = -Infinity; for (let i = 0; i < a.length; i++) if (a[i] > m) m = a[i]; return m; }
 function bisect(arr, x, lo, hi) {
