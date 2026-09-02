@@ -99,3 +99,13 @@ Kühlmitteltemperatur über 7 s. Alle Kennzahlen stimmten überein — bis auf z
 - Darüber steht ausdrücklich, ob eine Abstufung deutlich besser passt als alle anderen oder
   ob mehrere in Frage kommen, und darunter, dass Fahrzeugschein, Reparaturleitfaden oder
   Typschild entscheiden – nicht die Prozentzahl.
+
+## UI-Änderungen (Gangdiagramm)
+
+- **Punkte werden nach ihrer Rolle eingefärbt.** Farbig heißt einem Gang zugeordnet, hell
+  grau geprüft aber keinem Gang zuzuordnen, sehr blass gar nicht ausgewertet – unter
+  15 km/h, unter 900 min⁻¹ oder mit springender Drehzahl. Vorher lag alles in einer Farbe,
+  und man las in den Anfahrbereich Geraden hinein, die dort niemand geprüft hatte.
+- **„Nicht gefahren“ wird nicht mehr behauptet.** Fehlt ein niedriger Gang, steht jetzt
+  „keine feste Übersetzung messbar – im Anfahrbereich schlupft die Kupplung“. Das Werkzeug
+  kann nicht unterscheiden, ob ein Gang ungenutzt blieb oder nur nicht messbar war.

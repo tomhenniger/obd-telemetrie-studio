@@ -915,14 +915,31 @@ BUILDERS.fields = function (page) {
         good: 'Klar getrennte, dicht besetzte Geraden. Punkte dazwischen sind Schaltvorgänge und völlig normal.',
         bad: 'Streuen die Punkte breit um eine Gerade oder wandern nach oben ab, überträgt die Kupplung nicht sauber — bei einem Automatikgetriebe der wichtigste Hinweis überhaupt. Beim Gebrauchtwagenkauf lohnt hier der genaue Blick, besonders bei der multitronic.'
       },
-      foot: 'Die Geraden sind aus den Daten selbst geschätzt, nicht aus einer Tabelle übernommen. Nummeriert wird nach Übersetzung, nicht nach Gangnummer – ob der kürzeste erkannte Gang wirklich der erste ist, lässt sich aus einer Fahrt ohne Anfahrten nicht sagen.'
+      foot: 'Die Geraden sind aus den Daten selbst geschätzt, nicht aus einer Tabelle übernommen. ' +
+        'Farbige Punkte sind einem Gang zugeordnet, helle graue wurden geprüft und passten zu keinem, ' +
+        'sehr blasse gingen gar nicht in die Auswertung – unter ' + fmt(g.minSpeed || 15, 0) + ' km/h, ' +
+        'unter 900 min⁻¹ oder mit springender Drehzahl. Genau dort liegt der Anfahrbereich: die Kupplung ' +
+        'schlupft, es gibt kein festes Verhältnis, und was dort wie eine Gerade aussieht, ist die Bahn ' +
+        'eines Anfahrvorgangs quer durch alle Übersetzungen.'
     }, { type: 'scatter' });
     cc.chart.xTitle = 'Geschwindigkeit (km/h)';
     cc.chart.yTitle = 'Drehzahl (min⁻¹)';
+    /* Farbe nach Rolle: was einem Gang zugeordnet wurde, was bewertet aber keinem Gang
+       zugeordnet werden konnte, und was gar nicht in die Auswertung ging. Ohne diese
+       Unterscheidung liest man in den Anfahrbereich Geraden hinein, die dort niemand
+       geprüft hat — dort schlupft die Kupplung und es gibt gar kein festes Verhältnis. */
+    const pal = palette();
+    const byIdx = {}; g.gears.forEach((gr, i) => { byIdx[gr.idx] = i; });
+    const ex = g.excl;
     cc.chart.setData({ scatterData: {
       x: G.speed_mix, y: G.rpm, n: ds.N, r: 1.4,
       xlo: 0, xhi: ss.max * 1.05, ylo: 0, yhi: sr.max * 1.05,
-      color: () => 'rgba(120,140,170,.42)'
+      color: i => {
+        if (ex && ex[i]) return 'rgba(120,132,155,.16)';        // nicht ausgewertet
+        const a = g.assign[i];
+        if (a >= 0 && byIdx[a] !== undefined) return fade(pal[byIdx[a] % pal.length], .55);
+        return 'rgba(150,162,185,.42)';                          // bewertet, kein Gang
+      }
     } });
     cc.chart.overlay = null;
     cc.chart.opts.type = 'scatter';
@@ -1008,7 +1025,10 @@ BUILDERS.fields = function (page) {
         el('td', {}, 'G' + r.gear),
         el('td', { class: 'n' }, r.ref ? fmt(r.ref.kmhPer1000, 1) : '–'),
         el('td', { class: 'n' }, r.ref ? fmt(r.ref.kmhPer1000, 1) : '–'),
-        el('td', { colspan: '3', class: 'dim' }, 'in dieser Fahrt nicht gefahren – keine Messung möglich'))))),
+        el('td', { colspan: '3', class: 'dim' },
+          r.gear <= 2
+            ? 'keine feste Übersetzung messbar – im Anfahrbereich schlupft die Kupplung'
+            : 'in dieser Fahrt nicht als feste Übersetzung gemessen'))))),
       g.spread.length ? el('p', { class: 'card-f', style: { padding: '10px 0 0', borderTop: 0 } },
         'Stufensprünge: ' + g.spread.map(x => fmt(x, 3)).join(' · ') +
         '. Zugrunde gelegter Abrollumfang: ' + fmt(App.profile.specs.rollCircum || store.get('rollCircum', 2.0), 3) +
@@ -1017,8 +1037,13 @@ BUILDERS.fields = function (page) {
         (named
           ? 'Gemessen wurden ' + g.gears.length + ' von ' + gi.gears + ' Gängen' +
             ((gi.missing || []).length
-              ? ', nicht gefahren ' + (gi.missing.length === 1 ? 'wurde Gang ' : 'wurden die Gänge ') +
-                gi.missing.map(t => t.gear).join(', ') + '. '
+              ? '. Ohne stabile Messung ' + (gi.missing.length === 1 ? 'blieb Gang ' : 'blieben die Gänge ') +
+                gi.missing.map(t => t.gear).join(', ') +
+                (gi.missing.length === 1
+                  ? ' – das heißt nicht, dass er nicht gefahren wurde: '
+                  : ' – das heißt nicht, dass sie nicht gefahren wurden: ') +
+                'beim Anfahren schlupft die Kupplung, ' +
+                'dabei entsteht gar kein festes Verhältnis zwischen Drehzahl und Geschwindigkeit. '
               : '. ') +
             (gi.mode === 'count'
               ? (gi.suggested
@@ -2282,6 +2307,19 @@ function gearboxCard() {
 }
 
 
+
+/* Hex- oder rgb()-Farbe mit Deckkraft versehen. */
+function fade(c, a) {
+  c = String(c).trim();
+  if (c[0] === '#') {
+    const h = c.length === 4
+      ? c.slice(1).split('').map(x => parseInt(x + x, 16))
+      : [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
+    return 'rgba(' + h[0] + ',' + h[1] + ',' + h[2] + ',' + a + ')';
+  }
+  if (c.indexOf('rgb(') === 0) return c.replace('rgb(', 'rgba(').replace(')', ',' + a + ')');
+  return c;
+}
 /* --- Fahrzeugabfrage nach dem Import ---------------------------------------
    Aus den Daten lässt sich die Bauart ablesen, nicht das Modell: Zahl der Bänke,
    Kraftstoffart, ob aufgeladen, wie hoch gedreht wurde. Für die Sollwerte der

@@ -803,14 +803,21 @@ function computeGears(ds, rollCircumM, gbx, redline) {
   const { G, N, grid, step } = ds;
   const rpm = G.rpm, sp = G.speed_mix;
   if (!rpm || !sp) return null;
+  /* excl merkt sich, warum ein Punkt nicht in die Auswertung geht. Das Diagramm zeigt
+     alle Rasterpunkte; ohne diese Unterscheidung sieht der Betrachter im Anfahrbereich
+     eine Struktur, die die Erkennung gar nicht bewertet hat. */
+  const EXC = { eval: 0, slow: 1, lowRpm: 2, unstable: 3, nodata: 4 };
+  const excl = new Uint8Array(N);
   const ks = [], idxs = [];
   for (let i = 0; i < N; i++) {
     const v = sp[i], r = rpm[i];
-    if (!(v === v) || !(r === r) || v < 15 || r < 900) continue;
+    if (!(v === v) || !(r === r)) { excl[i] = EXC.nodata; continue; }
+    if (v < 15) { excl[i] = EXC.slow; continue; }
+    if (r < 900) { excl[i] = EXC.lowRpm; continue; }
     // Schaltvorgänge/Schlupf aussortieren: Drehzahl muss lokal stabil sein
     if (i > 1 && i < N - 2) {
       const dr = Math.abs(rpm[i + 1] - rpm[i - 1]) / Math.max(1, grid[i + 1] - grid[i - 1]);
-      if (dr > 1400) continue;
+      if (dr > 1400) { excl[i] = EXC.unstable; continue; }
     }
     ks.push(r / v); idxs.push(i);
   }
@@ -923,8 +930,16 @@ function computeGears(ds, rollCircumM, gbx, redline) {
 
   gears.sort((a, b) => b.k - a.k);
   gears.forEach((g, i) => { g.gear = i + 1; g.label = 'S' + (i + 1); });
+  let nSlow = 0, nLowRpm = 0, nUnstable = 0;
+  for (let i = 0; i < N; i++) {
+    if (excl[i] === EXC.slow) nSlow++;
+    else if (excl[i] === EXC.lowRpm) nLowRpm++;
+    else if (excl[i] === EXC.unstable) nUnstable++;
+  }
   const res = { gears, assign, remap: {}, coverage: assigned / Math.max(1, ks.length),
-                usable: ks.length, spread: [], hist: { h: hs, lo, w, NB } };
+                usable: ks.length, spread: [], hist: { h: hs, lo, w, NB },
+                excl, exclCounts: { slow: nSlow, lowRpm: nLowRpm, unstable: nUnstable },
+                minSpeed: 15, step };
   /* Nummerierung: ohne Getriebeangabe nach Übersetzung (S1, S2 …), mit Angabe die
      echten Gangnummern samt Auskunft darüber, welcher Gang nicht gefahren wurde. */
   res.gearbox = labelGears(res, gbx, redline);
