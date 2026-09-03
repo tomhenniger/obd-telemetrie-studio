@@ -8,6 +8,7 @@ GPS-Karte und eine Diagnose, die die Messwerte gegen hinterlegte Werksangaben st
 Kein Server, kein Framework, kein Tracking. Die CSV wird ausschließlich im Browser gelesen
 und verlässt das Gerät nicht. Die einzige Netzwerkverbindung sind die Kartenkacheln von
 OpenStreetMap – wer auch das vermeiden will, stellt den Kartenstil auf „Ohne Karte".
+- **Tempolimit-Vergleich**: Route nach Limit-Einhaltung eingefärbt (OSM-Tempolimits über Overpass, Schild/innerorts vs. implizit außerorts, Zeitregeln nach Aufzeichnungsdatum), Verstoßliste und Kennzahlen.
 
 ## Was es kann
 

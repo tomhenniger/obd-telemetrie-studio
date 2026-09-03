@@ -157,6 +157,7 @@ function initDataset(ds) {
   App.ts = ['rpm', 'speed_mix', 'boost'].filter(id => ds.G[id]);
   if (!App.ts.length) App.ts = [Array.from(ds.metrics.keys())[0]];
   App.mapMetric = ds.G.speed_mix ? 'speed_mix' : App.ts[0];
+  App.limits = null; App.limitsStatus = null;
   $('#brand-sub').textContent = App.fileName.replace(/\.[^.]+$/, '');
   akteAutoSave();
   buildNav();
@@ -641,6 +642,7 @@ BUILDERS.map = function (page) {
   const colorable = Array.from(ds.metrics.values()).filter(m => ds.G[m.id]);
   const sel = el('select', { class: 'sel', onchange: e => { App.mapMetric = e.target.value; paint(); } },
     colorable.map(m => el('option', { value: m.id, selected: m.id === App.mapMetric ? true : null }, m.label)));
+  sel.appendChild(el('option', { value: '__limits', selected: App.mapMetric === '__limits' ? true : null }, 'Tempolimit-Vergleich (OSM)'));
   const styleSel = el('select', { class: 'sel', onchange: e => { store.set('tiles', e.target.value); map.setServer(e.target.value); } },
     TILE_SERVERS.map(t => el('option', { value: t.id, selected: t.id === store.get('tiles', 'osm') ? true : null }, t.name)));
 
@@ -690,6 +692,13 @@ BUILDERS.map = function (page) {
         el('b', { style: { color: m.id === App.mapMetric ? 'var(--accent)' : null } },
           fmt(v, m.decimals) + ' ' + m.unit)));
     });
+    if (App.limits && App.limits.id === limId() && ti >= 0) {
+      const r = App.limits.res, c = LIMIT_CAT_NAME[r.cat[ti]], L = r.lim[ti];
+      const txt = c === 'noroad' ? 'keine Straße gefunden' : !(L === L) ? 'Limit unbekannt'
+        : (L === Infinity ? 'kein Limit' : 'Limit ' + fmt(L, 0)) + (r.kind[ti] && r.kind[ti] !== 'none' ? ' · ' + KIND_LABEL[r.kind[ti]] : '');
+      readout.appendChild(el('div', { class: 'mr-r' }, el('span', {}, 'Tempolimit'),
+        el('b', { style: { color: catColor(c) } }, txt + (r.excess[ti] > 0 ? ' · +' + fmt(r.excess[ti], 0) : ''))));
+    }
     if (gear) {
       const go = App.gears.gears.find(x => x.gear === gear);
       const named = App.gears.gearbox && (App.gears.gearbox.mode === 'table' || App.gears.gearbox.mode === 'count');
@@ -700,9 +709,127 @@ BUILDERS.map = function (page) {
   }
   map.onHover = t => { showAt(t); Chart.emitHover(t, null); };
   Chart.onHover('map', t => { if (readout.isConnected) showAt(t); });
+
+  /* ---- Tempolimits aus OpenStreetMap ---- */
+  const KIND_LABEL = { sign: 'Schild', urban: 'innerorts', rural: 'außerorts, implizit', none: 'unbegrenzt', unknown: 'unbekannt' };
+  const CAT_LABEL = { ok: 'unter dem Limit', sign: 'über Limit (Schild / Ort)', implicit: 'über implizitem Limit', unsure: 'unsicher', noroad: 'keine Straße gefunden' };
+  const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const catColor = c => c === 'ok' ? tok('--ok') : c === 'sign' ? tok('--crit') : c === 'implicit' ? tok('--warn') : c === 'unsure' ? tok('--accent') : 'rgba(150,160,180,.55)';
+  const limId = () => driveId(ds, App.fileName);
+  /* OBD-Geschwindigkeit, wo sie fehlt GPS – so wie speed_mix sie schon zusammenführt */
+  const speedSource = () => ds.G.speed_mix ? ['speed_mix', ds.G.speed ? 'OBD-Geschwindigkeit (GPS, wo OBD fehlt)' : 'GPS-Geschwindigkeit'] : ds.G.speed ? ['speed', 'OBD-Geschwindigkeit'] : ds.G.speed_gps ? ['speed_gps', 'GPS-Geschwindigkeit'] : null;
+  const limHost = el('div');
+  page.appendChild(card('Tempolimits (OpenStreetMap)', {
+    hint: 'gefahrene Geschwindigkeit gegen das Limit an der Straße',
+    info: {
+      read: 'Für jeden Streckenpunkt wird die nächste Straße aus OpenStreetMap gesucht (bis 30 m Abstand, Fahrtrichtung berücksichtigt) und ihr Tempolimit mit der gefahrenen Geschwindigkeit verglichen – ohne Toleranz: 59 km/h bei 50 sind über dem Limit. Rot heißt: das Limit gilt durch Schild oder Ortstafel. Gelb: außerorts gilt nur das allgemeine Limit ohne Schild. Blau: das Limit ist unbekannt, oder es gilt nur zu bestimmten Zeiten (etwa Mo–Fr 7–17 Uhr) und Datum oder Uhrzeit der Fahrt sind nicht bekannt.',
+      good: 'Fast alles grün, Rot nur an kurzen Stellen, und die Liste unten nennt nachvollziehbare Orte.',
+      bad: 'Viel Blau oder Grau heißt: OpenStreetMap kennt dort kein Limit oder die Position ist ungenau. Die Bewertung ist eine Hilfe zum Nachschauen, keine rechtliche Aussage – Schilder ändern sich, und OSM hinkt hinterher.'
+    }
+  }, limHost));
+  function renderLimits() {
+    limHost.innerHTML = '';
+    const src = speedSource();
+    if (App.limitsStatus) {
+      limHost.appendChild(el('p', { class: 'dim', style: { margin: '0' } }, App.limitsStatus));
+      if (!/^Fehler/.test(App.limitsStatus)) return;
+    }
+    if (!App.limits || App.limits.id !== limId()) {
+      const pts = limitsThinTrack(tr).length;
+      limHost.appendChild(el('div', { class: 'note info', style: { marginBottom: '10px' } },
+        icon('info', 'n-i'),
+        el('div', {}, el('b', {}, 'Dafür verlässt einmal die Route dein Gerät'),
+          'Die auf ' + pts + ' Punkte ausgedünnte Strecke wird an die Overpass-API von OpenStreetMap geschickt, um die Tempolimits der befahrenen Straßen zu holen. Keine Messwerte, keine Zeiten, nur Koordinaten. Das Ergebnis bleibt im Browser gespeichert.')));
+      limHost.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center' } },
+        el('button', { class: 'btn primary', type: 'button', disabled: src ? null : true, onclick: () => loadLimits(false) }, 'Tempolimits laden'),
+        el('span', { class: 'dim2', style: { fontSize: '12px' } }, src ? 'Vergleich mit ' + src[1] : 'keine Geschwindigkeit in der Aufzeichnung')));
+      return;
+    }
+    const { res, data } = App.limits;
+    const km = m => fmt(m / 1000, 1) + ' km';
+    const pct = m => res.total ? fmt(100 * m / res.total, 0) + ' %' : '–';
+    const top = res.segments[0];
+    limHost.appendChild(el('div', { class: 'grid kpis', style: { marginBottom: '12px' } },
+      kpi('Über dem Limit', km(res.over), '', pct(res.over) + ' der Strecke', { accent: res.over > 0 }),
+      kpi('Schild / innerorts', km(res.dist.sign), '', 'rot auf der Karte'),
+      kpi('Implizit außerorts', km(res.dist.implicit), '', 'gelb: ohne Schild'),
+      kpi('Unsicher', km(res.dist.unsure), '', 'blau: Limit, Zeitregel oder Tempo fehlt'),
+      kpi('Größte Überschreitung', top ? '+' + fmt(top.exMax, 0) : '–', top ? 'km/h' : '',
+        top ? fmt(top.vMax, 0) + ' km/h bei Limit ' + fmt(top.limit, 0) + (top.name ? ' · ' + top.name : '') : 'keine'),
+      kpi('Straßen zugeordnet', String(res.waysUsed), '', km(res.dist.noroad) + ' ohne Straße im Umkreis')));
+    const leg = el('div', { class: 'legend' });
+    ['ok', 'sign', 'implicit', 'unsure', 'noroad'].forEach(c =>
+      leg.appendChild(el('span', { class: 'li' }, el('i', { class: 'sw', style: { background: catColor(c), height: '10px', width: '10px', borderRadius: '50%' } }), CAT_LABEL[c])));
+    limHost.appendChild(leg);
+    if (res.segments.length) {
+      const rows = res.segments.slice(0, 15).map(s => el('tr', { style: { cursor: 'pointer' }, onclick: () => { map.setMarkerTime(s.t0); showAt(s.t0); map.fit(); } },
+        el('td', {}, xFormatter()(s.t0)),
+        el('td', {}, (s.name || (s.highway ? s.highway : 'unbenannt'))),
+        el('td', { class: 'n' }, el('span', { class: 'badge ' + (s.cat === 'sign' ? 'crit' : 'warn') }, fmt(s.limit, 0) + ' · ' + (KIND_LABEL[s.kind] || ''))),
+        el('td', { class: 'n' }, fmt(s.vMax, 0)),
+        el('td', { class: 'n' }, '+' + fmt(s.exMax, 0)),
+        el('td', { class: 'n' }, fmt(s.dist / 1000, 2)),
+        el('td', { class: 'n' }, fmtDur(s.t1 - s.t0))));
+      limHost.appendChild(el('div', { class: 'tblwrap', style: { marginTop: '12px' } },
+        el('table', { class: 'tbl' },
+          el('thead', {}, el('tr', {}, el('th', {}, 'Zeit'), el('th', {}, 'Straße'), el('th', {}, 'Limit'), el('th', {}, 'Max km/h'), el('th', {}, 'Über'), el('th', {}, 'km'), el('th', {}, 'Dauer'))),
+          el('tbody', {}, ...rows))));
+    } else {
+      limHost.appendChild(el('p', { class: 'dim', style: { margin: '12px 0 0' } }, 'Kein Abschnitt über dem Limit.'));
+    }
+    limHost.appendChild(el('div', { class: 'chiprow', style: { marginTop: '12px', alignItems: 'center' } },
+      el('button', { class: 'btn sm', type: 'button', onclick: () => { App.mapMetric = '__limits'; sel.value = '__limits'; paint(); host.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }, 'Auf der Karte zeigen'),
+      el('button', { class: 'btn sm ghost', type: 'button', onclick: () => loadLimits(true) }, 'Neu von OSM laden')));
+    limHost.appendChild(el('p', { class: 'dim2', style: { fontSize: '11.5px', lineHeight: '1.5', margin: '10px 0 0' } },
+      'Vergleich mit ' + (App.limits.src ? App.limits.src[1] : '–') + '; der Tacho zeigt etwa 3–5 % mehr als die OBD-Geschwindigkeit. Limits laut OpenStreetMap' +
+      (data.osmDate ? ' (Stand ' + String(data.osmDate).slice(0, 10) + ')' : '') + ', ' + data.ways.length + ' Straßenabschnitte geladen. Ohne Toleranz gerechnet; Zuordnung bis 30 m. Keine rechtliche Bewertung.'));
+  }
+  function computeLimits(data) {
+    const src = speedSource();
+    const arr = src ? ds.G[src[0]] : null;
+    const speedAt = i => { if (!arr) return NaN; const k = bisect(ds.grid, tr.t[i]); return k >= 0 ? arr[k] : NaN; };
+    const res = matchTrackLimits(tr, data.ways, speedAt, limitsWhenFor(ds, App.fileName));
+    App.limits = { id: limId(), data, res, src };
+    App.limitsStatus = null;
+  }
+  async function loadLimits(force) {
+    const id = limId();
+    App.limitsStatus = 'Lade …'; renderLimits();
+    try {
+      let data = force ? null : await limitsCacheGet(id);
+      if (!data) {
+        data = await fetchLimitWays(tr, s => { App.limitsStatus = s; renderLimits(); });
+        await limitsCachePut(id, data);
+      }
+      computeLimits(data);
+      App.mapMetric = '__limits'; sel.value = '__limits'; paint();
+    } catch (e) {
+      App.limitsStatus = 'Fehler: ' + ((e && e.message) || e) + ' – später erneut versuchen.';
+    }
+    renderLimits();
+  }
+  renderLimits();
+  if (!App.limits || App.limits.id !== limId()) {
+    limitsCacheGet(limId()).then(d => { if (d && limHost.isConnected) { computeLimits(d); renderLimits(); if (App.mapMetric === '__limits') paint(); } });
+  }
+  function paintLimits() {
+    rampRow.innerHTML = '';
+    if (!App.limits || App.limits.id !== limId()) {
+      map.setTrack(tr, () => 'rgba(150,160,180,.55)');
+      rampRow.appendChild(el('span', {}, 'Tempolimits noch nicht geladen – unten „Tempolimits laden“ drücken.'));
+      return;
+    }
+    const res = App.limits.res;
+    const COL = ['rgba(150,160,180,.55)', catColor('ok'), catColor('implicit'), catColor('sign'), catColor('unsure')];
+    map.setTrack(tr, i => COL[res.cat[i]]);
+    ['ok', 'sign', 'implicit', 'unsure', 'noroad'].forEach(c =>
+      rampRow.appendChild(el('span', { class: 'li', style: { display: 'inline-flex', alignItems: 'center', gap: '5px', marginRight: '10px' } },
+        el('i', { style: { display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: catColor(c) } }), CAT_LABEL[c])));
+  }
   requestAnimationFrame(() => { map.resize(); paint(); map.fit(); });
 
   function paint() {
+    if (App.mapMetric === '__limits') { paintLimits(); return; }
     const m = ds.metrics.get(App.mapMetric);
     const arr = ds.G[App.mapMetric];
     if (!arr || !m) { map.setTrack(tr, null); return; }
