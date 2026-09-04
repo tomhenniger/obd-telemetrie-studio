@@ -1,6 +1,9 @@
 # Changelog — 2026-09-04
 
 ## Neue Features
+- **Wärmehaushalt** (Überblick): Kühlmittel, Öl, Getriebe, Ladeluft, Ansaug- und Außenluft in einem Verlauf, dazu je Größe Startwert, Zeit bis Betriebstemperatur, Niveau der letzten zehn Minuten und Maximum.
+- **Bremsen** (Überblick): stärkste Verzögerung, rechnerischer Bremsweg aus 100 km/h, harte Bremsungen (unter −0,3 g) als Liste mit Sprung ins Diagramm, Fading-Hinweis über den Verlauf der Fahrt.
+- **Zwei neue Diagnoseregeln**: „Batterie beim Start“ (Ruhespannung vor dem Motorlauf, Einbruch beim Anlassen) und „Ladedruckaufbau bei Volllast“ (Zeit bis 90 % des Spitzendrucks, Kompressor und Turbo getrennt bewertet). Beide erscheinen in der Akte als Trend. Damit 40 Regeln.
 - **Verbrauch je Straße** (Strecke, nach dem Tempolimit-Abgleich): Liter und L/100km je Straße und je Klasse Ort, Landstraße, Autobahn, mit Anteil am Gesamtverbrauch.
 - **Limit-Bilanz**: Zeitgewinn und Mehrverbrauch aller Abschnitte über dem Limit, gerechnet mit der Verbrauchskurve der eigenen Fahrt (Median je 10-km/h-Klasse bei ruhiger Fahrt), in Litern und Euro.
 - **Drucken**: Druckknopf in der Kopfzeile. Druckt die aktuelle Seite hell, ohne Bedienelemente, mit aufgeklappten Befunden; über den Systemdialog auch als PDF (Kaufcheck-Protokoll, Diagnose).

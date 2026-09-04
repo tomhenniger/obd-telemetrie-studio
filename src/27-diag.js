@@ -933,6 +933,59 @@ const DIAG_RULES = [
   }
 },
 {
+  id: 'start_voltage', group: 'Elektrik', title: 'Batterie beim Start',
+  requires: ['batt', 'rpm'], confidence: 'mittel', provenance: 'gemessen',
+  run(c) {
+    const b = c.V('batt'), r = c.V('rpm'), grid = c.grid;
+    let first = -1;
+    for (let i = 0; i < grid.length; i++) if (r[i] > 500) { first = i; break; }
+    if (first <= 0) return { status: S.UNCLEAR, note: 'Die Aufzeichnung beginnt bei laufendem Motor – Ruhespannung und Starteinbruch sind nicht enthalten. Beim nächsten Mal die Aufzeichnung vor dem Anlassen starten.' };
+    let sum = 0, n = 0;
+    for (let i = 0; i < first; i++) if (b[i] === b[i]) { sum += b[i]; n++; }
+    if (!n) return { status: S.UNCLEAR, note: 'Vor dem Motorstart liegt keine Spannung vor.' };
+    const rest = sum / n;
+    let dip = Infinity;
+    for (let i = Math.max(0, first - 3); i <= Math.min(grid.length - 1, first + 3); i++) if (b[i] < dip) dip = b[i];
+    const st = rest >= 12.4 && dip >= 9.6 ? S.OK : rest >= 12.0 && dip >= 9.0 ? S.WARN : S.CRIT;
+    return { status: st, value: rest, unit: 'V', dec: 2, ref: 'Ruhe ≥ 12,4 V · Einbruch ≥ 9,6 V', refLo: 12.4, refHi: 13.0,
+      cond: 'vor dem ersten Motorlauf, ' + fmtDur(grid[first] - grid[0]) + ' Ruhe aufgezeichnet',
+      extra: [['Ruhespannung', fmt(rest, 2) + ' V'], ['Einbruch beim Anlassen', isFinite(dip) ? fmt(dip, 2) + ' V' : '–'], ['Messpunkte davor', String(n)]],
+      text: st === S.OK
+        ? 'Ruhespannung ' + fmt(rest, 2) + ' V und Starteinbruch bis ' + fmt(dip, 2) + ' V: die Batterie ist geladen und hält die Last des Anlassers. Über mehrere Fahrten in der Akte zeigt dieser Wert das Altern der Batterie, lange bevor sie ausfällt.'
+        : 'Ruhespannung ' + fmt(rest, 2) + ' V' + (isFinite(dip) ? ', beim Anlassen bis ' + fmt(dip, 2) + ' V' : '') + '. Unter 12,4 V ist die Batterie nicht voll, unter 12,0 V deutlich entladen oder gealtert; ein Einbruch unter 9,6 V heißt, der Anlasser zieht sie in die Knie. Bei kurzen Strecken und Standzeiten ist das normal; bleibt es über Fahrten so, ist die Batterie am Ende oder der Generator lädt zu wenig.',
+      action: st === S.OK ? null : ['Batterie voll laden und Ruhespannung nach 12 h messen', 'Generatorspannung bei laufendem Motor prüfen (Regel Bordspannung)', 'Alter der Batterie am Aufdruck prüfen, ab 5–6 Jahren tauschen'] };
+  }
+},
+{
+  id: 'boost_spool', group: 'Aufladung', title: 'Ladedruckaufbau bei Volllast',
+  requires: ['boost'], confidence: 'mittel', provenance: 'gemessen',
+  run(c) {
+    const ev = (c.ds.events && c.ds.events.wot) || [], b = c.V('boost'), grid = c.grid;
+    const times = [];
+    for (const s of ev) {
+      let mx = -Infinity; for (let k = s.i0; k <= s.i1; k++) if (b[k] > mx) mx = b[k];
+      const b0 = b[s.i0] === b[s.i0] ? b[s.i0] : 0;
+      if (!(mx - b0 > 0.2)) continue;
+      const target = b0 + 0.9 * (mx - b0);
+      for (let k = s.i0; k <= s.i1; k++) if (b[k] >= target) { times.push(grid[k] - grid[s.i0]); break; }
+    }
+    if (times.length < 2) return { status: S.UNCLEAR, note: times.length ? 'Nur ein Volllastzug mit messbarem Ladedruckaufbau – für eine Aussage braucht es mindestens zwei.' : 'Kein Volllastzug mit messbarem Ladedruckaufbau (mindestens 0,2 bar über dem Ausgangswert).' };
+    times.sort((p, q) => p - q);
+    const med = times[Math.floor(times.length / 2)];
+    const blown = c.profile && c.profile.aspiration === 'kompressor';
+    const lim = blown ? [0.8, 1.5] : [2.0, 3.5];
+    const st = med <= lim[0] ? S.OK : med <= lim[1] ? S.WARN : S.CRIT;
+    const step = grid.length > 1 ? grid[1] - grid[0] : 1;
+    return { status: st, value: med, unit: 's', dec: 1, ref: '≤ ' + fmt(lim[0], 1) + ' s (' + (blown ? 'Kompressor' : 'Turbolader') + ')', refLo: 0, refHi: lim[0],
+      cond: times.length + ' Volllastzüge, Zeit bis 90 % des Spitzendrucks, Raster ' + fmt(step, 1) + ' s',
+      extra: [['Züge', String(times.length)], ['schnellster', fmt(times[0], 1) + ' s'], ['langsamster', fmt(times[times.length - 1], 1) + ' s']],
+      text: st === S.OK
+        ? 'Der Ladedruck steht im Median nach ' + fmt(med, 1) + ' s – ' + (blown ? 'so unmittelbar, wie ein Kompressor es soll.' : 'ein gesunder Turbolader ohne Leckagen oder hängende Verstellung.') + ' Ein Trend über Fahrten in der Akte zeigt, ob der Aufbau langsamer wird.'
+        : 'Der Ladedruck braucht im Median ' + fmt(med, 1) + ' s bis 90 % des Spitzenwerts. ' + (blown ? 'Ein Kompressor liefert Druck praktisch mit dem Gaspedal; eine solche Verzögerung deutet auf Bypassklappe, Schlauch oder Riemen.' : 'Langsamer Aufbau spricht für Undichtigkeit im Ladeluftweg, eine träge Ladedruckregelung oder eine schwergängige Verstellung.') + ' Bei grobem Zeitraster ist die Messung ungenau – die Regel rechnet mit dem, was die Aufzeichnung hergibt.',
+      action: st === S.OK ? null : ['Ladeluftstrecke abdrücken (Schläuche, Schellen, Ladeluftkühler)', blown ? 'Bypassklappe und Riemen des Kompressors prüfen' : 'Ladedruckregelventil und Unterdruckdose prüfen', 'Aufzeichnung mit feinerem Raster (Boost mit 5–10 Hz) wiederholen'] };
+  }
+},
+{
   id: 'knock_retard_pid', fuel: 'petrol', group: 'Zündung', title: 'Klopfregelung (herstellerspezifische PID)',
   requires: ['knock_retard'], confidence: 'hoch', provenance: 'gemessen',
   run(c) {

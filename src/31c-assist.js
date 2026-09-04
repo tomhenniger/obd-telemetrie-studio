@@ -32,6 +32,8 @@ const RULE_NEEDS = {
   rpm_limit:          ['volllast'],
   speed_cross:        ['gps'],
   baro_sanity:        [],
+  start_voltage:      ['kaltstart'],
+  boost_spool:        ['volllast_mehrfach'],
   fuel_econ:          ['ruhig', 'strecke'],
   power_estimate:     ['warm', 'volllast'],
   pedal_scaling:      ['volllast'],

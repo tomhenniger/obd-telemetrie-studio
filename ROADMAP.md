@@ -10,8 +10,8 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 ### Auswertung
 - [ ] Zwei Fahrten überlagern: Verläufe und Kennfelder zweier Aufzeichnungen übereinander (vor/nach Reparatur, Sommer/Winter). Mittel.
 - [ ] Schaltanalyse: Schaltpunkte je Gang, Schaltdauer aus dem Drehzahleinbruch, Zeitanteil je Gang. Mittel.
-- [ ] Ladedruckaufbau je Volllastzug (Spool-Zeit), Trend in der Akte. Klein bis mittel.
-- [ ] Thermomanagement-Profil: Kühlmittel, Öl, Ladeluft, Getriebe in einem Bild, Warmlaufzeit je Größe. Klein.
+- [x] Ladedruckaufbau je Volllastzug als Diagnoseregel (Zeit bis 90 % des Spitzendrucks, Kompressor/Turbo getrennt bewertet), damit auch als Trend in der Akte. (2026-09-04)
+- [x] Wärmehaushalt auf dem Überblick: alle Temperaturen in einem Bild, Startwert, Zeit bis Betriebstemperatur, Niveau der letzten 10 Minuten. (2026-09-04)
 - [x] Ereignisse auf Karte und Verläufen: Stopps, Volllastzüge, Sprints, Klopfregelung, starke Bremsungen, Betriebswarm als Marker mit Kürzel, ein- und ausblendbar. (2026-09-04)
 
 ### Strecke (auf dem OSM-Matching)
@@ -34,9 +34,9 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 ### Motor tiefer
 - [ ] Leistung aus Beschleunigung: zweite, physikalische Leistungsschätzung (Masse, Steigung, Luft- und Rollwiderstand) neben der aus dem Verbrauch; Abweichung der beiden ist ein Befund. Mittel.
 - [ ] Fahrzeugmasse schätzen aus Leistung und Beschleunigung: Plausibilität von Beladung und Leistungsangabe. Mittel.
-- [ ] Leerlaufqualität: Drehzahlstreuung im warmen Leerlauf als Regel und als Akte-Trend (Aussetzer, Verkokung, Luftleck). Klein.
-- [ ] Startspannung: Einbruch beim Anlassen und Erholung als Batterie-Alter über Fahrten. Klein.
-- [ ] Bremsanalyse: maximale Verzögerung, Bremsweg-Schätzung 100–0, Fading über Wiederholungen. Klein.
+- [x] Leerlaufqualität: war als Regel „Leerlaufdrehzahl und -ruhe“ (Drehzahlstreuung) schon vorhanden und ist in der Akte trendfähig. (geprüft 2026-09-04)
+- [x] Batterie beim Start als Diagnoseregel: Ruhespannung vor dem ersten Motorlauf und Einbruch beim Anlassen, in der Akte als Trend. (2026-09-04)
+- [x] Bremsen auf dem Überblick: stärkste Verzögerung, rechnerischer Bremsweg aus 100, harte Bremsungen mit Liste, Fading-Hinweis. (2026-09-04)
 
 ### Deine eigenen Sollwerte
 - [ ] Persönliche Baseline: ab fünf Fahrten lernt die Akte den normalen Bereich dieses Wagens; Abweichung davon ist ein Befund, auch innerhalb des Werksbands. Mittel.

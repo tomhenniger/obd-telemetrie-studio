@@ -116,3 +116,12 @@ test('Verbrauch: Kraftstoffzähler und Streckenquelle mit verschiedenen Zeiträu
   assert.equal(f.status, 'unklar', f.status + ' ' + (f.note || ''));
   assert.ok(/verschiedene Zeiträume/.test(f.note));
 });
+
+test('Neue Regeln Batterie beim Start und Ladedruckaufbau laufen ohne Fehler und liefern einen gültigen Status', async () => {
+  const { res } = await run(richDrive());
+  for (const id of ['start_voltage', 'boost_spool']) {
+    const r = find(res, id);
+    assert.ok(r, id + ' vorhanden');
+    assert.ok(['ok', 'warn', 'crit', 'unklar', 'missing'].includes(r.status), id + ': ' + r.status);
+  }
+});

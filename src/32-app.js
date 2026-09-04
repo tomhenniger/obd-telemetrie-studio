@@ -484,6 +484,59 @@ BUILDERS.overview = function (page) {
       } },
       { type: 'timeseries', syncHover: true });
     page.appendChild(cc.node);
+
+  /* --- Wärmehaushalt: alle Temperaturen in einem Bild, Warmlaufzeit je Größe --- */
+  {
+    const T_IDS = [['coolant', 80], ['oil_temp', 80], ['trans_temp', 60], ['cac_mean', null], ['iat', null], ['ambient', null]].filter(([id]) => ds.G[id]);
+    if (T_IDS.length >= 2) {
+      const tc = chartCard('Wärmehaushalt', { height: 240, hint: 'Kühlmittel, Öl, Getriebe, Ladeluft und Außenluft über die Fahrt',
+        info: { read: 'Alle Temperaturen auf einer Achse. Kühlmittel läuft voraus, Öl folgt mit Verzögerung, das Getriebe braucht am längsten. Die Tabelle nennt je Größe den Startwert, die Zeit bis zur Betriebstemperatur und das Niveau, auf dem sie sich einpendelt.',
+                good: 'Kühlmittel nach 5–10 Minuten auf 85–95 °C und dort flach; Öl 10–20 °C darüber bei Last, Ladeluft nur wenige Grad über Außenluft.',
+                bad: 'Kühlmittel, das nie flach wird oder unter 80 °C bleibt (Thermostat), Öl, das dem Kühlmittel nicht folgt (Ölkühler, Sensor), Ladeluft, die über Kilometer heiß bleibt (Ladeluftkühler).' } });
+      page.appendChild(tc.node);
+      requestAnimationFrame(() => drawTimeseries(tc, T_IDS.map(x => x[0]), [ds.t0, ds.t1], true));
+      const rows = T_IDS.map(([id, thr]) => {
+        const a = ds.G[id], m = ds.metrics.get(id);
+        let first = NaN, tThr = NaN, k0 = -1;
+        for (let k = 0; k < ds.N; k++) if (a[k] === a[k]) { first = a[k]; k0 = k; break; }
+        if (thr !== null && first < thr) for (let k = k0; k < ds.N; k++) if (a[k] >= thr) { tThr = ds.grid[k] - ds.t0; break; }
+        const tail = []; for (let k = Math.max(0, ds.N - Math.round(600 / ds.step)); k < ds.N; k++) if (a[k] === a[k]) tail.push(a[k]);
+        tail.sort((p, q) => p - q);
+        const st = ds.stats[id];
+        return el('tr', {}, el('td', {}, m ? (m.short || m.label) : id),
+          el('td', { class: 'n' }, isFinite(first) ? fmt(first, 0) : '–'),
+          el('td', { class: 'n' }, thr === null ? '–' : isFinite(tThr) ? fmtDur(tThr) : (first >= thr ? 'schon warm' : 'nicht erreicht')),
+          el('td', { class: 'n' }, tail.length ? fmt(tail[Math.floor(tail.length / 2)], 0) : '–'),
+          el('td', { class: 'n' }, st ? fmt(st.max, 0) : '–'));
+      });
+      tc.node.querySelector('.card-b').appendChild(el('div', { class: 'tblwrap', style: { marginTop: '10px' } }, el('table', { class: 'tbl', style: { minWidth: '420px' } },
+        el('thead', {}, el('tr', {}, el('th', {}, 'Größe'), el('th', {}, 'Start °C'), el('th', {}, 'bis Betriebstemperatur'), el('th', {}, 'letzte 10 min °C'), el('th', {}, 'Max °C'))),
+        el('tbody', {}, ...rows))));
+    }
+  }
+  /* --- Bremsen: Verzögerung, harte Bremsungen, Bremsweg-Schätzung --- */
+  if (ds.G.accel && ds.G.speed_mix && s.accel) {
+    if (!ds._events) ds._events = driveEvents(ds);
+    const brakes = ds._events.filter(e => e.kind === 'brake');
+    const aMin = s.accel.min;                                       // g, negativ
+    const d100 = isFinite(aMin) && aMin < -0.05 ? Math.pow(100 / 3.6, 2) / (2 * Math.abs(aMin) * 9.81) : NaN;
+    const decels = brakes.map(b => parseFloat(String(b.label).replace(/[^\d.,-]/g, '').replace(',', '.'))).filter(isFinite);
+    let fading = null;
+    if (decels.length >= 3) { const firstHalf = decels.slice(0, Math.floor(decels.length / 2)), second = decels.slice(Math.floor(decels.length / 2));
+      const mean = a => a.reduce((p, q) => p + q, 0) / a.length; fading = mean(second) - mean(firstHalf); }   // positiv = spätere Bremsungen schwächer
+    page.appendChild(card('Bremsen', { hint: 'aus dem Geschwindigkeitsverlauf – kein Bremsdruck, keine Bremsprüfstandswerte',
+      info: { read: 'Verzögerung ist die negative Längsbeschleunigung aus der Geschwindigkeit. Harte Bremsungen sind Phasen unter −0,3 g über mindestens eine Sekunde. Der Bremsweg aus 100 km/h ist eine Rechnung mit der stärksten gemessenen Verzögerung, kein Messwert – auf trockener Straße schafft ein gesunder Wagen 0,9 bis 1,1 g und damit 35 bis 45 m.',
+              good: 'Stärkste Verzögerung deutlich über 0,5 g bei einer Gefahrenbremsung; über mehrere harte Bremsungen bleibt sie gleich.',
+              bad: 'Späte harte Bremsungen schwächer als frühe: das kann Fading sein (heiße Bremse), aber auch einfach vorsichtigeres Fahren. Bei einem Kaufcheck lohnt eine gezielte Bremsprobe aus 100 km/h.' } },
+      el('div', { class: 'grid kpis' },
+        kpi('Stärkste Verzögerung', fmt(Math.abs(aMin), 2), 'g', isFinite(d100) ? 'rechnerisch ' + fmt(d100, 0) + ' m Bremsweg aus 100 km/h' : ''),
+        kpi('Harte Bremsungen', String(brakes.length), '', 'unter −0,3 g, mindestens 1 s'),
+        kpi('Fading-Hinweis', fading === null ? '–' : (fading > 0.05 ? 'ja' : 'nein'), '', fading === null ? 'erst ab drei harten Bremsungen' : 'spätere Bremsungen ' + (fading > 0 ? 'schwächer' : 'nicht schwächer') + ' (' + (fading >= 0 ? '+' : '') + fmt(fading, 2) + ' g)')),
+      brakes.length ? el('div', { class: 'tblwrap', style: { marginTop: '10px' } }, el('table', { class: 'tbl', style: { minWidth: '360px' } },
+        el('thead', {}, el('tr', {}, el('th', {}, 'Zeit'), el('th', {}, 'Verzögerung'), el('th', {}, 'Ausgang'))),
+        el('tbody', {}, ...brakes.slice(0, 10).map(b => el('tr', { style: { cursor: 'pointer' }, onclick: () => { Chart.emitHover(b.t, null); if (App.map) App.map.setMarkerTime(b.t); } },
+          el('td', {}, b.time), el('td', { class: 'n' }, b.label.replace('Bremsung ', '')), el('td', {}, b.detail)))))) : null));
+  }
     drawTimeseries(cc, ids, [ds.t0, ds.t1], true);
   }
 
