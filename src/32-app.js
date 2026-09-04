@@ -731,8 +731,19 @@ BUILDERS.map = function (page) {
     limHost.innerHTML = '';
     const src = speedSource();
     if (App.limitsStatus) {
-      limHost.appendChild(el('p', { class: 'dim', style: { margin: '0' } }, App.limitsStatus));
-      if (!/^Fehler/.test(App.limitsStatus)) return;
+      const st = App.limitsStatus;
+      if (st.error) {
+        limHost.appendChild(el('div', { class: 'note crit', style: { marginBottom: '10px' } }, icon('alert', 'n-i'),
+          el('div', {}, el('b', {}, 'Tempolimits konnten nicht geladen werden'), st.error)));
+      } else {
+        const secs = Math.round((Date.now() - st.started) / 1000);
+        limHost.appendChild(el('div', { class: 'prog', style: { width: '100%' } },
+          el('div', { style: { display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '12.5px', color: 'var(--text-2)' } },
+            el('span', {}, st.text), el('span', { class: 'num nowrap' }, (st.frac === null ? '' : fmt(st.frac * 100, 0) + ' % · ') + secs + ' s')),
+          el('div', { class: 'prog-bar' + (st.frac === null ? ' indet' : '') },
+            el('i', { style: { width: st.frac === null ? null : fmt(st.frac * 100, 0) + '%' } }))));
+        return;
+      }
     }
     if (!App.limits || App.limits.id !== limId()) {
       const pts = limitsThinTrack(tr).length;
@@ -794,18 +805,25 @@ BUILDERS.map = function (page) {
   }
   async function loadLimits(force) {
     const id = limId();
-    App.limitsStatus = 'Lade …'; renderLimits();
+    const started = Date.now();
+    const setStatus = (text, frac) => { App.limitsStatus = { text, frac: frac === undefined ? null : frac, started }; renderLimits(); };
+    const paintNow = () => new Promise(r => setTimeout(r, 30));   // dem Browser Zeit zum Zeichnen geben
+    const tick = setInterval(() => { if (App.limitsStatus && !App.limitsStatus.error && limHost.isConnected) renderLimits(); }, 1000);
+    setStatus('Anfrage wird vorbereitet …', null);
     try {
       let data = force ? null : await limitsCacheGet(id);
       if (!data) {
-        data = await fetchLimitWays(tr, s => { App.limitsStatus = s; renderLimits(); });
+        data = await fetchLimitWays(tr, (text, frac) => setStatus(text, frac));
         await limitsCachePut(id, data);
-      }
+      } else setStatus('Aus dem Zwischenspeicher geladen', 0.6);
+      setStatus('Ordne ' + fmt(tr.n, 0) + ' Streckenpunkte ' + data.ways.length + ' Straßenabschnitten zu …', 0.85);
+      await paintNow();
       computeLimits(data);
       App.mapMetric = '__limits'; sel.value = '__limits'; paint();
     } catch (e) {
-      App.limitsStatus = 'Fehler: ' + ((e && e.message) || e) + ' – später erneut versuchen.';
+      App.limitsStatus = { error: ((e && e.message) || String(e)) + ' – später erneut versuchen; bei „Neu von OSM laden“ wird ein zweiter Server probiert.', started };
     }
+    clearInterval(tick);
     renderLimits();
   }
   renderLimits();

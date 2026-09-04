@@ -67,20 +67,42 @@ async function fetchLimitWays(tr, onStatus) {
   if (pts.length < 2) throw new Error('Zu wenige Positionen für eine Abfrage');
   const q = limitsOverpassQuery(pts, 25);
   let lastErr = null;
-  for (const url of LIMIT_ENDPOINTS) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  /* Zwei Server, zwei Runden: die öffentlichen Overpass-Server drosseln (429) und
+     brechen unter Last ab (504); eine kurze Pause und der andere Server helfen meist. */
+  const attempts = LIMIT_ENDPOINTS.concat(LIMIT_ENDPOINTS);
+  for (let k = 0; k < attempts.length; k++) {
+    const url = attempts[k];
     try {
-      if (onStatus) onStatus('Frage ' + new URL(url).host + ' nach Tempolimits entlang ' + pts.length + ' Streckenpunkten …');
+      if (k === LIMIT_ENDPOINTS.length) {
+        if (onStatus) onStatus('Beide Server waren ausgelastet – zweiter Versuch in 8 s …', null);
+        await sleep(8000);
+      }
+      if (onStatus) onStatus('Frage ' + new URL(url).host + ' nach Tempolimits entlang ' + pts.length + ' Streckenpunkten – der Server antwortet je nach Auslastung in 5 bis 60 s …', null);
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 95000);
       const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q),
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctrl.signal });
       clearTimeout(timer);
+      if (r.status === 429) throw new Error(new URL(url).host + ' drosselt gerade (429 Too Many Requests)');
+      if (r.status === 504 || r.status === 503) throw new Error(new URL(url).host + ' ist überlastet (' + r.status + ')');
       if (!r.ok) throw new Error('HTTP ' + r.status + ' von ' + new URL(url).host);
-      const j = await r.json();
+      /* Antwort stückweise lesen, damit der Fortschritt sichtbar wird (Gesamtgröße ist unbekannt) */
+      let j;
+      if (r.body && r.body.getReader) {
+        const reader = r.body.getReader(); const chunks = []; let got = 0;
+        for (;;) {
+          const { done, value } = await reader.read(); if (done) break;
+          chunks.push(value); got += value.length;
+          if (onStatus) onStatus('Antwort wird geladen: ' + fmt(got / 1024, 0) + ' KB …', null);
+        }
+        const all = new Uint8Array(got); let o = 0; for (const c of chunks) { all.set(c, o); o += c.length; }
+        j = JSON.parse(new TextDecoder().decode(all));
+      } else j = await r.json();
       const ways = (j.elements || []).filter(e => e.type === 'way' && e.geometry && e.geometry.length > 1 && e.tags)
         .map(e => ({ id: e.id, tags: e.tags, geom: e.geometry.map(g => [g.lat, g.lon]) }));
       return { ways, fetchedAt: Date.now(), osmDate: (j.osm3s && j.osm3s.timestamp_osm_base) || null, points: pts.length };
-    } catch (e) { lastErr = e; }
+    } catch (e) { lastErr = e; if (onStatus) onStatus(((e && e.message) || 'Fehler') + ' – nächster Versuch …', null); await sleep(1500); }
   }
   throw lastErr || new Error('Overpass nicht erreichbar');
 }
