@@ -16,6 +16,7 @@ OUT=index.html
   cat src/20-util.js
   cat src/21-parse.js
   cat src/21b-vin.js
+  cat src/21c-vcds.js
   cat src/22-metrics.js
   cat src/23-stats.js
   cat src/23b-events.js

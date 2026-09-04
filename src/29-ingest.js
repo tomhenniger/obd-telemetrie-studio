@@ -104,6 +104,12 @@ async function toCsvText(input, hint) {
     text = new TextDecoder('utf-8').decode(bytes);
   }
 
+  /* VCDS-Log? Dann erst in eine Wide-CSV übersetzen. */
+  if (looksLikeVcds(text)) {
+    const v = vcdsToCsv(text);
+    return { text: v.text, name: (hint || 'VCDS') + ' · ' + (v.controller || 'Messwertblock'), vcds: v };
+  }
+
   const probe = text.slice(0, 2000);
   if (/^\s*[{[]/.test(probe) || /<html/i.test(probe))
     throw new Error('Der übergebene Inhalt ist keine CSV-Datei, sondern ' +

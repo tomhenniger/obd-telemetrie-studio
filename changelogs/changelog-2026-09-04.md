@@ -1,6 +1,7 @@
 # Changelog — 2026-09-04
 
 ## Neue Features
+- **VCDS-Logs einlesen**: Messwertblock-Logs von VCDS werden am Kopf erkannt und beim Import in eine Wide-CSV übersetzt – Kanalnamen samt Einheit, STAMP-Spalten und wiederholte Blockköpfe fallen weg. Der Name des Steuergeräts steht im Dateinamen der Auswertung.
 - **Fahrt nacherleben** (Strecke): Regler und Abspielknopf, Marker auf der Karte und Zeiger in allen Verläufen laufen synchron mit, Tempo von 10× bis 300×.
 - **Wiederkehrende Abschnitte** (Strecke): Stellen, an denen die Route mehrfach befahren wurde, mit Dauer und Durchschnittstempo je Durchfahrt und Sprung zur schnellsten.
 - **Leistung aus der Fahrphysik** (Kennfelder): zweite, vom Kraftstofffluss unabhängige Schätzung. Aus Beschleunigung, Luft- und Rollwiderstand und Steigung folgt die Kraft, daraus die Leistung an der Kurbelwelle, je Volllastzug und gegen die Werksangabe. Dazu eine Massenschätzung aus Leistung und Beschleunigung mit Streuband. Alle Annahmen stehen unter der Karte.

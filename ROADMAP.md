@@ -45,7 +45,7 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 
 ### Daten und Import
 - [x] Mehrere CSV-Teile zu einer Fahrt zusammenführen (Mehrfachauswahl oder Ablegen, Reihenfolge nach Zeit, gleiche Spalten vorausgesetzt). (2026-09-04)
-- [ ] VCDS-Messwertblock-Logs einlesen: die Werkstatt-Logs der Audi-Welt. Mittel.
+- [x] VCDS-Messwertblöcke einlesen: Kopf, Kanalnamen und Einheiten werden erkannt und in eine Wide-CSV übersetzt, STAMP-Spalten verworfen. (2026-09-04)
 - [x] GPX-Track ergänzen: GPX zusammen mit der CSV auswählen, Punkte werden als Positionszeilen angehängt. (2026-09-04)
 
 ### Erlebnis
