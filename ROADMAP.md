@@ -32,8 +32,8 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 ## Vorgeschlagen (zweite Runde)
 
 ### Motor tiefer
-- [ ] Leistung aus Beschleunigung: zweite, physikalische Leistungsschätzung (Masse, Steigung, Luft- und Rollwiderstand) neben der aus dem Verbrauch; Abweichung der beiden ist ein Befund. Mittel.
-- [ ] Fahrzeugmasse schätzen aus Leistung und Beschleunigung: Plausibilität von Beladung und Leistungsangabe. Mittel.
+- [x] Leistung aus der Fahrphysik (Kennfelder): Kraft aus Beschleunigung, Luft- und Rollwiderstand und Steigung, je Volllastzug, gegen die Werksangabe. (2026-09-04)
+- [x] Massenschätzung aus Leistung und Beschleunigung, mit Streuung und Vergleich zum Leergewicht. (2026-09-04)
 - [x] Leerlaufqualität: war als Regel „Leerlaufdrehzahl und -ruhe“ (Drehzahlstreuung) schon vorhanden und ist in der Akte trendfähig. (geprüft 2026-09-04)
 - [x] Batterie beim Start als Diagnoseregel: Ruhespannung vor dem ersten Motorlauf und Einbruch beim Anlassen, in der Akte als Trend. (2026-09-04)
 - [x] Bremsen auf dem Überblick: stärkste Verzögerung, rechnerischer Bremsweg aus 100, harte Bremsungen mit Liste, Fading-Hinweis. (2026-09-04)

@@ -1392,6 +1392,34 @@ BUILDERS.fields = function (page) {
         shHost.appendChild(tbl('Hochschalten', sa.up));
         shHost.appendChild(tbl('Runterschalten', sa.down));
       }
+      /* --- Leistung aus der Beschleunigung --- */
+      {
+        const pa = powerFromAccel(ds, App.profile);
+        const ma = massFromPower(ds, App.profile);
+        const pHost = el('div');
+        const P = pa.params || {};
+        if (!pa.ok && !ma.ok) pHost.appendChild(emptyBox('Keine physikalische Schätzung möglich', (pa.reason || '') + ' ' + (ma.reason || '')));
+        else {
+          const items = [];
+          if (pa.ok) {
+            items.push(kpi('Leistung aus Fahrphysik', fmt(pa.best.kw, 0), 'kW', fmt(pa.best.kw * 1.35962, 0) + ' PS · bei ' + fmt(pa.best.v, 0) + ' km/h' + (isFinite(pa.best.rpm) ? ' / ' + fmt(pa.best.rpm, 0) + ' min⁻¹' : ''), { accent: true }));
+            items.push(kpi('Median über die Züge', fmt(pa.median, 0), 'kW', pa.pulls.length + ' Volllastzüge ausgewertet'));
+            if (pa.specKW) items.push(kpi('Gegen Werksangabe', (pa.devPct >= 0 ? '+' : '') + fmt(pa.devPct, 0), '%', 'Werk ' + fmt(pa.specKW, 0) + ' kW · ' + (Math.abs(pa.devPct) < 20 ? 'im Rahmen der Annahmen' : 'Annahmen prüfen')));
+          }
+          if (ma.ok) items.push(kpi('Masse aus Beschleunigung', fmt(ma.median, 0), 'kg', (ma.specKg ? 'Werk ' + fmt(ma.specKg, 0) + ' kg · ' + (ma.devKg >= 0 ? '+' : '') + fmt(ma.devKg, 0) + ' kg · ' : '') + 'Streuung ' + fmt(ma.p25, 0) + '–' + fmt(ma.p75, 0) + ' kg'));
+          pHost.appendChild(el('div', { class: 'grid kpis' }, ...items));
+          pHost.appendChild(el('p', { class: 'dim2', style: { marginTop: '10px', fontSize: '11.5px', lineHeight: '1.5' } },
+            'Angenommen: Masse ' + fmt(P.mass, 0) + ' kg, cW ' + fmt(P.cd, 2) + ', Stirnfläche ' + fmt(P.area, 2) + ' m², Rollwiderstand ' + fmt(P.crr, 3) + ', Antriebsstrang-Wirkungsgrad ' + fmt(P.driveline * 100, 0) + ' %. ' +
+            'Steigung fließt aus dem Höhenprofil ein, soweit vorhanden.'));
+        }
+        page.appendChild(card('Leistung aus der Fahrphysik', {
+          hint: 'zweite Schätzung, unabhängig vom Kraftstofffluss',
+          info: { read: 'Aus Beschleunigung, Geschwindigkeit und Steigung folgt die Kraft, die der Motor gerade aufbringt: Masse mal Beschleunigung plus Luft- und Rollwiderstand plus Hangabtrieb. Mal Geschwindigkeit ergibt das die Leistung am Rad, geteilt durch den Wirkungsgrad die an der Kurbelwelle. Die Massenschätzung löst dieselbe Gleichung nach der Masse auf und nutzt dafür die Leistung aus dem Verbrauch.',
+                  good: 'Beide Schätzungen liegen nah beieinander und nah an der Werksangabe. Die geschätzte Masse passt zu Leergewicht plus Beladung.',
+                  bad: 'Weicht die Leistung stark ab, stimmt eine Annahme nicht: falsches Profil, schwer beladen, oder die Fahrt hatte keinen sauberen Volllastzug. Eine deutlich zu hohe Masse deutet auf Anhänger, Zuladung oder eine zu optimistische Werksangabe. Das ersetzt keinen Prüfstand.' }
+        }, pHost));
+      }
+
       page.appendChild(card('Schaltanalyse', {
         hint: 'Schaltpunkte, Schaltdauer und Zeitanteil je Gang aus der Gangzuordnung',
         info: { read: 'Ein Schaltvorgang ist der Wechsel zwischen zwei Gängen, die je mindestens zwei Sekunden stabil zugeordnet waren. „Drehzahl davor“ ist der Median der letzten 1,5 s im alten Gang, „danach“ der Median der ersten 1,5 s im neuen. Die Schaltdauer ist die Zeit ohne eindeutige Zuordnung dazwischen – bei 1-s-Raster grob. Kickdown: Rückschaltung bei über 75 % Pedal oder deutlicher Beschleunigung.',
