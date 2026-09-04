@@ -22,6 +22,7 @@ OUT=index.html
   cat src/25b-limits.js
   cat src/26-profiles.js
   cat src/26b-gearbox.js
+  cat src/26c-tyres.js
   cat src/27-diag.js
   cat src/28-ui.js
   cat src/29-ingest.js

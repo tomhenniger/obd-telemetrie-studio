@@ -11,7 +11,7 @@ const { chromium } = require(pwPath);
 const CSV = process.argv[2] || path.join(__dirname, '..', 'data', 'demo.csv');
 const URL = process.argv[3] || 'http://127.0.0.1:8731/index.html';
 const OUT = path.join(__dirname, 'shots');
-const SECTIONS = ['overview', 'series', 'map', 'dist', 'fields', 'diag', 'akte', 'buy', 'ai', 'data', 'settings'];
+const SECTIONS = ['overview', 'series', 'map', 'dist', 'fields', 'tyres', 'diag', 'akte', 'buy', 'ai', 'data', 'settings'];
 const VIEWPORTS = { desktop: { width: 1400, height: 900 }, phone: { width: 390, height: 844 } };
 
 (async () => {

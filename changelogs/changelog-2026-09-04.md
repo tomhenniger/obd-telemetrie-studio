@@ -1,6 +1,7 @@
 # Changelog — 2026-09-04
 
 ## Neue Features
+- **Neuer Bereich „Tacho & Reifen“**: Reifenfaktor aus OBD- gegen GPS-Geschwindigkeit (nur ruhige Sekunden, Median, je Geschwindigkeitsklasse, Streubild), Tempomat-Tabelle mit tatsächlicher Geschwindigkeit inklusive einstellbarer Tacho-Voreilung, Reifenrechner (Größe → Durchmesser und Abrollumfang, wirksamer Umfang aus der Messung, Abweichung als Profilverlust oder falsche Größe, passende Größen), Übernahme des wirksamen Umfangs in die Gangerkennung.
 
 
 ## UI-Änderungen

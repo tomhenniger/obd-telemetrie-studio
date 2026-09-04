@@ -4,6 +4,9 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 
 ## Aufgenommen (2026-09-04)
 
+### Erledigt
+- [x] Tacho & Reifen: Reifenfaktor aus OBD gegen GPS, Tempomat-Tabelle, Reifenrechner mit passenden Größen, wirksamer Umfang für die Gangerkennung. (2026-09-04)
+
 ### Auswertung
 - [ ] Zwei Fahrten überlagern: Verläufe und Kennfelder zweier Aufzeichnungen übereinander (vor/nach Reparatur, Sommer/Winter). Mittel.
 - [ ] Schaltanalyse: Schaltpunkte je Gang, Schaltdauer aus dem Drehzahleinbruch, Zeitanteil je Gang. Mittel.

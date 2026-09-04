@@ -691,6 +691,9 @@ table.tbl tbody tr:hover td { background: var(--surface-2); }
 .pform-f span { font-size: 11.5px; color: var(--text-2); }
 .pform-f .inp { width: 100%; }
 
+/* Beschriftete Eingabe in einer Zeile, bricht als Ganzes um */
+.field { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; font-size: 12.5px; }
+
 /* Zeitbereichs-Regler */
 .range { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; }
 .range .rv { font-variant-numeric: tabular-nums; color: var(--text-2); }
@@ -847,6 +850,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 <g id="i-share"><path d="M12 15V3.5M8.5 7L12 3.5 15.5 7"/><path d="M5 13v6a2 2 0 002 2h10a2 2 0 002-2v-6"/></g>
 <g id="i-phone"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 5.5h3"/><path d="M11 18.6h2"/></g>
 <g id="i-ai"><path d="M12 3.5l1.9 4.6 4.6 1.9-4.6 1.9L12 16.5l-1.9-4.6L5.5 10l4.6-1.9z"/><path d="M18.5 15.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></g>
+<g id="i-wheel"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/></g>
 <g id="i-tri"><path d="M12 4.5L21 19.5H3z"/></g>
 <g id="i-minus"><path d="M6 12h12"/></g>
 <g id="i-more"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></g>
@@ -5588,6 +5592,104 @@ function labelGears(res, gbx, redline) {
   asc.forEach((g, i) => { g.gear = i + 1; g.label = 'S' + (i + 1); });
   return { mode: 'none' };
 }
+/* ===== Tacho & Reifen ==============================================
+   Das Steuergerät rechnet die Raddrehzahl mit einem fest hinterlegten
+   Abrollumfang in km/h um (das ist die OBD-Geschwindigkeit, auf ihr fußen
+   Tacho und Tempomat). GPS misst die echte Geschwindigkeit. Das Verhältnis
+   k = v_GPS / v_OBD ist der Reifenfaktor: k < 1 heißt, das Auto ist
+   langsamer als das Steuergerät glaubt (kleinerer Reifen, abgefahren);
+   k > 1 heißt größerer Reifen. Der Tacho zeigt zusätzlich gesetzlich
+   voreilend an (nie weniger, höchstens +10 % + 4 km/h).
+   ================================================================== */
+
+/* "255/35 R19", "255/35ZR19", "225/50 R 17", "255/35-19" */
+function parseTyre(str) {
+  const m = String(str || '').toUpperCase().replace(/\s+/g, '').match(/^(\d{3})\/(\d{2})(?:Z?R|-)?(\d{2})(?:[A-Z].*)?$/);
+  if (!m) return null;
+  const width = +m[1], aspect = +m[2], rim = +m[3];
+  if (width < 125 || width > 355 || aspect < 20 || aspect > 85 || rim < 12 || rim > 24) return null;
+  const diameterMm = rim * 25.4 + 2 * width * aspect / 100;
+  const staticCircum = Math.PI * diameterMm / 1000;
+  return { width, aspect, rim, diameterMm, staticCircum,
+           rollCircum: staticCircum,                         // entspricht den Herstellertabellen auf ±0,5 % (255/35 R19 → 2,077 m)
+           label: width + '/' + aspect + ' R' + rim };
+}
+
+/* Gängige Größen, deren Abrollumfang innerhalb tolPct am Ziel liegt */
+function tyreCandidates(targetRollM, tolPct, limit) {
+  tolPct = tolPct || 1.5; limit = limit || 12;
+  const out = [];
+  for (let rim = 15; rim <= 22; rim++)
+    for (let width = 185; width <= 305; width += 10)
+      for (let aspect = 25; aspect <= 65; aspect += 5) {
+        const t = parseTyre(width + '/' + aspect + ' R' + rim);
+        if (!t) continue;
+        const dev = (t.rollCircum / targetRollM - 1) * 100;
+        if (Math.abs(dev) <= tolPct) out.push({ label: t.label, rollCircum: t.rollCircum, dev });
+      }
+  out.sort((a, b) => Math.abs(a.dev) - Math.abs(b.dev));
+  return out.slice(0, limit);
+}
+
+/* Reifenfaktor aus OBD- und GPS-Geschwindigkeit auf dem Zeitraster.
+   Nur ruhige Punkte: beide Werte da, v_GPS ≥ vMin, kaum Beschleunigung. */
+function speedRatioAnalysis(G, grid, opts) {
+  opts = opts || {};
+  const obd = G.speed, gps = G.speed_gps, acc = G.accel;
+  const vMin = opts.vMin || 45, aMax = opts.aMax || 0.35;
+  if (!obd || !gps) return { ok: false, reason: 'OBD- und GPS-Geschwindigkeit werden beide gebraucht' };
+  const xs = [], ys = [], ratios = [], idx = [];
+  const step = grid.length > 1 ? grid[1] - grid[0] : 1;
+  for (let i = 1; i < grid.length - 1; i++) {
+    const a = obd[i], g = gps[i];
+    if (!(a === a) || !(g === g) || g < vMin || a < vMin) continue;
+    let ax = acc && acc[i] === acc[i] ? Math.abs(acc[i]) * 9.81 : Math.abs((a - obd[i - 1]) / 3.6 / step);   // accel liegt in g vor
+    if (!(ax === ax) || ax > aMax) continue;
+    if (Math.abs(g / a - 1) > 0.25) continue;                 // GPS-Ausreißer
+    xs.push(a); ys.push(g); ratios.push(g / a); idx.push(i);
+  }
+  const n = ratios.length;
+  if (n < 40) return { ok: false, reason: 'zu wenige ruhige Abschnitte ab ' + vMin + ' km/h mit beiden Geschwindigkeiten (' + n + ' Punkte, mindestens 40)', n };
+  const sorted = ratios.slice().sort((p, q) => p - q);
+  const med = sorted[Math.floor(n / 2)];
+  const mad = sorted.map(r => Math.abs(r - med)).sort((p, q) => p - q)[Math.floor(n / 2)];
+  /* Ursprungsgerade nach kleinsten Quadraten: k = Σxy / Σx² */
+  let sxy = 0, sxx = 0;
+  for (let i = 0; i < n; i++) { sxy += xs[i] * ys[i]; sxx += xs[i] * xs[i]; }
+  const slope = sxy / sxx;
+  /* nach Geschwindigkeitsklassen: bleibt der Faktor konstant, ist es der Reifen; steigt er, ist es etwas anderes */
+  const bins = [[45, 70], [70, 100], [100, 130], [130, 260]].map(([lo, hi]) => {
+    const r = ratios.filter((_, i) => xs[i] >= lo && xs[i] < hi);
+    if (r.length < 8) return { lo, hi, n: r.length, k: NaN };
+    const s = r.slice().sort((p, q) => p - q);
+    return { lo, hi, n: r.length, k: s[Math.floor(s.length / 2)] };
+  });
+  const valid = bins.filter(b => b.k === b.k);
+  const spreadBins = valid.length > 1 ? Math.max(...valid.map(b => b.k)) - Math.min(...valid.map(b => b.k)) : 0;
+  return { ok: true, n, k: med, slope, mad, bins, spreadBins, xs, ys, idx,
+           consistent: mad < 0.015 && spreadBins < 0.012,
+           quality: mad < 0.01 ? 'gut' : mad < 0.02 ? 'brauchbar' : 'unruhig' };
+}
+
+/* Was der Reifenfaktor bedeutet, wenn Steuergerät-Umfang und montierte Größe bekannt sind */
+function tyreInterpretation(k, ecuCircum, mounted) {
+  const out = { k, effectiveCircum: ecuCircum ? k * ecuCircum : null, mounted: mounted || null };
+  if (out.effectiveCircum && mounted) {
+    out.devMountedPct = (out.effectiveCircum / mounted.rollCircum - 1) * 100;
+    /* 1 mm weniger Profil = 2 mm weniger Durchmesser; Umfang skaliert mit dem Durchmesser */
+    out.treadMm = -out.devMountedPct / 100 * mounted.diameterMm / 2;
+  }
+  return out;
+}
+
+/* Tempomat-Tabelle: Sollwert (Steuergerät) → tatsächliche Geschwindigkeit */
+function cruiseTable(k, overreadPct, overreadKmh, setSpeeds) {
+  setSpeeds = setSpeeds || [50, 70, 80, 100, 120, 130, 140, 160, 180, 200];
+  return setSpeeds.map(set => {
+    const obd = (set - (overreadKmh || 0)) / (1 + (overreadPct || 0) / 100);   // was der Radsensor bei dieser Anzeige liefert
+    return { set, obd, real: obd * k };
+  });
+}
 /* ============================================================
    Diagnose-Engine
    Fünf Zustände je Regel: ok | warn | crit | missing | unklar
@@ -9986,6 +10088,7 @@ const SECTIONS = [
   { id: 'map',      label: 'Strecke',      tab: 'Karte',     icon: 'map',    sub: 'GPS-Route und Höhenprofil', data: true },
   { id: 'dist',     label: 'Verteilungen', tab: 'Verteilung',icon: 'bars',   sub: 'Histogramme und Statistik je Messgröße', data: true },
   { id: 'fields',   label: 'Kennfelder',   tab: 'Kennfeld',  icon: 'grid',   sub: 'Betriebspunkte, Klopfbild, Gangerkennung', data: true },
+  { id: 'tyres',    label: 'Tacho & Reifen', tab: 'Tacho',    icon: 'wheel',  sub: 'Radsensor gegen GPS, Tempomat, Reifengröße', data: true },
   { id: 'diag',     label: 'Diagnose',     tab: 'Diagnose',  icon: 'stetho', sub: 'Messwerte gegen Werksangaben', data: true },
   { id: 'akte',     label: 'Fahrzeugakte', tab: 'Akte',      icon: 'table',  sub: 'Mehrere Fahrten desselben Fahrzeugs im Verlauf' },
   { id: 'buy',      label: 'Kaufcheck',    tab: 'Kaufcheck', icon: 'clip',   sub: 'Gebrauchtwagen prüfen — Sichtprüfung, Probefahrt, Messprotokoll' },
@@ -12156,6 +12259,106 @@ function distDisputeNote(ds) {
         'Ausfällen ist der GPS-Wert deshalb keine Fahrleistung.'
       : 'Das deutet darauf hin, dass eine der Quellen nicht die ganze Fahrt abdeckt.'));
 }
+/* ===== Tacho & Reifen ============================================== */
+BUILDERS.tyres = function (page) {
+  const ds = App.ds, G = ds.G;
+  const r = speedRatioAnalysis(G, ds.grid);
+  const ecuCircum = rollCircumNow();
+  const profTyre = App.profile && App.profile.specs && App.profile.specs.tyre || '';
+  const mountedStr = store.get('tyreMounted', profTyre);
+  const mounted = parseTyre(mountedStr);
+  const overPct = +store.get('tachoOverPct', 0) || 0, overKmh = +store.get('tachoOverKmh', 0) || 0;
+
+  page.appendChild(el('div', { class: 'sech' },
+    el('p', {}, 'Das Steuergerät rechnet die Raddrehzahl mit einem festen Abrollumfang in km/h um. GPS misst, wie schnell das Auto wirklich ist. Aus dem Verhältnis folgt, was Tempomat und Tacho tatsächlich bedeuten und ob die Bereifung zur Annahme des Steuergeräts passt.')));
+
+  /* --- Radsensor gegen GPS --- */
+  if (!r.ok) {
+    page.appendChild(card('Radsensor gegen GPS', { hint: 'Reifenfaktor aus der Fahrt' },
+      emptyBox('Kein belastbarer Vergleich möglich', r.reason + '. Dafür braucht es OBD-Geschwindigkeit und GPS-Geschwindigkeit in derselben Aufzeichnung und einige Minuten gleichmäßige Fahrt ab 45 km/h.')));
+  } else {
+    const kPct = (r.k - 1) * 100;
+    const K = el('div', { class: 'grid kpis' },
+      kpi('Reifenfaktor', fmt(r.k, 4), '', 'v_GPS ÷ v_OBD, Median aus ' + fmt(r.n, 0) + ' ruhigen Punkten', { accent: true }),
+      kpi('Radsensor gegenüber GPS', ((1 / r.k - 1) >= 0 ? '+' : '') + fmt((1 / r.k - 1) * 100, 1), '%', kPct < 0 ? 'zeigt zu viel an – Auto ist langsamer' : kPct > 0 ? 'zeigt zu wenig an – Auto ist schneller' : 'stimmt'),
+      kpi('Streuung', '±' + fmt(r.mad * 100, 2), '%', 'Median-Abweichung, Güte: ' + r.quality),
+      kpi('Über Tempo konstant', r.consistent ? 'ja' : 'nein', '', r.consistent ? 'passt zu einem Reifeneffekt' : 'Faktor wandert mit dem Tempo – eher GPS oder Latenz'));
+    const binRows = r.bins.map(b => el('tr', {}, el('td', {}, b.lo + '–' + (b.hi > 250 ? '…' : b.hi) + ' km/h'),
+      el('td', { class: 'n' }, fmt(b.n, 0)), el('td', { class: 'n' }, b.k === b.k ? fmt(b.k, 4) : '–'),
+      el('td', { class: 'n' }, b.k === b.k ? ((b.k - 1) >= 0 ? '+' : '') + fmt((b.k - 1) * 100, 2) + ' %' : '–')));
+    const cc = chartCard('GPS gegen Radsensor', { legend: false, height: 300, hint: 'jeder Punkt eine ruhige Sekunde; liegt alles auf einer Geraden, ist es der Reifen' },
+      { type: 'scatter', xTitle: 'OBD-Geschwindigkeit (km/h)', yTitle: 'GPS (km/h)' });
+    const lo = Math.min(...r.xs) - 5, hi = Math.max(...r.xs) + 5;
+    cc.chart.scatterData = { x: r.xs, y: r.ys, n: r.n, xlo: lo, xhi: hi, ylo: lo, yhi: hi, r: 1.8 };
+    cc.chart.xTitle = 'OBD-Geschwindigkeit (km/h)'; cc.chart.yTitle = 'GPS (km/h)';
+    requestAnimationFrame(() => cc.chart.draw());
+    page.appendChild(card('Radsensor gegen GPS', {
+      hint: 'Reifenfaktor aus der Fahrt',
+      info: { read: 'Verglichen werden nur Sekunden, in denen beide Geschwindigkeiten vorliegen, das Auto mindestens 45 km/h fährt und kaum beschleunigt. Der Faktor ist der Median der Verhältnisse; die Tabelle zeigt ihn je Geschwindigkeitsklasse.',
+              good: 'Faktor in allen Klassen gleich, Streuung unter ±1 %. Dann ist die Abweichung ein Reifeneffekt und kein Messfehler.',
+              bad: 'Faktor wandert mit dem Tempo oder streut stark: GPS-Rauschen, Latenz zwischen OBD und GPS oder Fahrt im Wald. Dann lieber eine ruhige Autobahnfahrt aufzeichnen.' }
+    }, K, el('div', { class: 'tblwrap', style: { marginTop: '12px' } }, el('table', { class: 'tbl', style: { minWidth: '360px' } },
+      el('thead', {}, el('tr', {}, el('th', {}, 'Klasse'), el('th', {}, 'Punkte'), el('th', {}, 'Faktor'), el('th', {}, 'Abweichung'))),
+      el('tbody', {}, ...binRows)))));
+    page.appendChild(cc.node);
+  }
+
+  /* --- Tempomat --- */
+  const k = r.ok ? r.k : 1;
+  const inpPct = el('input', { class: 'inp', type: 'number', step: '0.5', min: '0', max: '12', value: String(overPct), style: { width: '80px' },
+    onchange: e => { store.set('tachoOverPct', +e.target.value || 0); go('tyres', true); } });
+  const inpKmh = el('input', { class: 'inp', type: 'number', step: '1', min: '0', max: '6', value: String(overKmh), style: { width: '80px' },
+    onchange: e => { store.set('tachoOverKmh', +e.target.value || 0); go('tyres', true); } });
+  const rows = cruiseTable(k, overPct, overKmh).map(x => el('tr', {},
+    el('td', { class: 'n' }, fmt(x.set, 0) + ' km/h'), el('td', { class: 'n' }, fmt(x.obd, 1)), el('td', { class: 'n' }, fmt(x.real, 1)),
+    el('td', { class: 'n' }, ((x.real - x.set) >= 0 ? '+' : '') + fmt(x.real - x.set, 1))));
+  page.appendChild(card('Tempomat und Tacho', {
+    hint: r.ok ? 'was eine eingestellte Geschwindigkeit wirklich bedeutet' : 'ohne gemessenen Faktor gilt hier 1,0',
+    info: { read: 'Der Tempomat hält die Geschwindigkeit des Steuergeräts, also die OBD-Geschwindigkeit. Multipliziert mit dem Reifenfaktor ergibt sich, wie schnell das Auto wirklich fährt. Zeigt die Anzeige zusätzlich voreilend an (das dürfen Tachos: nie weniger, höchstens +10 % + 4 km/h), trage die Voreilung ein – messen kannst du sie, indem du bei gleichmäßiger Fahrt die Tachoanzeige mit der OBD-Geschwindigkeit im Zeitreihen-Messfenster vergleichst.',
+            good: 'Bei Faktor nahe 1 und kleiner Voreilung fährst du bei „130“ etwa 125 bis 128 km/h.',
+            bad: 'Ein Faktor unter 0,97 heißt: das Auto ist über 3 % langsamer als angezeigt. Dann ist der Reifen kleiner als das Steuergerät annimmt, oder er ist weit abgefahren.' }
+  },
+    el('div', { class: 'chiprow', style: { alignItems: 'center', marginBottom: '10px' } },
+      el('span', { class: 'field' }, el('span', { class: 'dim' }, 'Anzeige eilt vor um'), inpPct, el('span', { class: 'dim' }, '%')),
+      el('span', { class: 'field' }, el('span', { class: 'dim' }, 'plus'), inpKmh, el('span', { class: 'dim' }, 'km/h'))),
+    el('div', { class: 'tblwrap' }, el('table', { class: 'tbl', style: { minWidth: '380px' } },
+      el('thead', {}, el('tr', {}, el('th', {}, 'Eingestellt'), el('th', {}, 'Radsensor'), el('th', {}, 'Wirklich'), el('th', {}, 'Differenz'))),
+      el('tbody', {}, ...rows)))));
+
+  /* --- Reifenrechner --- */
+  const inpTyre = el('input', { class: 'inp', type: 'text', value: mountedStr, placeholder: 'z. B. 255/35 R19', style: { width: '150px' },
+    onchange: e => { store.set('tyreMounted', e.target.value.trim()); go('tyres', true); } });
+  const inpEcu = el('input', { class: 'inp', type: 'number', step: '0.001', min: '1.2', max: '3', value: fmt(ecuCircum, 3).replace(',', '.'), style: { width: '100px' },
+    onchange: e => { const v = parseFloat(e.target.value); if (v > 1.2 && v < 3) { store.set('rollCircum', v); if (App.profile) App.profile.specs.rollCircum = v; recompute(); } } });
+  const it = tyreInterpretation(k, ecuCircum, mounted);
+  const items = [];
+  if (mounted) items.push(kpi('Montiert laut Angabe', mounted.label, '', 'Ø ' + fmt(mounted.diameterMm, 0) + ' mm · Abrollumfang neu ' + fmt(mounted.rollCircum, 3) + ' m'));
+  items.push(kpi('Steuergerät rechnet mit', fmt(ecuCircum, 3), 'm', 'Abrollumfang aus dem Profil, unten änderbar'));
+  if (r.ok) items.push(kpi('Wirksamer Umfang', fmt(it.effectiveCircum, 3), 'm', 'Reifenfaktor × Annahme des Steuergeräts', { accent: true }));
+  if (r.ok && mounted) items.push(kpi('Gegen die Angabe', (it.devMountedPct >= 0 ? '+' : '') + fmt(it.devMountedPct, 1), '%',
+    Math.abs(it.devMountedPct) < 1 ? 'passt – innerhalb Profilverschleiß' : it.devMountedPct < 0 ? 'entspricht ' + fmt(it.treadMm, 0) + ' mm weniger Radius: abgefahren oder kleinere Größe' : 'größer als angegeben – andere Größe oder Steuergerät falsch kodiert'));
+  const cands = r.ok ? tyreCandidates(it.effectiveCircum, 1.2, 10) : [];
+  page.appendChild(card('Reifenrechner', {
+    hint: 'Reifengröße, Abrollumfang und was das Steuergerät annimmt',
+    info: { read: 'Aus Breite, Querschnitt und Felge folgt der Durchmesser, daraus der Abrollumfang (etwa 97 % des Umfangs, weil der Reifen unter Last abplattet). Der wirksame Umfang aus der Messung ist Reifenfaktor mal Annahme des Steuergeräts. Weicht er von der montierten Größe ab, ist entweder Profil weg (1 mm Profil = 2 mm Durchmesser = 0,3 %) oder es steckt eine andere Größe drauf als angegeben.',
+            good: 'Wirksamer Umfang innerhalb 1 % der montierten Größe.',
+            bad: 'Mehr als 3 % Abweichung: Reifen prüfen, Tacho und Tempomat stimmen dann spürbar nicht.' }
+  },
+    el('div', { class: 'chiprow', style: { alignItems: 'center', marginBottom: '12px' } },
+      el('span', { class: 'field' }, el('span', { class: 'dim' }, 'Montiert'), inpTyre),
+      el('span', { class: 'field' }, el('span', { class: 'dim' }, 'Steuergerät-Umfang'), inpEcu, el('span', { class: 'dim' }, 'm')),
+      r.ok ? el('button', { class: 'btn sm', type: 'button', onclick: () => { store.set('rollCircum', +it.effectiveCircum.toFixed(4)); if (App.profile) App.profile.specs.rollCircum = +it.effectiveCircum.toFixed(4); recompute(); } }, 'Wirksamen Umfang für die Gangerkennung übernehmen') : null),
+    el('div', { class: 'grid kpis' }, ...items),
+    cands.length ? el('div', { style: { marginTop: '12px' } },
+      el('div', { class: 'lbl-eng', style: { marginBottom: '6px' } }, 'Größen, die zum wirksamen Umfang passen'),
+      el('div', { class: 'chiprow' }, cands.map(c => el('span', { class: 'chip' + (mounted && c.label === mounted.label ? ' on' : ''), 'aria-pressed': mounted && c.label === mounted.label ? 'true' : 'false' },
+        c.label, el('span', { class: 'dim2', style: { fontSize: '11px' } }, (c.dev >= 0 ? '+' : '') + fmt(c.dev, 1) + ' %'))))) : null,
+    mountedStr && !mounted ? el('p', { class: 'dim2', style: { marginTop: '8px', fontSize: '12px' } }, 'Die Reifengröße „' + mountedStr + '“ verstehe ich nicht – bitte als 255/35 R19 schreiben.') : null));
+
+  page.appendChild(noteBox('info', 'Was der Reifenfaktor kann und was nicht',
+    'GPS-Geschwindigkeit aus dem Handy ist bei gleichmäßiger Fahrt auf ±1 km/h genau; bei 100 km/h ist das ±1 %. Deshalb zählt nur der Median vieler ruhiger Sekunden, nicht ein einzelner Wert. Was er nicht kann: die Tachoanzeige selbst messen – die eilt herstellerseitig vor, und den Betrag kennt nur ein Blick auf die Anzeige während der Fahrt.'));
+};
+
 BUILDERS.data = function (page) {
   const ds = App.ds, m = ds.meta;
   page.appendChild(sectionHead('Datenqualität', 'Was tatsächlich in der Datei steht – bevor irgendetwas daraus geschlossen wird.'));
