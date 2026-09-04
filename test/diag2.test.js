@@ -125,3 +125,15 @@ test('Neue Regeln Batterie beim Start und Ladedruckaufbau laufen ohne Fehler und
     assert.ok(['ok', 'warn', 'crit', 'unklar', 'missing'].includes(r.status), id + ': ' + r.status);
   }
 });
+
+test('Zusatzangaben der Regeln sind immer Wertepaare', async () => {
+  const { res } = await run(richDrive());
+  for (const r of res) {
+    if (r.extra === undefined || r.extra === null) continue;
+    assert.ok(Array.isArray(r.extra), r.id + ': extra muss ein Array sein');
+    r.extra.forEach((e, i) => {
+      assert.ok(Array.isArray(e) && e.length >= 2,
+        r.id + ': extra[' + i + '] ist kein Paar (' + JSON.stringify(e) + ') – im Bericht bricht das den Aufbau ab');
+    });
+  }
+});

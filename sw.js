@@ -1,7 +1,7 @@
 /* Service Worker: die App offline verfügbar halten und Kartenkacheln zwischenspeichern.
    Die App selbst wird bei jedem Start im Hintergrund erneuert (stale-while-revalidate),
    damit eine installierte Fassung nicht auf altem Stand einfriert. */
-const APP_CACHE = 'obd-app-v1';
+const APP_CACHE = 'obd-app-v2';
 const TILE_CACHE = 'obd-tiles-v1';
 const TILE_LIMIT = 1200;                       // etwa 25 MB
 const APP_FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-maskable.svg'];
@@ -47,7 +47,21 @@ self.addEventListener('fetch', e => {
   e.respondWith((async () => {
     const c = await caches.open(APP_CACHE);
     const hit = await c.match(req, { ignoreSearch: true });
-    const net = fetch(req).then(res => { if (res && res.ok) c.put(req, res.clone()); return res; }).catch(() => null);
+    const net = fetch(req).then(async res => {
+      if (res && res.ok) {
+        /* Hat sich die Seite geändert, sagen wir es den offenen Fenstern –
+           sonst arbeitet jemand tagelang mit der Fassung von gestern weiter. */
+        if (hit && /text\/html/.test(res.headers.get('content-type') || '')) {
+          const [a, b] = await Promise.all([hit.clone().text(), res.clone().text()]);
+          if (a.length !== b.length) {
+            const cl = await self.clients.matchAll({ type: 'window' });
+            cl.forEach(w => w.postMessage({ type: 'update-ready' }));
+          }
+        }
+        c.put(req, res.clone());
+      }
+      return res;
+    }).catch(() => null);
     return hit || (await net) || new Response('Offline und nicht im Zwischenspeicher.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
   })());
 });

@@ -3864,8 +3864,16 @@ function baseName() {
   });
   /* Offlinefähig machen: der Service Worker legt App und Kartenkacheln ab.
      Nur über https oder localhost erlaubt – bei file:// wird es still übersprungen. */
-  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost'))
-    navigator.serviceWorker.register('sw.js').then(r => { App.sw = r; }).catch(() => {});
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('sw.js').then(r => { App.sw = r; r.update().catch(() => {}); }).catch(() => {});
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (!e.data || e.data.type !== 'update-ready' || $('#upd-bar')) return;
+      document.body.appendChild(el('div', { class: 'upd-bar', id: 'upd-bar' },
+        el('span', {}, 'Eine neuere Fassung ist da.'),
+        el('button', { class: 'btn primary sm', type: 'button', onclick: () => location.reload() }, 'Neu laden'),
+        el('button', { class: 'btn sm ghost', type: 'button', onclick: () => $('#upd-bar').remove() }, 'Später')));
+    });
+  }
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); App.installPrompt = e; });
   /* Live-Aufzeichnung: nur zeigen, wo der Browser Bluetooth kann */
   if (liveSupported()) { const lb = $('#open-live'); if (lb) { lb.hidden = false; lb.onclick = openLiveDialog; } }

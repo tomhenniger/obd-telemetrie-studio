@@ -231,7 +231,7 @@ const DIAG_RULES = [
     return { status: st, value: mx, unit: '°C', dec: 0, ref: '≤ 65 °C', refLo: 20, refHi: 65,
       cond: 'Kühlmittel ≥ 80 °C',
       extra: [['Median', fmt(med, 0) + ' °C'], ['Bewertete Zeit', fmtDur(d)],
-              colder ? ['Maximum über die ganze Aufzeichnung', fmt(mxAll, 0) + ' °C (vor Erreichen der Betriebstemperatur)'] : null],
+              colder ? ['Maximum über die ganze Aufzeichnung', fmt(mxAll, 0) + ' °C (vor Erreichen der Betriebstemperatur)'] : null].filter(Boolean),
       text: st === S.OK
         ? 'Die Ladeluft bleibt im warmen Betrieb mit maximal ' + fmt(mx, 0) + ' °C klar unterhalb der Klopfgrenze'
           + (colder ? ' (über die ganze Aufzeichnung, also inklusive Warmlaufphase, bis ' + fmt(mxAll, 0) + ' °C)' : '')

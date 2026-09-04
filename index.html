@@ -835,6 +835,12 @@ details.acc > summary::-webkit-details-marker { display: none; }
   a { color: inherit; text-decoration: none; }
 }
 
+/* Hinweis auf eine neuere Fassung – die installierte App soll nicht einfrieren */
+.upd-bar { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  z-index: 80; display: flex; align-items: center; gap: 10px; padding: 9px 12px; font-size: 12.5px;
+  background: var(--surface); border: 1px solid var(--border-2); border-radius: var(--r); box-shadow: var(--shadow-3); }
+@media (max-width: 760px) { .upd-bar { bottom: calc(78px + env(safe-area-inset-bottom)); left: 8px; right: 8px; transform: none; } }
+
 /* Teilen-Dialog: QR-Code neben Link und Knöpfen */
 .share-wrap { display: flex; gap: 16px; align-items: flex-start; }
 .share-qr { flex: none; line-height: 0; background: #fff; padding: 8px; border-radius: var(--r-sm); border: 1px solid var(--border); }
@@ -7014,7 +7020,7 @@ const DIAG_RULES = [
     return { status: st, value: mx, unit: '°C', dec: 0, ref: '≤ 65 °C', refLo: 20, refHi: 65,
       cond: 'Kühlmittel ≥ 80 °C',
       extra: [['Median', fmt(med, 0) + ' °C'], ['Bewertete Zeit', fmtDur(d)],
-              colder ? ['Maximum über die ganze Aufzeichnung', fmt(mxAll, 0) + ' °C (vor Erreichen der Betriebstemperatur)'] : null],
+              colder ? ['Maximum über die ganze Aufzeichnung', fmt(mxAll, 0) + ' °C (vor Erreichen der Betriebstemperatur)'] : null].filter(Boolean),
       text: st === S.OK
         ? 'Die Ladeluft bleibt im warmen Betrieb mit maximal ' + fmt(mx, 0) + ' °C klar unterhalb der Klopfgrenze'
           + (colder ? ' (über die ganze Aufzeichnung, also inklusive Warmlaufphase, bis ' + fmt(mxAll, 0) + ' °C)' : '')
@@ -15564,8 +15570,16 @@ function baseName() {
   });
   /* Offlinefähig machen: der Service Worker legt App und Kartenkacheln ab.
      Nur über https oder localhost erlaubt – bei file:// wird es still übersprungen. */
-  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost'))
-    navigator.serviceWorker.register('sw.js').then(r => { App.sw = r; }).catch(() => {});
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('sw.js').then(r => { App.sw = r; r.update().catch(() => {}); }).catch(() => {});
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (!e.data || e.data.type !== 'update-ready' || $('#upd-bar')) return;
+      document.body.appendChild(el('div', { class: 'upd-bar', id: 'upd-bar' },
+        el('span', {}, 'Eine neuere Fassung ist da.'),
+        el('button', { class: 'btn primary sm', type: 'button', onclick: () => location.reload() }, 'Neu laden'),
+        el('button', { class: 'btn sm ghost', type: 'button', onclick: () => $('#upd-bar').remove() }, 'Später')));
+    });
+  }
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); App.installPrompt = e; });
   /* Live-Aufzeichnung: nur zeigen, wo der Browser Bluetooth kann */
   if (liveSupported()) { const lb = $('#open-live'); if (lb) { lb.hidden = false; lb.onclick = openLiveDialog; } }
@@ -15821,8 +15835,10 @@ function repFindings(diag) {
       if (meta.length) kids.push(el('div', { class: 'rt-f-meta' }, meta.join(' · ')));
       const txt = bewertet ? r.text : (r.note || (r.missing ? 'Nicht aufgezeichnet: ' + r.missing.join(', ') : ''));
       if (txt) kids.push(el('p', {}, txt));
-      if (bewertet && r.extra && r.extra.length)
-        kids.push(el('div', { class: 'rt-f-facts' }, r.extra.slice(0, 6).map(([k, v]) => el('span', {}, el('i', {}, k), ' ' + v))));
+      /* Zusatzangaben können je nach Regel Lücken enthalten – hier nichts voraussetzen */
+      const facts = (bewertet && Array.isArray(r.extra) ? r.extra : []).filter(e => Array.isArray(e) && e.length >= 2).slice(0, 6);
+      if (facts.length)
+        kids.push(el('div', { class: 'rt-f-facts' }, facts.map(([k, v]) => el('span', {}, el('i', {}, k), ' ' + v))));
       if (r.action && r.action.length)
         kids.push(el('ul', { class: 'rt-f-act' }, r.action.map(a => el('li', {}, a))));
       out.push(el('div', { class: 'rt-f rt-f-' + r.status }, ...kids));

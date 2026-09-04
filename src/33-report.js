@@ -128,8 +128,10 @@ function repFindings(diag) {
       if (meta.length) kids.push(el('div', { class: 'rt-f-meta' }, meta.join(' · ')));
       const txt = bewertet ? r.text : (r.note || (r.missing ? 'Nicht aufgezeichnet: ' + r.missing.join(', ') : ''));
       if (txt) kids.push(el('p', {}, txt));
-      if (bewertet && r.extra && r.extra.length)
-        kids.push(el('div', { class: 'rt-f-facts' }, r.extra.slice(0, 6).map(([k, v]) => el('span', {}, el('i', {}, k), ' ' + v))));
+      /* Zusatzangaben können je nach Regel Lücken enthalten – hier nichts voraussetzen */
+      const facts = (bewertet && Array.isArray(r.extra) ? r.extra : []).filter(e => Array.isArray(e) && e.length >= 2).slice(0, 6);
+      if (facts.length)
+        kids.push(el('div', { class: 'rt-f-facts' }, facts.map(([k, v]) => el('span', {}, el('i', {}, k), ' ' + v))));
       if (r.action && r.action.length)
         kids.push(el('ul', { class: 'rt-f-act' }, r.action.map(a => el('li', {}, a))));
       out.push(el('div', { class: 'rt-f rt-f-' + r.status }, ...kids));
