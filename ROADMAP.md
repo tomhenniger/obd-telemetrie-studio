@@ -21,7 +21,7 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 
 ### Werkstatt und Kauf
 - [x] Bericht als eigenes Dokument: A4-Seiten mit Kopf- und Fußzeile, Deckblatt, Inhaltsverzeichnis mit echten Seitenzahlen, verdichtete Befundtabellen, Schlussseite mit QR-Code und Link. Vier Zuschnitte (Werkstatt, Kauf, Technik, Kurzfassung). (2026-09-04)
-- [x] Teilen per Link: Zusammenfassung gepackt in der Adresse (ohne Route, ohne Rohdaten), Empfänger sieht sie auf dem Startbildschirm. QR-Code offen. (2026-09-04)
+- [x] Teilen per Link und QR-Code: Knopf in der Kopfzeile, Dialog mit QR-Code, Link, Kopieren, Geräte-Teilen und QR als Bild. (2026-09-04)
 - [x] Datenschutz-Schnitt: Start und Ziel (je 500 m) werden bei der Tempolimit-Abfrage weggelassen (Voreinstellung an). Exporte enthalten keine Koordinaten. (2026-09-04)
 
 ### Plattform

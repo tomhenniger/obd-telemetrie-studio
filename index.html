@@ -835,6 +835,16 @@ details.acc > summary::-webkit-details-marker { display: none; }
   a { color: inherit; text-decoration: none; }
 }
 
+/* Teilen-Dialog: QR-Code neben Link und Knöpfen */
+.share-wrap { display: flex; gap: 16px; align-items: flex-start; }
+.share-qr { flex: none; line-height: 0; background: #fff; padding: 8px; border-radius: var(--r-sm); border: 1px solid var(--border); }
+.share-qr svg { display: block; width: 180px; height: 180px; }
+.share-side { flex: 1; min-width: 0; }
+@media (max-width: 560px) {
+  .share-wrap { flex-direction: column; align-items: stretch; }
+  .share-qr { align-self: center; }
+}
+
 /* ===== Bericht: eigenes Dokument in Seiten ========================= */
 .rep-bar {
   position: sticky; top: 0; z-index: 60; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -1094,6 +1104,10 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <div class="sub" id="page-sub"></div>
       </div>
       <div class="topbar-actions">
+        <button class="btn sm" id="share" title="Auswertung als Link oder QR-Code teilen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-share"/></svg>
+          <span class="lbl-hide">Teilen</span>
+        </button>
         <button class="btn sm" id="report" title="Vollständigen Bericht über alle Bereiche erzeugen">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-print"/></svg>
           <span class="lbl-hide">Bericht</span>
@@ -14142,32 +14156,6 @@ BUILDERS.ai = function (page) {
     'als XML-Dokument in die Zwischenablage — mit Anleitung, Fahrzeugprofil, allen Kennzahlen, den Befunden und einer ' +
     'heruntergerechneten Zeitreihe. Das fügst du bei ChatGPT, Claude, Gemini oder einem anderen Sprachmodell ein und stellst deine Fragen.'));
 
-  /* --- Zusammenfassung teilen --- */
-  {
-    const shHost = el('div');
-    const out = el('input', { class: 'inp', readonly: true, style: { flex: '1 1 260px', minWidth: '0' }, onclick: e => e.target.select() });
-    const info = el('p', { class: 'dim2', style: { fontSize: '11.5px', marginTop: '10px' } });
-    const make = async () => {
-      try {
-        const url = shareUrl(await encodeShare(shareSummary(App.ds, App.diag, App.profile, App.gears, App.fileName)));
-        out.value = url;
-        info.textContent = 'Länge ' + fmt(url.length / 1024, 1) + ' KB' + (url.length > 8000
-          ? ' – für manche Messenger zu lang; dann lieber die Bericht-JSON aus der Datenqualität schicken.'
-          : ' – passt in Nachricht und Adresszeile.');
-      } catch (e) { out.value = ''; info.textContent = 'Fehler: ' + (e.message || e); }
-    };
-    shHost.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center' } },
-      el('button', { class: 'btn', type: 'button', onclick: make }, 'Link erzeugen'), out,
-      el('button', { class: 'btn', type: 'button', onclick: async () => { if (!out.value) await make(); try { await navigator.clipboard.writeText(out.value); } catch (e) {} } }, 'Kopieren')));
-    shHost.appendChild(info);
-    page.appendChild(card('Zusammenfassung teilen', {
-      hint: 'Kennzahlen und Befunde in der Adresse – ohne Server, ohne Route',
-      info: { read: 'Der Link enthält die Kennzahlen der Fahrt, die bewerteten Befunde und das Fahrzeugprofil, gepackt und in der Adresse kodiert. Keine Route, keine Rohdaten, keine Zeitreihe. Wer ihn öffnet, sieht dieselbe Zusammenfassung im eigenen Browser – nichts davon läuft über einen Server.',
-              good: 'Für die Werkstatt, den Verkäufer oder ein Forum: kurz, nachvollziehbar, ohne Anhang.',
-              bad: 'Sehr lange Links werden von manchen Messengern abgeschnitten. Der Hinweis unter dem Feld nennt die Länge.' }
-    }, shHost));
-  }
-
   page.appendChild(card('Prompt erzeugen', {
     hint: 'die Rohdatei bleibt außen vor — 28 MB passen in kein Kontextfenster',
     tools: [vseg, seg],
@@ -14691,6 +14679,78 @@ function vehicleEvidence(ds) {
 function closeVehicleDialog() { const o = $('#veh-dlg'); if (o) o.remove(); }
 
 /* ===== Live-Aufzeichnung vom Adapter ================================ */
+/* ===== Auswertung teilen ===========================================
+   Der Link trägt die Zusammenfassung in sich: Kennzahlen, bewertete Befunde,
+   Fahrzeugprofil. Keine Route, keine Rohdaten, kein Server. Wer ihn öffnet,
+   sieht dieselbe Zusammenfassung im Browser und kann von dort weiterarbeiten.
+   ================================================================== */
+async function openShareDialog() {
+  if ($('#share-dlg')) return;
+  const close = () => { const n = $('#share-dlg'); if (n) n.remove(); document.removeEventListener('keydown', esc); };
+  const esc = e => { if (e.key === 'Escape') close(); };
+  const body = el('div', { class: 'mdl-b' });
+  const dlg = el('div', { class: 'mdl-bd', id: 'share-dlg', onclick: e => { if (e.target === e.currentTarget) close(); } },
+    el('div', { class: 'mdl', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Auswertung teilen' },
+      el('div', { class: 'mdl-h' },
+        el('h3', {}, 'Auswertung teilen'),
+        el('p', {}, 'Der Link enthält die Zusammenfassung selbst – Kennzahlen, bewertete Befunde und das Fahrzeugprofil. Ohne Server, ohne Konto, ohne Route.')),
+      body,
+      el('div', { class: 'mdl-f' }, el('button', { class: 'btn', type: 'button', onclick: close }, 'Schließen'))));
+  document.body.appendChild(dlg);
+  document.addEventListener('keydown', esc);
+  body.appendChild(el('p', { class: 'dim' }, 'Link wird erzeugt …'));
+
+  if (!App.ds || !App.diag) {
+    body.innerHTML = '';
+    body.appendChild(noteBox('info', 'Erst eine Fahrt laden',
+      'Zum Teilen braucht es eine ausgewertete Aufzeichnung. Lade eine CSV-Datei, dann steht hier der Link.'));
+    return;
+  }
+  let url = '', code = '';
+  try {
+    code = await encodeShare(shareSummary(App.ds, App.diag, App.profile, App.gears, App.fileName));
+    url = shareUrl(code);
+  } catch (e) {
+    body.innerHTML = '';
+    body.appendChild(noteBox('crit', 'Link konnte nicht erzeugt werden', String(e.message || e)));
+    return;
+  }
+  const field = el('input', { class: 'inp', readonly: true, value: url, style: { width: '100%' },
+    onclick: e => e.target.select() });
+  let qrSvgStr = null;
+  try { qrSvgStr = qrSvg(url, { px: 260, quiet: 3, fg: '#000000', bg: '#ffffff' }); }
+  catch (e) { qrSvgStr = null; }
+
+  const copyBtn = el('button', { class: 'btn primary', type: 'button', onclick: async () => {
+    try { await navigator.clipboard.writeText(url); copyBtn.textContent = 'Kopiert'; setTimeout(() => { copyBtn.innerHTML = ''; copyBtn.append(icon('clip'), 'Link kopieren'); }, 1600); }
+    catch (e) { field.select(); }
+  } }, icon('clip'), 'Link kopieren');
+  const shareBtn = (navigator.share) ? el('button', { class: 'btn', type: 'button', onclick: async () => {
+    try { await navigator.share({ title: 'OBD-Auswertung' + (App.profile ? ' · ' + App.profile.name : ''), text: 'Auswertung meiner OBD-Aufzeichnung', url }); }
+    catch (e) { /* Abbruch durch den Nutzer ist kein Fehler */ }
+  } }, icon('share'), 'Teilen …') : null;
+  const qrDl = qrSvgStr ? el('button', { class: 'btn', type: 'button', onclick: () => {
+    download('obd-auswertung-qr.svg', 'image/svg+xml', qrSvgStr);
+  } }, icon('dl'), 'QR als Bild') : null;
+
+  body.innerHTML = '';
+  body.appendChild(el('div', { class: 'share-wrap' },
+    qrSvgStr ? el('div', { class: 'share-qr', html: qrSvgStr }) : null,
+    el('div', { class: 'share-side' },
+      el('div', { class: 'lbl-eng', style: { marginBottom: '6px' } }, 'Link'),
+      field,
+      el('div', { class: 'chiprow', style: { marginTop: '10px' } }, copyBtn, shareBtn, qrDl),
+      el('p', { class: 'dim2', style: { fontSize: '11.5px', marginTop: '10px', lineHeight: '1.5' } },
+        'Länge ' + fmt(url.length / 1024, 1) + ' KB' + (url.length > 8000
+          ? '. Das ist für manche Messenger zu lang – dann lieber den Bericht als PDF schicken.'
+          : '. Passt in Nachricht, Adresszeile und QR-Code.')))));
+  body.appendChild(el('div', { class: 'lbl-eng', style: { margin: '16px 0 6px' } }, 'Was der Empfänger sieht'));
+  const t = App.diag.tally || {};
+  body.appendChild(el('p', { class: 'dim', style: { fontSize: '12.5px', lineHeight: '1.6' } },
+    'Fahrzeugprofil, Kennzahlen der Fahrt und ' + ((t.ok || 0) + (t.warn || 0) + (t.crit || 0)) + ' bewertete Befunde. ' +
+    'Nicht enthalten: die gefahrene Route, die Zeitreihen und die Rohdatei. Wer die vollständige Auswertung sehen will, braucht die CSV-Datei.'));
+}
+
 /* ===== Bericht öffnen und schließen ================================ */
 async function openReport(kindKey) {
   const key = kindKey || store.get('reportKind', 'werkstatt');
@@ -15493,6 +15553,15 @@ function baseName() {
   applyTheme(saved || 'dark');   // das Gerät ist dunkel; hell nur auf ausdrückliche Wahl
   /* Drucken: helles Schema, aufgeklappte Befunde, nur die aktuelle Seite */
   const repBtn = $('#report'); if (repBtn) repBtn.onclick = () => openReport();
+  const shrBtn = $('#share'); if (shrBtn) shrBtn.onclick = openShareDialog;
+  /* Tastenkürzel: T teilt, B erzeugt den Bericht – nur, wenn nicht gerade getippt wird */
+  document.addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.key === 't' || e.key === 'T') { e.preventDefault(); openShareDialog(); }
+    if (e.key === 'b' || e.key === 'B') { e.preventDefault(); openReport(); }
+  });
   /* Offlinefähig machen: der Service Worker legt App und Kartenkacheln ab.
      Nur über https oder localhost erlaubt – bei file:// wird es still übersprungen. */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost'))
