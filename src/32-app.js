@@ -1330,6 +1330,48 @@ BUILDERS.fields = function (page) {
     cc.chart.draw();
     page.appendChild(cc.node);
 
+    /* --- Schaltanalyse --- */
+    {
+      const sa = shiftAnalysis(ds, App.gears);
+      const shHost = el('div');
+      if (!sa.ok) shHost.appendChild(emptyBox('Keine Schaltanalyse möglich', sa.reason + ' Mit Getriebeangabe in den Einstellungen wird die Zuordnung meist stabiler.'));
+      else {
+        const upRpm = sa.up.length ? sa.up.map(u => u.rpmMed).filter(isFinite) : [];
+        const upAll = upRpm.length ? upRpm.reduce((p, q) => p + q, 0) / upRpm.length : NaN;
+        shHost.appendChild(el('div', { class: 'grid kpis' },
+          kpi('Schaltvorgänge', String(sa.n), '', sa.shifts.filter(x => x.up).length + ' hoch · ' + sa.shifts.filter(x => !x.up).length + ' runter'),
+          kpi('Hochschalten bei', isFinite(upAll) ? fmt(upAll, 0) : '–', 'min⁻¹', 'Mittel der Median-Drehzahlen je Gangpaar'),
+          kpi('Schaltdauer', isFinite(sa.durMedian) ? fmt(sa.durMedian, 1) : '–', 's', 'Median der Lücke ohne Gangzuordnung · Raster ' + fmt(ds.step, 1) + ' s'),
+          kpi('Kickdowns', String(sa.kickdowns), '', 'Rückschaltungen unter Last')));
+        const bars = el('div', { class: 'chart-host', style: { marginTop: '12px' } });
+        shHost.appendChild(bars);
+        requestAnimationFrame(() => {
+          const ch = new Chart(bars, { type: 'bars', height: Math.max(120, sa.perGear.length * 30 + 24), labelWidth: 96 });
+          ch.barData = sa.perGear.map(g => ({ label: 'Gang ' + g.label, value: g.share * 100, text: fmt(g.share * 100, 0) + ' % · ' + fmtDur(g.time) + (isFinite(g.vMin) ? ' · ' + fmt(g.vMin, 0) + '–' + fmt(g.vMax, 0) + ' km/h' : '') }));
+          ch.draw();
+        });
+        const row = (u, dir) => el('tr', {}, el('td', {}, sa.labelOf(u.from) + ' → ' + sa.labelOf(u.to)), el('td', { class: 'n' }, String(u.n)),
+          el('td', { class: 'n' }, isFinite(u.rpmMed) ? fmt(u.rpmMed, 0) : '–'),
+          el('td', { class: 'n' }, isFinite(u.rpmMin) ? fmt(u.rpmMin, 0) + '–' + fmt(u.rpmMax, 0) : '–'),
+          el('td', { class: 'n' }, isFinite(u.rpmAfter) ? fmt(u.rpmAfter, 0) : '–'),
+          el('td', { class: 'n' }, isFinite(u.vMed) ? fmt(u.vMed, 0) : '–'),
+          el('td', { class: 'n' }, isFinite(u.pedMed) ? fmt(u.pedMed, 0) + ' %' : '–'));
+        const tbl = (title, list) => list.length ? el('div', { style: { marginTop: '12px' } },
+          el('div', { class: 'lbl-eng', style: { marginBottom: '6px' } }, title),
+          el('div', { class: 'tblwrap' }, el('table', { class: 'tbl', style: { minWidth: '520px' } },
+            el('thead', {}, el('tr', {}, el('th', {}, 'Gänge'), el('th', {}, 'n'), el('th', {}, 'Drehzahl davor'), el('th', {}, 'Spanne'), el('th', {}, 'danach'), el('th', {}, 'km/h'), el('th', {}, 'Pedal'))),
+            el('tbody', {}, ...list.map(u => row(u)))))) : null;
+        shHost.appendChild(tbl('Hochschalten', sa.up));
+        shHost.appendChild(tbl('Runterschalten', sa.down));
+      }
+      page.appendChild(card('Schaltanalyse', {
+        hint: 'Schaltpunkte, Schaltdauer und Zeitanteil je Gang aus der Gangzuordnung',
+        info: { read: 'Ein Schaltvorgang ist der Wechsel zwischen zwei Gängen, die je mindestens zwei Sekunden stabil zugeordnet waren. „Drehzahl davor“ ist der Median der letzten 1,5 s im alten Gang, „danach“ der Median der ersten 1,5 s im neuen. Die Schaltdauer ist die Zeit ohne eindeutige Zuordnung dazwischen – bei 1-s-Raster grob. Kickdown: Rückschaltung bei über 75 % Pedal oder deutlicher Beschleunigung.',
+                good: 'Hochschaltpunkte, die mit dem Pedal wandern (ruhig 1.800–2.500, zügig 3.000–4.000), gleichmäßige Schaltdauern, Runterschalten beim Bremsen in kleinen Schritten.',
+                bad: 'Schaltdauern über 1,5 s oder stark streuende Schaltpunkte bei gleichem Pedal: Kupplungs- oder Adaptionsthema beim Doppelkupplungsgetriebe, Wandler oder Steuerung beim Automaten. Beim Kaufcheck lohnt dann ein gezielter Schaltvorgang-Test.' }
+      }, shHost));
+    }
+
     const gi = g.gearbox || { mode: 'none' };
     const named = gi.mode === 'table' || gi.mode === 'count';
     if (gi.uniform)

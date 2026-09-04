@@ -9,7 +9,7 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 
 ### Auswertung
 - [ ] Zwei Fahrten überlagern: Verläufe und Kennfelder zweier Aufzeichnungen übereinander (vor/nach Reparatur, Sommer/Winter). Mittel.
-- [ ] Schaltanalyse: Schaltpunkte je Gang, Schaltdauer aus dem Drehzahleinbruch, Zeitanteil je Gang. Mittel.
+- [x] Schaltanalyse (Kennfelder): Schaltpunkte je Gangpaar hoch und runter, Drehzahl davor/danach, Schaltdauer, Zeitanteil je Gang, Kickdowns. (2026-09-04)
 - [x] Ladedruckaufbau je Volllastzug als Diagnoseregel (Zeit bis 90 % des Spitzendrucks, Kompressor/Turbo getrennt bewertet), damit auch als Trend in der Akte. (2026-09-04)
 - [x] Wärmehaushalt auf dem Überblick: alle Temperaturen in einem Bild, Startwert, Zeit bis Betriebstemperatur, Niveau der letzten 10 Minuten. (2026-09-04)
 - [x] Ereignisse auf Karte und Verläufen: Stopps, Volllastzüge, Sprints, Klopfregelung, starke Bremsungen, Betriebswarm als Marker mit Kürzel, ein- und ausblendbar. (2026-09-04)

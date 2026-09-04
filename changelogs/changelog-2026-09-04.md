@@ -1,6 +1,7 @@
 # Changelog — 2026-09-04
 
 ## Neue Features
+- **Schaltanalyse** (Kennfelder): Schaltvorgänge aus der Gangzuordnung – Drehzahl vor und nach dem Wechsel je Gangpaar (hoch und runter), Spanne, Geschwindigkeit, Pedalstellung, Schaltdauer, Zeitanteil je Gang als Balken, Zahl der Kickdowns.
 - **Wärmehaushalt** (Überblick): Kühlmittel, Öl, Getriebe, Ladeluft, Ansaug- und Außenluft in einem Verlauf, dazu je Größe Startwert, Zeit bis Betriebstemperatur, Niveau der letzten zehn Minuten und Maximum.
 - **Bremsen** (Überblick): stärkste Verzögerung, rechnerischer Bremsweg aus 100 km/h, harte Bremsungen (unter −0,3 g) als Liste mit Sprung ins Diagramm, Fading-Hinweis über den Verlauf der Fahrt.
 - **Zwei neue Diagnoseregeln**: „Batterie beim Start“ (Ruhespannung vor dem Motorlauf, Einbruch beim Anlassen) und „Ladedruckaufbau bei Volllast“ (Zeit bis 90 % des Spitzendrucks, Kompressor und Turbo getrennt bewertet). Beide erscheinen in der Akte als Trend. Damit 40 Regeln.

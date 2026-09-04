@@ -19,6 +19,7 @@ OUT=index.html
   cat src/22-metrics.js
   cat src/23-stats.js
   cat src/23b-events.js
+  cat src/23c-shifts.js
   cat src/24-chart.js
   cat src/25-map.js
   cat src/25b-limits.js
