@@ -39,9 +39,9 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 - [x] Bremsen auf dem Überblick: stärkste Verzögerung, rechnerischer Bremsweg aus 100, harte Bremsungen mit Liste, Fading-Hinweis. (2026-09-04)
 
 ### Deine eigenen Sollwerte
-- [ ] Persönliche Baseline: ab fünf Fahrten lernt die Akte den normalen Bereich dieses Wagens; Abweichung davon ist ein Befund, auch innerhalb des Werksbands. Mittel.
-- [ ] Fremde Akte als Referenz: exportierte Akte eines anderen Wagens desselben Motors einlesen und danebenlegen. Klein.
-- [ ] Wartungsstand: Intervalle je Profil (Öl, Kerzen, Kompressoröl, Getriebeöl) gegen Kilometerstand und Datum aus der Akte. Klein bis mittel.
+- [x] Persönliche Baseline in der Akte: Median und robustes Streuband je Befund, Trend je 30 Tage, Bewertung der aktuellen Fahrt gegen die eigene Norm. (2026-09-04)
+- [x] Referenzakte: fremde Akte laden und als Spalte neben der eigenen Baseline vergleichen, ohne sie zu speichern. (2026-09-04)
+- [x] Wartungsstand in der Akte: elf Arbeiten mit Faustintervallen, gefiltert nach Bauart (Zahnriemen, Kompressor, Diesel), Restlaufzeit nach Kilometern und Zeit. (2026-09-04)
 
 ### Daten und Import
 - [ ] Mehrere CSV-Teile zu einer Fahrt zusammenführen (abgebrochene Aufzeichnung). Klein bis mittel.

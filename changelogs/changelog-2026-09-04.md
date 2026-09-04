@@ -1,6 +1,9 @@
 # Changelog — 2026-09-04
 
 ## Neue Features
+- **Persönliche Baseline** (Fahrzeugakte): ab fünf Fahrten lernt die Akte je Befund den Normalbereich dieses Wagens (Median, robustes 3σ-Streuband) und den Trend je 30 Tage. Die aktuelle Fahrt wird dagegen bewertet: „außerhalb der eigenen Norm“ trotz grünem Werksband ist der eigentliche Gewinn.
+- **Referenzakte**: die exportierte Akte eines anderen Fahrzeugs lässt sich zum Vergleich laden und erscheint als eigene Spalte neben der Baseline; sie wird nicht gespeichert.
+- **Wartungsstand** (Fahrzeugakte): Kilometerstand und je Arbeit Stand und Datum eintragen, die Liste rechnet Restlaufzeit und Fälligkeit. Elf Arbeiten, gefiltert nach Bauart: Zahnriemen nur bei Riementrieb, Kompressoröl nur beim Kompressor, Partikelfilter nur beim Diesel.
 - **Schaltanalyse** (Kennfelder): Schaltvorgänge aus der Gangzuordnung – Drehzahl vor und nach dem Wechsel je Gangpaar (hoch und runter), Spanne, Geschwindigkeit, Pedalstellung, Schaltdauer, Zeitanteil je Gang als Balken, Zahl der Kickdowns.
 - **Wärmehaushalt** (Überblick): Kühlmittel, Öl, Getriebe, Ladeluft, Ansaug- und Außenluft in einem Verlauf, dazu je Größe Startwert, Zeit bis Betriebstemperatur, Niveau der letzten zehn Minuten und Maximum.
 - **Bremsen** (Überblick): stärkste Verzögerung, rechnerischer Bremsweg aus 100 km/h, harte Bremsungen (unter −0,3 g) als Liste mit Sprung ins Diagramm, Fading-Hinweis über den Verlauf der Fahrt.

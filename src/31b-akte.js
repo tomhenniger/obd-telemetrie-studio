@@ -177,3 +177,104 @@ function akteTrendableRules(rows) {
   for (const r of rows) for (const d of (r.diag || [])) if (d.value !== null && d.value !== undefined) count.set(d.id, (count.get(d.id) || 0) + 1);
   return Array.from(count.entries()).filter(([, n]) => n >= 2).map(([id]) => id);
 }
+
+/* ===== Persönliche Baseline =========================================
+   Ab genügend Fahrten lernt die Akte den normalen Bereich dieses Wagens.
+   Abweichung davon ist ein Befund, auch wenn der Wert im Werksband liegt:
+   das Werksband gilt für alle Exemplare, die Baseline nur für dieses.
+   ================================================================== */
+const BASELINE_MIN_DRIVES = 5;
+
+function baselineFor(rows, ruleId, opts) {
+  opts = opts || {};
+  const minN = opts.minN || BASELINE_MIN_DRIVES;
+  const pts = akteTrend(rows, ruleId).filter(p => p.value !== null && p.value !== undefined && isFinite(p.value));
+  if (pts.length < minN) return { ok: false, n: pts.length, need: minN };
+  const vals = pts.map(p => p.value).sort((a, b) => a - b);
+  const q = f => { const i = (vals.length - 1) * f, lo = Math.floor(i), hi = Math.ceil(i); return vals[lo] + (vals[hi] - vals[lo]) * (i - lo); };
+  const med = q(0.5);
+  const mad = vals.map(v => Math.abs(v - med)).sort((a, b) => a - b)[Math.floor(vals.length / 2)];
+  const sigma = mad * 1.4826;                       // robuste Streuung
+  const band = [med - 3 * sigma, med + 3 * sigma];  // eigener Normalbereich
+  /* Trend: Steigung der kleinsten Quadrate über die Zeit, in Einheit je 30 Tage */
+  const t0 = pts[0].date;
+  let sx = 0, sy = 0, sxy = 0, sxx = 0;
+  pts.forEach(p => { const x = (p.date - t0) / 86400000; sx += x; sy += p.value; sxy += x * p.value; sxx += x * x; });
+  const n = pts.length, den = n * sxx - sx * sx;
+  const slope = Math.abs(den) > 1e-9 ? (n * sxy - sx * sy) / den : 0;
+  const spanDays = (pts[n - 1].date - t0) / 86400000;
+  return { ok: true, n, median: med, sigma, band, unit: pts[0].unit, ref: pts[0].ref,
+           refLo: pts[0].refLo, refHi: pts[0].refHi, slope30: slope * 30, spanDays, points: pts,
+           last: pts[n - 1] };
+}
+
+/* Bewertet den Wert der aktuellen Fahrt gegen die Baseline der übrigen Fahrten */
+function baselineCheck(rows, ruleId, currentValue, currentId) {
+  const others = rows.filter(r => r.id !== currentId);
+  const b = baselineFor(others, ruleId);
+  if (!b.ok || !isFinite(currentValue)) return { ok: false, n: b.n || 0, need: BASELINE_MIN_DRIVES };
+  const dev = currentValue - b.median;
+  const z = b.sigma > 1e-9 ? dev / b.sigma : 0;
+  const outside = b.sigma > 1e-9 && Math.abs(z) > 3;
+  const insideSpec = b.refLo === null || b.refLo === undefined || (currentValue >= b.refLo && currentValue <= b.refHi);
+  return { ok: true, n: b.n, median: b.median, sigma: b.sigma, band: b.band, z, dev, outside, insideSpec,
+           unit: b.unit, slope30: b.slope30, spanDays: b.spanDays,
+           kind: outside && insideSpec ? 'eigen' : outside ? 'beides' : 'normal' };
+}
+
+/* Alle Regeln, für die genug Fahrten für eine Baseline vorliegen */
+function baselineRules(rows, minN) {
+  const ids = akteTrendableRules(rows);
+  return ids.map(id => ({ id, b: baselineFor(rows, id, { minN: minN || BASELINE_MIN_DRIVES }) })).filter(x => x.b.ok);
+}
+
+/* ===== Wartungsstand ================================================
+   Der Nutzer trägt Kilometerstand und erledigte Arbeiten ein; daraus
+   rechnet die Akte, was fällig ist. Intervalle sind Faustwerte je
+   Bauart – das Serviceheft des Herstellers geht immer vor.
+   ================================================================== */
+const SERVICE_ITEMS = [
+  { id: 'oil',        label: 'Motoröl und Filter',   km: 15000, months: 12, note: 'Longlife nur bei passendem Öl und ruhigem Profil; bei Kurzstrecke und Direkteinspritzung eher jährlich.' },
+  { id: 'air',        label: 'Luftfilter',           km: 60000, months: 48, note: 'Bei staubiger Umgebung früher.' },
+  { id: 'cabin',      label: 'Innenraumfilter',      km: 30000, months: 24, note: '' },
+  { id: 'spark',      label: 'Zündkerzen',           km: 60000, months: 72, note: 'Aufgeladene Direkteinspritzer oft 30.000–45.000 km.', fuel: 'petrol' },
+  { id: 'brakefluid', label: 'Bremsflüssigkeit',     km: null,  months: 24, note: 'Wasseraufnahme ist zeit-, nicht kilometerabhängig.' },
+  { id: 'coolant',    label: 'Kühlmittel',           km: null,  months: 60, note: '' },
+  { id: 'trans',      label: 'Getriebeöl',           km: 60000, months: 72, note: 'Doppelkupplung meist 60.000 km, Wandler oft „lebenslang“ – bei hoher Laufleistung trotzdem wechseln.', gearbox: 'auto' },
+  { id: 'haldex',     label: 'Haldex-Öl',            km: 60000, months: 72, note: 'Nur bei Allrad mit Lamellenkupplung.' },
+  { id: 'timing',     label: 'Zahnriemen',           km: 120000, months: 96, note: 'Nur bei Riementrieb – bei Kette entfällt der Punkt.', timing: 'Zahnriemen' },
+  { id: 'dpf',        label: 'Partikelfilter prüfen', km: 100000, months: 96, note: 'Beladung und Aschemasse auslesen.', fuel: 'diesel' },
+  { id: 'compressor', label: 'Kompressoröl',         km: 100000, months: 120, note: 'Roots-Kompressor mit eigenem Ölvorrat.', aspiration: 'kompressor' }
+];
+
+function serviceApplies(item, profile) {
+  if (!profile) return !item.fuel && !item.aspiration && !item.timing;
+  if (item.fuel && profile.fuel !== item.fuel) return false;
+  if (item.aspiration && profile.aspiration !== item.aspiration) return false;
+  if (item.timing && (profile.specs || {}).timingDrive !== item.timing) return false;
+  return true;
+}
+
+/* state = { km: aktueller Stand, done: { id: { km, date } } } */
+function serviceStatus(profile, state, nowMs) {
+  state = state || {}; nowMs = nowMs || Date.now();
+  const km = isFinite(state.km) ? +state.km : NaN;
+  return SERVICE_ITEMS.filter(it => serviceApplies(it, profile)).map(it => {
+    const d = (state.done || {})[it.id] || {};
+    const dueKm = it.km && isFinite(d.km) ? d.km + it.km : null;
+    const dueDate = it.months && d.date ? new Date(d.date) : null;
+    if (dueDate) dueDate.setMonth(dueDate.getMonth() + it.months);
+    const kmLeft = dueKm !== null && isFinite(km) ? dueKm - km : null;
+    const daysLeft = dueDate ? Math.round((dueDate.getTime() - nowMs) / 86400000) : null;
+    const known = isFinite(d.km) || !!d.date;
+    let status = 'unknown';
+    if (known) {
+      const overdue = (kmLeft !== null && kmLeft < 0) || (daysLeft !== null && daysLeft < 0);
+      const soon = (kmLeft !== null && kmLeft < 2000) || (daysLeft !== null && daysLeft < 60);
+      status = overdue ? 'over' : soon ? 'soon' : 'ok';
+    }
+    return { id: it.id, label: it.label, note: it.note, intervalKm: it.km, intervalMonths: it.months,
+             lastKm: isFinite(d.km) ? d.km : null, lastDate: d.date || null, dueKm, dueDate: dueDate ? dueDate.getTime() : null,
+             kmLeft, daysLeft, status };
+  });
+}

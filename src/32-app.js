@@ -3059,6 +3059,17 @@ BUILDERS.akte = function (page) {
       [el('option', { value: '', selected: !filterProfile ? true : null }, 'alle Fahrzeuge (' + rows.length + ')')]
         .concat(profiles.map(p => el('option', { value: p.id, selected: p.id === filterProfile ? true : null },
           p.name + ' (' + rows.filter(r => r.profileId === p.id).length + ')'))));
+    const refInput = el('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' },
+      onchange: async e => {
+        const f = e.target.files[0]; if (!f) return;
+        try {
+          const inc = akteParseImport(await f.text());
+          App.akteRef = { name: f.name, rows: inc };
+          host.prepend(noteBox('ok', 'Referenzakte geladen', inc.length + ' Fahrten aus „' + f.name + '“ – wird nur verglichen, nicht gespeichert.'));
+          setTimeout(render, 700);
+        } catch (err) { host.prepend(noteBox('crit', 'Referenzakte nicht lesbar', String(err.message || err))); }
+        e.target.value = '';
+      } });
     const importInput = el('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' },
       onchange: async e => {
         const f = e.target.files[0]; if (!f) return;
@@ -3079,6 +3090,9 @@ BUILDERS.akte = function (page) {
         download('fahrzeugakte-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json', akteExportJson(rows)) },
         icon('dl'), 'Akte exportieren') : null,
       el('button', { class: 'btn', type: 'button', onclick: () => importInput.click() }, 'Akte einlesen'),
+      el('button', { class: 'btn', type: 'button', title: 'Akte eines anderen Fahrzeugs zum Vergleich laden – wird nicht gespeichert',
+        onclick: () => refInput.click() }, App.akteRef ? 'Referenz: ' + App.akteRef.name : 'Referenzakte vergleichen'),
+      App.akteRef ? el('button', { class: 'btn ghost sm', type: 'button', onclick: () => { App.akteRef = null; render(); } }, 'Referenz entfernen') : null,
       importInput,
       el('label', { class: 'chip', style: { display: 'inline-flex', gap: '6px', alignItems: 'center' } },
         el('input', { type: 'checkbox', checked: store.get('akteAuto', true) !== false ? true : null,
@@ -3139,6 +3153,90 @@ BUILDERS.akte = function (page) {
     }, el('div', { class: 'tblwrap' }, matrix)));
 
     /* Verlauf einer Regel */
+    /* --- Persönliche Baseline --- */
+    {
+      const bl = baselineRules(shown).sort((a, b) => Math.abs(b.b.slope30 / (b.b.sigma || 1)) - Math.abs(a.b.slope30 / (a.b.sigma || 1)));
+      const bHost = el('div');
+      if (!bl.length) {
+        bHost.appendChild(emptyBox('Noch keine eigene Baseline',
+          'Ab ' + BASELINE_MIN_DRIVES + ' Fahrten mit demselben Messwert lernt die Akte den normalen Bereich dieses Wagens. Bisher: ' + shown.length + ' Fahrt(en) gespeichert. Der Werksbereich gilt für alle Exemplare, die Baseline nur für deines – damit fällt eine Abweichung auf, lange bevor sie das Werksband verlässt.'));
+      } else {
+        const cur = App.ds ? driveId(App.ds, App.fileName) : null;
+        const refRows = App.akteRef ? App.akteRef.rows : null;
+        const rows2 = bl.slice(0, 14).map(({ id, b }) => {
+          const rb = refRows ? baselineFor(refRows, id, { minN: 2 }) : null;
+          const now = cur ? (shown.find(r => r.id === cur) || {}) : null;
+          const nowVal = now && now.diag ? (now.diag.find(d => d.id === id) || {}).value : null;
+          const chk = cur ? baselineCheck(shown, id, nowVal, cur) : { ok: false };
+          const drift = b.sigma > 1e-9 ? b.slope30 / b.sigma : 0;
+          const badge = !chk.ok ? null
+            : chk.kind === 'eigen' ? el('span', { class: 'badge warn' }, 'außerhalb der eigenen Norm')
+            : chk.kind === 'beides' ? el('span', { class: 'badge crit' }, 'außerhalb Norm und Sollband')
+            : el('span', { class: 'badge ok' }, 'im eigenen Normbereich');
+          return el('tr', {},
+            el('td', {}, ruleTitle(id)),
+            el('td', { class: 'n' }, String(b.n)),
+            el('td', { class: 'n' }, fmt(b.median, 2) + (b.unit ? ' ' + b.unit : '')),
+            el('td', { class: 'n' }, '±' + fmt(3 * b.sigma, 2)),
+            el('td', { class: 'n' }, (b.slope30 >= 0 ? '+' : '') + fmt(b.slope30, 2) + (b.unit ? ' ' + b.unit : '') + '/30 d'),
+            el('td', { class: 'n' }, chk.ok ? fmt(nowVal, 2) : '–'),
+            refRows ? el('td', { class: 'n', title: rb && rb.ok ? rb.n + ' Fahrten der Referenz' : 'in der Referenzakte nicht vorhanden' },
+              rb && rb.ok ? fmt(rb.median, 2) + (Math.abs(rb.median - b.median) > 3 * Math.max(b.sigma, 1e-9) ? ' ⚠' : '') : '–') : null,
+            el('td', {}, badge || el('span', { class: 'dim2' }, Math.abs(drift) > 0.5 ? 'driftet' : 'stabil')));
+        });
+        bHost.appendChild(el('div', { class: 'tblwrap' }, el('table', { class: 'tbl', style: { minWidth: '620px' } },
+          el('thead', {}, el('tr', {}, el('th', {}, 'Befund'), el('th', {}, 'Fahrten'), el('th', {}, 'dein Normalwert'), el('th', {}, 'Streuband (3σ)'), el('th', {}, 'Trend'), el('th', {}, 'diese Fahrt'), App.akteRef ? el('th', { title: App.akteRef.name }, 'Referenz') : null, el('th', {}, 'Bewertung'))),
+          el('tbody', {}, ...rows2))));
+      }
+      host.appendChild(card('Deine Baseline', {
+        hint: 'der Normalbereich dieses Wagens, aus seinen eigenen Fahrten gelernt',
+        info: { read: 'Für jeden Befund mit Zahlenwert bildet die Akte Median und robuste Streuung über alle gespeicherten Fahrten. Das Streuband ist der dreifache Streuwert um den Median – innerhalb davon ist ein Wert für dieses Auto normal. Der Trend ist die Steigung über die Zeit, umgerechnet auf 30 Tage. „Diese Fahrt“ vergleicht den aktuellen Wert gegen die Baseline der übrigen Fahrten.',
+                good: 'Werte im eigenen Normbereich, Trend nahe null.',
+                bad: '„Außerhalb der eigenen Norm“ bei gleichzeitig grünem Sollband ist der eigentliche Gewinn dieser Ansicht: das Auto verhält sich anders als sonst, obwohl der Werksbereich noch eingehalten ist. Ein stetiger Trend in eine Richtung ist ein Grund, die Messgröße im Auge zu behalten.' }
+      }, bHost));
+    }
+
+    /* --- Wartungsstand --- */
+    {
+      const key = 'service:' + (filterProfile || (App.profile ? App.profile.id : 'alle'));
+      const st = store.get(key, { km: null, done: {} });
+      const list = serviceStatus(App.profile, st);
+      const sHost = el('div');
+      const kmIn = el('input', { class: 'inp', type: 'number', min: '0', step: '1000', value: st.km !== null && st.km !== undefined ? String(st.km) : '',
+        placeholder: 'z. B. 185000', style: { width: '130px' },
+        onchange: e => { st.km = e.target.value === '' ? null : +e.target.value; store.set(key, st); render(); } });
+      sHost.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center', marginBottom: '10px' } },
+        el('span', { class: 'field' }, el('span', { class: 'dim' }, 'Kilometerstand'), kmIn, el('span', { class: 'dim' }, 'km'))));
+      const badge = s => s === 'over' ? el('span', { class: 'badge crit' }, 'fällig')
+        : s === 'soon' ? el('span', { class: 'badge warn' }, 'bald')
+        : s === 'ok' ? el('span', { class: 'badge ok' }, 'im Intervall')
+        : el('span', { class: 'badge mute' }, 'unbekannt');
+      const rows3 = list.map(it => {
+        const kmIn2 = el('input', { class: 'inp', type: 'number', min: '0', step: '1000', value: it.lastKm !== null ? String(it.lastKm) : '', placeholder: 'km', style: { width: '104px' },
+          onchange: e => { st.done = st.done || {}; st.done[it.id] = Object.assign({}, st.done[it.id], { km: e.target.value === '' ? null : +e.target.value }); store.set(key, st); render(); } });
+        const dIn = el('input', { class: 'inp', type: 'date', value: it.lastDate ? new Date(it.lastDate).toISOString().slice(0, 10) : '', style: { width: '142px' },
+          onchange: e => { st.done = st.done || {}; st.done[it.id] = Object.assign({}, st.done[it.id], { date: e.target.value ? new Date(e.target.value).getTime() : null }); store.set(key, st); render(); } });
+        const rest = [];
+        if (it.kmLeft !== null) rest.push((it.kmLeft >= 0 ? 'noch ' : 'überfällig ') + fmt(Math.abs(it.kmLeft), 0) + ' km');
+        if (it.daysLeft !== null) rest.push((it.daysLeft >= 0 ? 'noch ' : 'überfällig ') + fmt(Math.abs(it.daysLeft), 0) + ' Tage');
+        return el('tr', {},
+          el('td', {}, el('b', {}, it.label), it.note ? el('span', { class: 'dim2', style: { display: 'block', fontSize: '11.5px', whiteSpace: 'normal' } }, it.note) : null),
+          el('td', { class: 'n' }, (it.intervalKm ? fmt(it.intervalKm / 1000, 0) + ' tkm' : '') + (it.intervalKm && it.intervalMonths ? ' / ' : '') + (it.intervalMonths ? it.intervalMonths + ' Mon.' : '')),
+          el('td', {}, kmIn2), el('td', {}, dIn),
+          el('td', { class: 'n' }, rest.join(' · ') || '–'),
+          el('td', {}, badge(it.status)));
+      });
+      sHost.appendChild(el('div', { class: 'tblwrap' }, el('table', { class: 'tbl', style: { minWidth: '680px' } },
+        el('thead', {}, el('tr', {}, el('th', {}, 'Arbeit'), el('th', {}, 'Intervall'), el('th', {}, 'zuletzt km'), el('th', {}, 'zuletzt am'), el('th', {}, 'Rest'), el('th', {}, 'Stand'))),
+        el('tbody', {}, ...rows3))));
+      host.appendChild(card('Wartungsstand', {
+        hint: 'Faustintervalle je Bauart – das Serviceheft des Herstellers geht vor',
+        info: { read: 'Trage den aktuellen Kilometerstand ein und je Arbeit, bei welchem Stand und Datum sie zuletzt gemacht wurde. Die Liste rechnet daraus, was fällig ist. Welche Punkte erscheinen, hängt am Fahrzeugprofil: Zahnriemen nur bei Riementrieb, Kompressoröl nur beim Kompressor, Partikelfilter nur beim Diesel.',
+                good: 'Alles im Intervall, Öl mit Datum und Kilometerstand belegt.',
+                bad: 'Bremsflüssigkeit und Kühlmittel altern nach Zeit, nicht nach Kilometern – sie fallen bei Wenigfahrern als Erstes durch. Die Werte bleiben auf diesem Gerät.' }
+      }, sHost));
+    }
+
     const trendable = akteTrendableRules(cols);
     if (trendable.length) {
       const chosen0 = store.get('akteRule', trendable[0]);
