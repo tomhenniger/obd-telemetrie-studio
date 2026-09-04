@@ -834,6 +834,59 @@ details.acc > summary::-webkit-details-marker { display: none; }
   .f-b, .chk .f-b { display: grid !important; }
   a { color: inherit; text-decoration: none; }
 }
+
+/* ===== Vollständiger Bericht ======================================= */
+.rep-bar {
+  position: sticky; top: 0; z-index: 60; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 20px; background: var(--overlay); backdrop-filter: saturate(140%) blur(10px);
+  border-bottom: 1px solid var(--border); font-size: 12.5px;
+}
+.rep-bar > .btn:nth-of-type(1) { margin-left: auto; }
+.rep-bar .sel { min-height: 30px; padding: 4px 24px 4px 9px; }
+body.report-mode #app, body.report-mode #hero { display: none !important; }
+.report { max-width: 1000px; margin: 0 auto; padding: 22px 22px 60px; display: grid; gap: 22px; }
+.report .page { padding: 0; max-width: none; animation: none; }
+.rep-cover { border: 1px solid var(--border); border-radius: var(--r); padding: 26px 24px; background: var(--surface); }
+.rep-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.rep-brand b { display: block; font-size: 13.5px; }
+.rep-brand span { display: block; font-size: 11.5px; color: var(--text-3); }
+.rep-cover h1 { font-size: 26px; font-weight: 600; letter-spacing: -.015em; margin-bottom: 6px; }
+.rep-sub { font-size: 12.5px; color: var(--text-2); margin: 0 0 4px; }
+.rep-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; margin: 18px 0 14px;
+  background: var(--lcd); border: 1px solid var(--lcd-line); border-radius: var(--r); overflow: hidden; }
+.rep-kpis > div { padding: 11px 13px; border-right: 1px solid var(--lcd-line); }
+.rep-kpis > div:last-child { border-right: 0; }
+.rep-kpis span { display: block; font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--lcd-dim2); }
+.rep-kpis b { font-size: 19px; font-weight: 600; color: var(--lcd-text); font-variant-numeric: tabular-nums; }
+.rep-tally { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.rep-note { font-size: 11.5px; color: var(--text-3); line-height: 1.55; margin: 0; max-width: 80ch; }
+.rep-sec { display: grid; gap: 12px; }
+.rep-sec > h2 { font-size: 19px; font-weight: 600; padding-bottom: 8px; border-bottom: 1px solid var(--border-2); }
+.rep-sec > h2 + .rep-sub { margin-top: -6px; }
+.rep-toc { list-style: none; counter-reset: rep; margin: 0; padding: 0; display: grid; gap: 4px; }
+.rep-toc li { counter-increment: rep; display: flex; align-items: baseline; gap: 8px; font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.rep-toc li::before { content: counter(rep) "."; color: var(--text-3); font-variant-numeric: tabular-nums; min-width: 20px; }
+.rep-toc a { color: var(--text-1); text-decoration: none; font-weight: 550; }
+.rep-toc .rep-dot { flex: 1; border-bottom: 1px dotted var(--border-2); }
+.rep-toc .dim2 { font-size: 11.5px; max-width: 46%; text-align: right; }
+@media (max-width: 760px) {
+  .report { padding: 14px 12px 40px; gap: 16px; }
+  .rep-cover { padding: 18px 16px; }
+  .rep-cover h1 { font-size: 21px; }
+  .rep-toc .dim2 { display: none; }
+  .rep-bar { padding: 9px 12px; }
+  .lbl-hide { display: none; }
+}
+@media print {
+  .rep-bar { display: none !important; }
+  .report { max-width: none; padding: 0; gap: 14px; }
+  .rep-cover { break-after: page; border: 0; padding: 0; }
+  .rep-sec { break-inside: auto; }
+  .rep-sec > h2 { break-after: avoid; }
+  .rep-toc { break-after: page; }
+  .rep-toc a { color: #000; }
+  .report .card, .report .finding, .report .kpis, .report .chk { break-inside: avoid; }
+}
 </style>
 </head>
 <body class="no-data">
@@ -955,8 +1008,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <div class="sub" id="page-sub"></div>
       </div>
       <div class="topbar-actions">
-        <button class="btn icon" id="print" title="Diese Seite drucken oder als PDF sichern" aria-label="Diese Seite drucken">
+        <button class="btn sm" id="report" title="Vollständigen Bericht über alle Bereiche erzeugen">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-print"/></svg>
+          <span class="lbl-hide">Bericht</span>
         </button>
         <button class="btn icon" id="theme" title="Hell/Dunkel umschalten" aria-label="Hell/Dunkel umschalten">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-moon" id="theme-ico"/></svg>
@@ -14275,6 +14329,113 @@ function vehicleEvidence(ds) {
 function closeVehicleDialog() { const o = $('#veh-dlg'); if (o) o.remove(); }
 
 /* ===== Live-Aufzeichnung vom Adapter ================================ */
+/* ===== Vollständiger Bericht =======================================
+   Baut alle Bereiche untereinander in eine eigene Druckansicht: Deckblatt,
+   Inhaltsverzeichnis, dann die Abschnitte mit aufgeklappten Befunden.
+   Danach räumt der Modus sich vollständig wieder ab.
+   ================================================================== */
+const REPORT_SECTIONS = ['overview', 'diag', 'tyres', 'fields', 'series', 'dist', 'map', 'akte', 'buy', 'data'];
+/* Umfänge: nicht jeder Bericht muss alles enthalten */
+const REPORT_SCOPES = {
+  voll:      { label: 'Vollständig', hint: 'alle Bereiche', sections: REPORT_SECTIONS },
+  technik:   { label: 'Technik',     hint: 'Motorzustand ohne Karte und Kaufcheck', sections: ['overview', 'diag', 'tyres', 'fields', 'dist', 'data'] },
+  werkstatt: { label: 'Werkstatt',   hint: 'Befunde und Kennzahlen für die Übergabe', sections: ['overview', 'diag'] },
+  kauf:      { label: 'Kauf',        hint: 'Befunde, Kaufcheck, Fahrzeugakte', sections: ['overview', 'diag', 'buy', 'akte'] }
+};
+
+async function buildReport(opts) {
+  opts = opts || {};
+  const pick = opts.sections || REPORT_SECTIONS;
+  const host = el('div', { id: 'full-report', class: 'report' });
+  const ds = App.ds, prof = App.profile, T = (ds && ds.trip) || {};
+  const now = new Date();
+  const tally = App.diag && App.diag.tally ? App.diag.tally : null;
+
+  /* --- Deckblatt --- */
+  const kpiRow = [];
+  if (ds) {
+    kpiRow.push(['Fahrtdauer', fmtDur(ds.duration)], ['Strecke', isFinite(T.dist) ? fmt(T.dist, 2) + ' km' : '–'],
+      ['⌀ Geschwindigkeit', isFinite(T.speedAvgMoving) ? fmt(T.speedAvgMoving, 0) + ' km/h' : '–'],
+      ['Verbrauch', isFinite(T.consAvg) ? fmt(T.consAvg, 1) + ' L/100km' : '–']);
+  }
+  host.appendChild(el('section', { class: 'rep-cover' },
+    el('div', { class: 'rep-brand' }, el('div', { class: 'brand-mark' }, 'OBD'),
+      el('div', {}, el('b', {}, 'Telemetrie Studio'), el('span', {}, 'Auswertung einer OBD2-Aufzeichnung'))),
+    el('h1', {}, prof ? prof.name : 'Fahrzeugbericht'),
+    el('p', { class: 'rep-sub' }, (App.fileName || 'ohne Datei') + ' · erstellt am ' + now.toLocaleDateString('de-DE') + ' um ' + now.toLocaleTimeString('de-DE').slice(0, 5)),
+    prof ? el('p', { class: 'rep-sub' }, profileSpecLine(prof) || prof.engine || '') : null,
+    App.vin ? el('p', { class: 'rep-sub' }, 'Fahrgestellnummer ' + App.vin.vin + (App.vin.modelYear ? ' · Modelljahr ' + App.vin.modelYear : '')) : null,
+    kpiRow.length ? el('div', { class: 'rep-kpis' }, kpiRow.map(([k, v]) => el('div', {}, el('span', {}, k), el('b', {}, v)))) : null,
+    tally ? el('div', { class: 'rep-tally' },
+      el('span', { class: 'badge ok' }, (tally.ok || 0) + ' unauffällig'),
+      el('span', { class: 'badge warn' }, (tally.warn || 0) + ' grenzwertig'),
+      el('span', { class: 'badge crit' }, (tally.crit || 0) + ' auffällig'),
+      el('span', { class: 'badge mute' }, (tally.unklar || 0) + ' nicht bewertbar'),
+      el('span', { class: 'badge mute' }, (tally.missing || 0) + ' PID fehlt')) : null,
+    el('p', { class: 'rep-note' }, 'Alle Werte stammen aus dieser einen Aufzeichnung. Bewertungen vergleichen die Messung mit den hinterlegten Werksangaben; wo die Datenlage nicht reicht, steht „nicht bewertbar“ statt einer Ampel. Der Bericht ersetzt keine Werkstattprüfung.')));
+
+  /* --- Inhaltsverzeichnis --- */
+  const toc = el('ol', { class: 'rep-toc' });
+  host.appendChild(el('section', { class: 'rep-sec' }, el('h2', {}, 'Inhalt'), toc));
+
+  /* --- Abschnitte --- */
+  const built = [];
+  for (const id of pick) {
+    const sec = SECTIONS.find(s => s.id === id);
+    if (!sec || (sec.data && !App.ds)) continue;
+    const wrap = el('section', { class: 'rep-sec', id: 'rep-' + id });
+    wrap.appendChild(el('h2', {}, sec.label));
+    wrap.appendChild(el('p', { class: 'rep-sub' }, sec.sub));
+    const page = el('div', { class: 'page' });
+    wrap.appendChild(page);
+    try { BUILDERS[id](page); }
+    catch (e) { page.appendChild(noteBox('crit', 'Dieser Abschnitt konnte nicht aufgebaut werden', e.message)); }
+    host.appendChild(wrap);
+    built.push({ id, label: sec.label });
+    toc.appendChild(el('li', {}, el('a', { href: '#rep-' + id }, sec.label), el('span', { class: 'rep-dot' }), el('span', { class: 'dim2' }, sec.sub)));
+    await new Promise(r => setTimeout(r, 0));                       // Ereignisschleife atmen lassen
+  }
+  /* Alles aufklappen, Bedienelemente aus dem Bericht nehmen */
+  host.querySelectorAll('details').forEach(d => { d.open = true; });
+  host.querySelectorAll('.info-panel').forEach(p => p.remove());
+  host.querySelectorAll('input, select, textarea').forEach(n => { n.setAttribute('readonly', 'readonly'); n.setAttribute('tabindex', '-1'); });
+  return { host, built };
+}
+
+async function openReport(scopeKey) {
+  const old = document.getElementById('full-report');
+  if (old && !scopeKey) return;
+  if (old) closeReport(true);
+  const key = scopeKey || store.get('reportScope', 'voll');
+  const scope = REPORT_SCOPES[key] || REPORT_SCOPES.voll;
+  store.set('reportScope', key);
+  const bar = document.querySelector('.rep-bar') || el('div', { class: 'rep-bar' });
+  bar.innerHTML = ''; bar.appendChild(el('span', {}, 'Bericht wird zusammengestellt …'));
+  if (!bar.isConnected) document.body.appendChild(bar);
+  document.body.classList.add('report-mode');
+  const { host, built } = await buildReport({ sections: scope.sections });
+  document.body.appendChild(host);
+  const sel = el('select', { class: 'sel', onchange: e => openReport(e.target.value) },
+    Object.keys(REPORT_SCOPES).map(k => el('option', { value: k, selected: k === key ? true : null },
+      REPORT_SCOPES[k].label + ' – ' + REPORT_SCOPES[k].hint)));
+  bar.innerHTML = '';
+  bar.append(
+    el('span', { class: 'field' }, el('span', { class: 'dim' }, 'Umfang'), sel),
+    el('span', { class: 'dim2' }, built.length + ' Abschnitte · ' + (App.fileName || 'ohne Datei')),
+    el('button', { class: 'btn primary sm', type: 'button', onclick: () => window.print() }, icon('print'), 'Drucken oder als PDF sichern'),
+    el('button', { class: 'btn sm', type: 'button', onclick: () => closeReport() }, 'Zurück zur Auswertung'));
+  requestAnimationFrame(() => Chart.all.forEach(c => { try { c.resize(); c.draw(); } catch (e) {} }));
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+function closeReport(keepMode) {
+  const host = document.getElementById('full-report');
+  if (host) { Chart.all.slice().forEach(c => { if (c.host && host.contains(c.host)) c.destroy(); }); host.remove(); }
+  if (keepMode) return;
+  const bar = document.querySelector('.rep-bar'); if (bar) bar.remove();
+  document.body.classList.remove('report-mode');
+  requestAnimationFrame(() => Chart.all.forEach(c => { try { c.resize(); c.draw(); } catch (e) {} }));
+}
+
 function openLiveDialog() {
   const link = new ObdLink();
   let rec = null, loop = null, stopped = false, pos = null, watchId = null;
@@ -15035,7 +15196,7 @@ function baseName() {
   const saved = store.get('theme', null);
   applyTheme(saved || 'dark');   // das Gerät ist dunkel; hell nur auf ausdrückliche Wahl
   /* Drucken: helles Schema, aufgeklappte Befunde, nur die aktuelle Seite */
-  const printBtn = $('#print'); if (printBtn) printBtn.onclick = () => window.print();
+  const repBtn = $('#report'); if (repBtn) repBtn.onclick = () => openReport();
   /* Offlinefähig machen: der Service Worker legt App und Kartenkacheln ab.
      Nur über https oder localhost erlaubt – bei file:// wird es still übersprungen. */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost'))
@@ -15074,7 +15235,8 @@ function baseName() {
   let printTheme = null, printOpened = [];
   window.addEventListener('beforeprint', () => {
     printTheme = document.documentElement.getAttribute('data-theme'); applyTheme('light');
-    printOpened = $$('#pages .page:not([hidden]) details:not([open])'); printOpened.forEach(d => { d.open = true; });
+    const scope = document.getElementById('full-report') ? '#full-report' : '#pages .page:not([hidden])';
+    printOpened = $$(scope + ' details:not([open])'); printOpened.forEach(d => { d.open = true; });
   });
   window.addEventListener('afterprint', () => {
     if (printTheme) applyTheme(printTheme);

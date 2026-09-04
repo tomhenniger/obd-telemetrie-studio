@@ -1,6 +1,7 @@
 # Changelog — 2026-09-04
 
 ## Neue Features
+- **Vollständiger Bericht**: Der Knopf „Bericht“ in der Kopfzeile stellt alle Bereiche zu einem durchgehenden Dokument zusammen – Deckblatt mit Fahrzeug, Fahrt und Ampelbilanz, Inhaltsverzeichnis, danach die Abschnitte mit aufgeklappten Befunden. Vier Umfänge wählbar: Vollständig, Technik, Werkstatt, Kauf. Über die Druckfunktion als PDF sicherbar (Beispiel: 36 A4-Seiten), Deckblatt und Inhalt jeweils auf eigener Seite, Karten und Tabellen brechen nicht mitten durch.
 - **Live vom Adapter aufzeichnen** (Startbildschirm, nur wo der Browser Bluetooth kann): verbindet sich mit einem BLE-OBD-Adapter, fragt 14 Standard-PIDs im Wechsel ab, zeigt die Werte live und schreibt sie als Aufzeichnung mit, die beim Beenden in dieselbe Auswertung läuft wie eine Datei. GPS wird mitgeschrieben, wenn erlaubt. Klassische Bluetooth- und WLAN-Adapter erreicht der Browser nicht, Safari kann Web Bluetooth generell nicht.
 - **Installierbar und offline**: Die Seite lässt sich als App auf den Startbildschirm legen und startet ohne Netz. Kartenkacheln werden beim Anschauen gespeichert (bis etwa 1.200 Stück), „Karte dieser Fahrt speichern“ lädt die Umgebung der Route in zwei Zoomstufen vorab. Der Stand lässt sich in den Einstellungen einsehen und leeren.
 - **VCDS-Logs einlesen**: Messwertblock-Logs von VCDS werden am Kopf erkannt und beim Import in eine Wide-CSV übersetzt – Kanalnamen samt Einheit, STAMP-Spalten und wiederholte Blockköpfe fallen weg. Der Name des Steuergeräts steht im Dateinamen der Auswertung.
@@ -19,7 +20,7 @@
 - **Zwei neue Diagnoseregeln**: „Batterie beim Start“ (Ruhespannung vor dem Motorlauf, Einbruch beim Anlassen) und „Ladedruckaufbau bei Volllast“ (Zeit bis 90 % des Spitzendrucks, Kompressor und Turbo getrennt bewertet). Beide erscheinen in der Akte als Trend. Damit 40 Regeln.
 - **Verbrauch je Straße** (Strecke, nach dem Tempolimit-Abgleich): Liter und L/100km je Straße und je Klasse Ort, Landstraße, Autobahn, mit Anteil am Gesamtverbrauch.
 - **Limit-Bilanz**: Zeitgewinn und Mehrverbrauch aller Abschnitte über dem Limit, gerechnet mit der Verbrauchskurve der eigenen Fahrt (Median je 10-km/h-Klasse bei ruhiger Fahrt), in Litern und Euro.
-- **Drucken**: Druckknopf in der Kopfzeile. Druckt die aktuelle Seite hell, ohne Bedienelemente, mit aufgeklappten Befunden; über den Systemdialog auch als PDF (Kaufcheck-Protokoll, Diagnose).
+- **Drucken**: helles Druck-Layout ohne Bedienelemente, mit aufgeklappten Befunden; über den Systemdialog auch als PDF.
 - **Fahrgestellnummer**: steht sie in der Aufzeichnung, zeigt der Fahrzeugdialog Hersteller, Region und Modelljahr; der Kaufcheck übernimmt sie ins FIN-Feld.
 - Tempolimits: Option „Start und Ziel weglassen (je 500 m)“ (voreingestellt an), damit die Wohnadresse nicht in der Abfrage steckt.
 - **Anmerkungen an Zeitpunkten** (Zeitreihen): Zeiger auf die Stelle, Text eingeben, setzen. Erscheint als gestrichelte N-Linie im Verlauf und als Pin auf der Karte, wird mit der Fahrt in der Akte gespeichert und steht im KI-Prompt unter `<anmerkungen>`.
