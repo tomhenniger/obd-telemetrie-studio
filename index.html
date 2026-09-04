@@ -7500,7 +7500,7 @@ const DIAG_RULES = [
       extra: [['Ruhewert', fmt(pIdle, 1) + ' %'],
               ['Last im Sekundenfenster um das Pedalmaximum', isFinite(lNear) ? fmt(lNear, 0) + ' %' : '–'],
               ['Höchste Last der Fahrt', fmt(lMax, 0) + ' %'],
-              isFinite(dt) ? ['Abstand beider Maxima', fmt(dt, 1) + ' s'] : null],
+              isFinite(dt) ? ['Abstand beider Maxima', fmt(dt, 1) + ' s'] : null].filter(Boolean),
       text: st === S.OK
         ? 'Der Pedalgeber meldet im Ruhezustand ' + fmt(pIdle, 1) + ' % und bei Vollgas ' + fmt(pMax, 1) + ' %. VAG nutzt den elektrischen Sensorbereich bewusst nicht voll aus – ' + fmt(pMax, 1) + ' % sind hier echtes Vollgas, nicht Teillast. Im Sekundenfenster um dieses Pedalmaximum liegt die Motorlast bei ' + fmt(lNear, 0) + ' %, was das bestätigt.'
         : 'Bei Volllast (' + fmt(lMax, 0) + ' % Motorlast) erreicht der Pedalgeber nur ' + fmt(pMax, 1) + ' %. Kennlinie des Gebers prüfen.' };
@@ -7524,7 +7524,7 @@ const DIAG_RULES = [
     if (med < 70) st = S.WARN;
     return { status: st, value: med, unit: '°C', dec: 0, ref: '80–120 °C, Spitze ≤ 125 °C', refLo: 80, refHi: 120,
       cond: 'Kühlmittel ≥ 80 °C und Motor läuft',
-      extra: [['Maximum', fmt(mx, 0) + ' °C'], isFinite(co) ? ['Kühlmittel dabei', fmt(co, 0) + ' °C'] : null, ['Bewertete Zeit', fmtDur(d)]],
+      extra: [['Maximum', fmt(mx, 0) + ' °C'], isFinite(co) ? ['Kühlmittel dabei', fmt(co, 0) + ' °C'] : null, ['Bewertete Zeit', fmtDur(d)]].filter(Boolean),
       text: st === S.OK
         ? 'Das Öl liegt im warmen Betrieb bei ' + fmt(med, 0) + ' °C (Spitze ' + fmt(mx, 0) + ' °C) – im Bereich, in dem Kondensat und Kraftstoffeintrag ausdampfen und die Viskosität stimmt.'
         : med < 70
@@ -7550,7 +7550,7 @@ const DIAG_RULES = [
     return { status: st, value: med, unit: '°C', dec: 0, ref: '350–800 °C, über 900 °C nur sekundenweise', refLo: 350, refHi: 800,
       cond: 'Kühlmittel ≥ 80 °C, in Bewegung',
       extra: [['Maximum', fmt(mx, 0) + ' °C'], ['Zeit über 900 °C', fmtDur(hot)],
-              isFinite(delta) ? ['Unterschied Bank 1/2', fmt(delta, 0) + ' K'] : null],
+              isFinite(delta) ? ['Unterschied Bank 1/2', fmt(delta, 0) + ' K'] : null].filter(Boolean),
       text: st === S.OK
         ? 'Der Katalysator arbeitet bei ' + fmt(med, 0) + ' °C im Median. Zündaussetzer oder ein zu fettes Gemisch würden ihn deutlich heißer laufen lassen – davon ist nichts zu sehen.'
         : med < 300
@@ -7664,7 +7664,7 @@ const DIAG_RULES = [
     if (!isFinite(r) && !isFinite(perL)) return { status: S.UNCLEAR, note: 'Weder Leerlauf noch Lastsignal ausreichend für eine Plausibilitätsprüfung.' };
     return { status: st, value: isFinite(perL) ? perL : r, unit: isFinite(perL) ? 'g/s·L' : 'r', dec: 2,
       ref: isFinite(perL) ? '1,5–4,5 g/s je Liter im Leerlauf' : 'r ≥ 0,85 zur Last', refLo: isFinite(perL) ? 1.5 : 0.85, refHi: isFinite(perL) ? 4.5 : 1,
-      extra: [isFinite(idleMaf) ? ['Luftmasse im Leerlauf', fmt(idleMaf, 1) + ' g/s'] : null, isFinite(r) ? ['Korrelation zur Last', fmt(r, 3)] : null],
+      extra: [isFinite(idleMaf) ? ['Luftmasse im Leerlauf', fmt(idleMaf, 1) + ' g/s'] : null, isFinite(r) ? ['Korrelation zur Last', fmt(r, 3)] : null].filter(Boolean),
       text: st === S.OK
         ? 'Der Luftmassenmesser liefert plausible Werte: ' + (isFinite(perL) ? fmt(perL, 1) + ' g/s je Liter im Leerlauf' : '') + (isFinite(r) ? (isFinite(perL) ? ', ' : '') + 'Korrelation ' + fmt(r, 2) + ' zur Last' : '') + '.'
         : notes.join(' ') + ' Ein verschmutzter oder driftender Luftmassenmesser zeigt zu wenig – das Steuergerät magert ab, die Gemischkorrektur wandert ins Plus.',
@@ -7693,7 +7693,7 @@ const DIAG_RULES = [
     return { status: st, value: isFinite(pW) ? pW : pI, unit: 'kPa', dec: 0,
       ref: isRail ? 'Raildruck unter Last ≥ 50 % der Spitze' : 'Einbruch unter Last ≤ 15 %', refLo: 0, refHi: s.max,
       cond: isRail ? 'Hochdruck-Rail' : 'Vorförderdruck',
-      extra: [isFinite(pI) ? ['Leerlauf', fmt(pI, 0) + ' kPa'] : null, isFinite(pW) ? ['Volllast (p05)', fmt(pW, 0) + ' kPa'] : null, ['Spitze', fmt(s.max, 0) + ' kPa']],
+      extra: [isFinite(pI) ? ['Leerlauf', fmt(pI, 0) + ' kPa'] : null, isFinite(pW) ? ['Volllast (p05)', fmt(pW, 0) + ' kPa'] : null, ['Spitze', fmt(s.max, 0) + ' kPa']].filter(Boolean),
       text: st === S.OK
         ? 'Der Kraftstoffdruck hält unter Last (' + (isFinite(pW) ? fmt(pW, 0) : fmt(pI, 0)) + ' kPa). Förderpumpe und Druckregler liefern.'
         : why + ' Das ist die Signatur einer schwächelnden Kraftstoffpumpe, eines verstopften Filters oder eines undichten Druckreglers.',
@@ -7877,7 +7877,7 @@ const DIAG_RULES = [
     if (eP < 2) { st = S.WARN; why += ' In der Teillast bleibt sie bei ' + fmt(eP, 0) + ' % – entweder abgeschaltet, versottet oder stillgelegt.'; }
     return { status: st, value: eP, unit: '%', dec: 0, ref: 'Teillast 5–40 %, Volllast ≈ 0 %', refLo: 5, refHi: 40,
       cond: 'Teillast warm · Volllast',
-      extra: [['AGR in der Teillast', fmt(eP, 0) + ' %'], isFinite(eW) ? ['AGR unter Volllast (p95)', fmt(eW, 0) + ' %'] : null],
+      extra: [['AGR in der Teillast', fmt(eP, 0) + ' %'], isFinite(eW) ? ['AGR unter Volllast (p95)', fmt(eW, 0) + ' %'] : null].filter(Boolean),
       text: st === S.OK
         ? 'Die Abgasrückführung arbeitet in der Teillast (' + fmt(eP, 0) + ' %) und schließt unter Volllast' + (isFinite(eW) ? ' (' + fmt(eW, 0) + ' %)' : '') + '. Diese PID zeigt meist den Sollwert, nicht die Ventilstellung – ein versottetes Ventil bleibt hier unsichtbar.'
         : why + ' Diese PID zeigt meist den Sollwert; für die Ist-Stellung und die Regelabweichung braucht es die herstellerspezifischen Messwerte.',
