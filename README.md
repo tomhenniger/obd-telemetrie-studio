@@ -191,6 +191,7 @@ statt eines Urteils auf dünner Datenbasis.
 | Datei | Inhalt |
 |---|---|
 | `src/02–04-*.css` | Design-Tokens, Layout, Komponenten |
+| `sw.js`, `manifest.webmanifest`, `icon*.svg` | Offlinebetrieb und Installation (liegen neben `index.html`) |
 | `src/20-util.js` | Formatierung, Statistik-Helfer, LTTB-Downsampling |
 | `src/21-parse.js` | CSV-Parser mit Format-, Trennzeichen- und Zeiterkennung |
 | `src/22-metrics.js` | PID-Alias-Tabelle und Einheiten-Normalisierung |

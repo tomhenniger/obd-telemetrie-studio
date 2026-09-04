@@ -191,6 +191,33 @@ class TrackMap {
     this.marker = m;
     this._scheduleDraw();
   }
+  /* Kacheln der aktuellen Ansicht und Route vorab laden, damit sie offline verfügbar sind */
+  async prefetchTiles(extraZoom) {
+    const t = this.track; if (!t) return 0;
+    const zs = [this.zoom];
+    for (let i = 1; i <= (extraZoom || 0); i++) { if (this.zoom + i <= 17) zs.push(this.zoom + i); }
+    const urls = new Set();
+    for (const z of zs) {
+      const n = Math.pow(2, z);
+      const stride = Math.max(1, Math.floor(t.n / 400));
+      for (let i = 0; i < t.n; i += stride) {
+        const lat = t.lat[i], lon = t.lon[i];
+        const x = Math.floor((lon + 180) / 360 * n);
+        const la = lat * Math.PI / 180;
+        const y = Math.floor((1 - Math.log(Math.tan(la) + 1 / Math.cos(la)) / Math.PI) / 2 * n);
+        for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+          const u = this.tileUrl(z, x + dx, y + dy);
+          if (u) urls.add(u);
+        }
+      }
+    }
+    let done = 0;
+    const list = Array.from(urls).slice(0, 900);
+    for (let i = 0; i < list.length; i += 6) {
+      await Promise.all(list.slice(i, i + 6).map(u => fetch(u, { mode: 'no-cors' }).then(() => { done++; }).catch(() => {})));
+    }
+    return done;
+  }
   tileUrl(z, x, y) {
     if (!this.server.url) return null;
     const n = Math.pow(2, z);

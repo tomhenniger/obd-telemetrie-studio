@@ -25,7 +25,7 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 - [x] Datenschutz-Schnitt: Start und Ziel (je 500 m) werden bei der Tempolimit-Abfrage weggelassen (Voreinstellung an). Exporte enthalten keine Koordinaten. (2026-09-04)
 
 ### Plattform
-- [ ] Installierbar und offline (PWA, Kachel-Cache). Mittel.
+- [x] Installierbar und offline: Manifest, Symbole, Service Worker; App startet ohne Netz, Kartenkacheln werden gespeichert, Umgebung der Route vorab ladbar. (2026-09-04)
 - [ ] Live-Verbindung zum ELM327 per Web Bluetooth (Chrome Android/Desktop). Groß.
 - [x] Fahrgestellnummer aus der CSV: Hersteller (WMI), Region, Modelljahr im Fahrzeugdialog, vorausgefüllt im Kaufcheck. (2026-09-04)
 

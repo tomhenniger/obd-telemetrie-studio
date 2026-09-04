@@ -3448,6 +3448,49 @@ BUILDERS.akte = function (page) {
 
 /* --- Einstellungen --- */
 BUILDERS.settings = function (page) {
+  /* --- Installieren und offline --- */
+  {
+    const host = el('div');
+    const state = el('p', { class: 'dim', style: { margin: '0 0 10px' } });
+    const refresh = async () => {
+      const parts = [];
+      const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+      parts.push(standalone ? 'Läuft als installierte App.' : 'Läuft im Browser-Tab.');
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        parts.push(reg && reg.active ? 'Offlinebetrieb ist eingerichtet.' : location.protocol === 'https:' || location.hostname === 'localhost'
+          ? 'Offlinebetrieb wird beim nächsten Laden eingerichtet.' : 'Offlinebetrieb braucht https – über eine Datei geöffnet geht das nicht.');
+      } else parts.push('Dieser Browser unterstützt keinen Offlinebetrieb.');
+      if (typeof caches !== 'undefined') {
+        try { const c = await caches.open('obd-tiles-v1'); const k = await c.keys(); parts.push(k.length + ' Kartenkacheln gespeichert.'); } catch (e) {}
+      }
+      state.textContent = parts.join(' ');
+    };
+    refresh();
+    host.appendChild(state);
+    host.appendChild(el('div', { class: 'chiprow' },
+      el('button', { class: 'btn primary', type: 'button', onclick: async () => {
+        if (!App.installPrompt) { alert('Zum Installieren im Browsermenü „Zum Startbildschirm hinzufügen“ wählen. In Safari auf dem iPhone steht das im Teilen-Menü.'); return; }
+        App.installPrompt.prompt(); await App.installPrompt.userChoice; App.installPrompt = null; refresh();
+      } }, 'Als App installieren'),
+      el('button', { class: 'btn', type: 'button', onclick: async () => {
+        if (!App.map || !App.ds || !App.ds.track) { alert('Erst eine Fahrt mit GPS laden, dann sind die Kacheln dieser Gegend bekannt.'); return; }
+        await App.map.prefetchTiles(1);
+        refresh();
+      } }, 'Karte dieser Fahrt speichern'),
+      el('button', { class: 'btn ghost', type: 'button', onclick: async () => {
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('clear-tiles');
+        else if (typeof caches !== 'undefined') await caches.delete('obd-tiles-v1');
+        setTimeout(refresh, 400);
+      } }, 'Kartenspeicher leeren')));
+    page.appendChild(card('Installieren und offline', {
+      hint: 'die App auf dem Gerät behalten, auch ohne Netz',
+      info: { read: 'Installiert liegt die App als eigenes Symbol auf dem Startbildschirm und startet ohne Netz. Kartenkacheln werden beim Anschauen gespeichert; „Karte dieser Fahrt speichern“ lädt zusätzlich die Umgebung der aktuellen Route in zwei Zoomstufen vor.',
+              good: 'Für den Besichtigungstermin: App installieren, Karte der Gegend vorher laden, vor Ort ohne Netz arbeiten.',
+              bad: 'Der Kartenspeicher wächst mit jeder angesehenen Gegend. Er ist auf etwa 1.200 Kacheln begrenzt und lässt sich hier leeren.' }
+    }, host));
+  }
+
   const ds = App.ds;
   page.appendChild(el('div', { class: 'chiprow', style: { marginBottom: '12px' } },
     el('button', { class: 'btn primary', type: 'button', onclick: () => openVehicleDialog({
@@ -3630,6 +3673,11 @@ function baseName() {
   applyTheme(saved || 'dark');   // das Gerät ist dunkel; hell nur auf ausdrückliche Wahl
   /* Drucken: helles Schema, aufgeklappte Befunde, nur die aktuelle Seite */
   const printBtn = $('#print'); if (printBtn) printBtn.onclick = () => window.print();
+  /* Offlinefähig machen: der Service Worker legt App und Kartenkacheln ab.
+     Nur über https oder localhost erlaubt – bei file:// wird es still übersprungen. */
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost'))
+    navigator.serviceWorker.register('sw.js').then(r => { App.sw = r; }).catch(() => {});
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); App.installPrompt = e; });
   /* Geteilte Zusammenfassung: als Karte auf dem Startbildschirm zeigen */
   (async () => {
     const code = shareFromUrl(); if (!code) return;
