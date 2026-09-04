@@ -3005,108 +3005,42 @@ function vehicleEvidence(ds) {
 function closeVehicleDialog() { const o = $('#veh-dlg'); if (o) o.remove(); }
 
 /* ===== Live-Aufzeichnung vom Adapter ================================ */
-/* ===== Vollständiger Bericht =======================================
-   Baut alle Bereiche untereinander in eine eigene Druckansicht: Deckblatt,
-   Inhaltsverzeichnis, dann die Abschnitte mit aufgeklappten Befunden.
-   Danach räumt der Modus sich vollständig wieder ab.
-   ================================================================== */
-const REPORT_SECTIONS = ['overview', 'diag', 'tyres', 'fields', 'series', 'dist', 'map', 'akte', 'buy', 'data'];
-/* Umfänge: nicht jeder Bericht muss alles enthalten */
-const REPORT_SCOPES = {
-  voll:      { label: 'Vollständig', hint: 'alle Bereiche', sections: REPORT_SECTIONS },
-  technik:   { label: 'Technik',     hint: 'Motorzustand ohne Karte und Kaufcheck', sections: ['overview', 'diag', 'tyres', 'fields', 'dist', 'data'] },
-  werkstatt: { label: 'Werkstatt',   hint: 'Befunde und Kennzahlen für die Übergabe', sections: ['overview', 'diag'] },
-  kauf:      { label: 'Kauf',        hint: 'Befunde, Kaufcheck, Fahrzeugakte', sections: ['overview', 'diag', 'buy', 'akte'] }
-};
-
-async function buildReport(opts) {
-  opts = opts || {};
-  const pick = opts.sections || REPORT_SECTIONS;
-  const host = el('div', { id: 'full-report', class: 'report' });
-  const ds = App.ds, prof = App.profile, T = (ds && ds.trip) || {};
-  const now = new Date();
-  const tally = App.diag && App.diag.tally ? App.diag.tally : null;
-
-  /* --- Deckblatt --- */
-  const kpiRow = [];
-  if (ds) {
-    kpiRow.push(['Fahrtdauer', fmtDur(ds.duration)], ['Strecke', isFinite(T.dist) ? fmt(T.dist, 2) + ' km' : '–'],
-      ['⌀ Geschwindigkeit', isFinite(T.speedAvgMoving) ? fmt(T.speedAvgMoving, 0) + ' km/h' : '–'],
-      ['Verbrauch', isFinite(T.consAvg) ? fmt(T.consAvg, 1) + ' L/100km' : '–']);
-  }
-  host.appendChild(el('section', { class: 'rep-cover' },
-    el('div', { class: 'rep-brand' }, el('div', { class: 'brand-mark' }, 'OBD'),
-      el('div', {}, el('b', {}, 'Telemetrie Studio'), el('span', {}, 'Auswertung einer OBD2-Aufzeichnung'))),
-    el('h1', {}, prof ? prof.name : 'Fahrzeugbericht'),
-    el('p', { class: 'rep-sub' }, (App.fileName || 'ohne Datei') + ' · erstellt am ' + now.toLocaleDateString('de-DE') + ' um ' + now.toLocaleTimeString('de-DE').slice(0, 5)),
-    prof ? el('p', { class: 'rep-sub' }, profileSpecLine(prof) || prof.engine || '') : null,
-    App.vin ? el('p', { class: 'rep-sub' }, 'Fahrgestellnummer ' + App.vin.vin + (App.vin.modelYear ? ' · Modelljahr ' + App.vin.modelYear : '')) : null,
-    kpiRow.length ? el('div', { class: 'rep-kpis' }, kpiRow.map(([k, v]) => el('div', {}, el('span', {}, k), el('b', {}, v)))) : null,
-    tally ? el('div', { class: 'rep-tally' },
-      el('span', { class: 'badge ok' }, (tally.ok || 0) + ' unauffällig'),
-      el('span', { class: 'badge warn' }, (tally.warn || 0) + ' grenzwertig'),
-      el('span', { class: 'badge crit' }, (tally.crit || 0) + ' auffällig'),
-      el('span', { class: 'badge mute' }, (tally.unklar || 0) + ' nicht bewertbar'),
-      el('span', { class: 'badge mute' }, (tally.missing || 0) + ' PID fehlt')) : null,
-    el('p', { class: 'rep-note' }, 'Alle Werte stammen aus dieser einen Aufzeichnung. Bewertungen vergleichen die Messung mit den hinterlegten Werksangaben; wo die Datenlage nicht reicht, steht „nicht bewertbar“ statt einer Ampel. Der Bericht ersetzt keine Werkstattprüfung.')));
-
-  /* --- Inhaltsverzeichnis --- */
-  const toc = el('ol', { class: 'rep-toc' });
-  host.appendChild(el('section', { class: 'rep-sec' }, el('h2', {}, 'Inhalt'), toc));
-
-  /* --- Abschnitte --- */
-  const built = [];
-  for (const id of pick) {
-    const sec = SECTIONS.find(s => s.id === id);
-    if (!sec || (sec.data && !App.ds)) continue;
-    const wrap = el('section', { class: 'rep-sec', id: 'rep-' + id });
-    wrap.appendChild(el('h2', {}, sec.label));
-    wrap.appendChild(el('p', { class: 'rep-sub' }, sec.sub));
-    const page = el('div', { class: 'page' });
-    wrap.appendChild(page);
-    try { BUILDERS[id](page); }
-    catch (e) { page.appendChild(noteBox('crit', 'Dieser Abschnitt konnte nicht aufgebaut werden', e.message)); }
-    host.appendChild(wrap);
-    built.push({ id, label: sec.label });
-    toc.appendChild(el('li', {}, el('a', { href: '#rep-' + id }, sec.label), el('span', { class: 'rep-dot' }), el('span', { class: 'dim2' }, sec.sub)));
-    await new Promise(r => setTimeout(r, 0));                       // Ereignisschleife atmen lassen
-  }
-  /* Alles aufklappen, Bedienelemente aus dem Bericht nehmen */
-  host.querySelectorAll('details').forEach(d => { d.open = true; });
-  host.querySelectorAll('.info-panel').forEach(p => p.remove());
-  host.querySelectorAll('input, select, textarea').forEach(n => { n.setAttribute('readonly', 'readonly'); n.setAttribute('tabindex', '-1'); });
-  return { host, built };
-}
-
-async function openReport(scopeKey) {
+/* ===== Bericht öffnen und schließen ================================ */
+async function openReport(kindKey) {
+  const key = kindKey || store.get('reportKind', 'werkstatt');
+  store.set('reportKind', key);
   const old = document.getElementById('full-report');
-  if (old && !scopeKey) return;
-  if (old) closeReport(true);
-  const key = scopeKey || store.get('reportScope', 'voll');
-  const scope = REPORT_SCOPES[key] || REPORT_SCOPES.voll;
-  store.set('reportScope', key);
-  const bar = document.querySelector('.rep-bar') || el('div', { class: 'rep-bar' });
-  bar.innerHTML = ''; bar.appendChild(el('span', {}, 'Bericht wird zusammengestellt …'));
-  if (!bar.isConnected) document.body.appendChild(bar);
+  if (old && !kindKey) return;
+  if (old) old.remove();
   document.body.classList.add('report-mode');
-  const { host, built } = await buildReport({ sections: scope.sections });
-  document.body.appendChild(host);
+  const bar = document.querySelector('.rep-bar') || el('div', { class: 'rep-bar' });
+  bar.innerHTML = ''; bar.appendChild(el('span', { class: 'dim' }, 'Bericht wird gesetzt …'));
+  if (!bar.isConnected) document.body.appendChild(bar);
+  await new Promise(r => setTimeout(r, 30));
+  let doc;
+  try { doc = await buildReportDoc(key); }
+  catch (e) {
+    bar.innerHTML = '';
+    bar.append(el('span', { class: 'dim' }, 'Bericht fehlgeschlagen: ' + (e.message || e)),
+      el('button', { class: 'btn sm', type: 'button', onclick: () => closeReport() }, 'Zurück'));
+    console.error(e);
+    return;
+  }
+  document.body.appendChild(doc.node);
   const sel = el('select', { class: 'sel', onchange: e => openReport(e.target.value) },
-    Object.keys(REPORT_SCOPES).map(k => el('option', { value: k, selected: k === key ? true : null },
-      REPORT_SCOPES[k].label + ' – ' + REPORT_SCOPES[k].hint)));
+    Object.keys(REPORT_KINDS).map(k => el('option', { value: k, selected: k === key ? true : null },
+      REPORT_KINDS[k].label + ' – ' + REPORT_KINDS[k].hint)));
   bar.innerHTML = '';
   bar.append(
-    el('span', { class: 'field' }, el('span', { class: 'dim' }, 'Umfang'), sel),
-    el('span', { class: 'dim2' }, built.length + ' Abschnitte · ' + (App.fileName || 'ohne Datei')),
+    el('span', { class: 'field' }, el('span', { class: 'dim' }, 'Bericht'), sel),
+    el('span', { class: 'dim2' }, doc.pages + ' Seiten · ' + doc.parts + ' Abschnitte'),
     el('button', { class: 'btn primary sm', type: 'button', onclick: () => window.print() }, icon('print'), 'Drucken oder als PDF sichern'),
     el('button', { class: 'btn sm', type: 'button', onclick: () => closeReport() }, 'Zurück zur Auswertung'));
-  requestAnimationFrame(() => Chart.all.forEach(c => { try { c.resize(); c.draw(); } catch (e) {} }));
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
-function closeReport(keepMode) {
+function closeReport() {
   const host = document.getElementById('full-report');
-  if (host) { Chart.all.slice().forEach(c => { if (c.host && host.contains(c.host)) c.destroy(); }); host.remove(); }
-  if (keepMode) return;
+  if (host) host.remove();
   const bar = document.querySelector('.rep-bar'); if (bar) bar.remove();
   document.body.classList.remove('report-mode');
   requestAnimationFrame(() => Chart.all.forEach(c => { try { c.resize(); c.draw(); } catch (e) {} }));

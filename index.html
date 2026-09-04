@@ -835,7 +835,7 @@ details.acc > summary::-webkit-details-marker { display: none; }
   a { color: inherit; text-decoration: none; }
 }
 
-/* ===== Vollständiger Bericht ======================================= */
+/* ===== Bericht: eigenes Dokument in Seiten ========================= */
 .rep-bar {
   position: sticky; top: 0; z-index: 60; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   padding: 10px 20px; background: var(--overlay); backdrop-filter: saturate(140%) blur(10px);
@@ -844,48 +844,134 @@ details.acc > summary::-webkit-details-marker { display: none; }
 .rep-bar > .btn:nth-of-type(1) { margin-left: auto; }
 .rep-bar .sel { min-height: 30px; padding: 4px 24px 4px 9px; }
 body.report-mode #app, body.report-mode #hero { display: none !important; }
-.report { max-width: 1000px; margin: 0 auto; padding: 22px 22px 60px; display: grid; gap: 22px; }
-.report .page { padding: 0; max-width: none; animation: none; }
-.rep-cover { border: 1px solid var(--border); border-radius: var(--r); padding: 26px 24px; background: var(--surface); }
-.rep-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
-.rep-brand b { display: block; font-size: 13.5px; }
-.rep-brand span { display: block; font-size: 11.5px; color: var(--text-3); }
-.rep-cover h1 { font-size: 26px; font-weight: 600; letter-spacing: -.015em; margin-bottom: 6px; }
-.rep-sub { font-size: 12.5px; color: var(--text-2); margin: 0 0 4px; }
-.rep-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; margin: 18px 0 14px;
-  background: var(--lcd); border: 1px solid var(--lcd-line); border-radius: var(--r); overflow: hidden; }
-.rep-kpis > div { padding: 11px 13px; border-right: 1px solid var(--lcd-line); }
-.rep-kpis > div:last-child { border-right: 0; }
-.rep-kpis span { display: block; font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--lcd-dim2); }
-.rep-kpis b { font-size: 19px; font-weight: 600; color: var(--lcd-text); font-variant-numeric: tabular-nums; }
-.rep-tally { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-.rep-note { font-size: 11.5px; color: var(--text-3); line-height: 1.55; margin: 0; max-width: 80ch; }
-.rep-sec { display: grid; gap: 12px; }
-.rep-sec > h2 { font-size: 19px; font-weight: 600; padding-bottom: 8px; border-bottom: 1px solid var(--border-2); }
-.rep-sec > h2 + .rep-sub { margin-top: -6px; }
-.rep-toc { list-style: none; counter-reset: rep; margin: 0; padding: 0; display: grid; gap: 4px; }
-.rep-toc li { counter-increment: rep; display: flex; align-items: baseline; gap: 8px; font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--border); }
-.rep-toc li::before { content: counter(rep) "."; color: var(--text-3); font-variant-numeric: tabular-nums; min-width: 20px; }
-.rep-toc a { color: var(--text-1); text-decoration: none; font-weight: 550; }
-.rep-toc .rep-dot { flex: 1; border-bottom: 1px dotted var(--border-2); }
-.rep-toc .dim2 { font-size: 11.5px; max-width: 46%; text-align: right; }
-@media (max-width: 760px) {
-  .report { padding: 14px 12px 40px; gap: 16px; }
-  .rep-cover { padding: 18px 16px; }
-  .rep-cover h1 { font-size: 21px; }
-  .rep-toc .dim2 { display: none; }
-  .rep-bar { padding: 9px 12px; }
+body.report-mode { background: #6b6f74; }
+
+.rt-doc-wrap { display: grid; justify-items: center; gap: 16px; padding: 16px 12px 60px; }
+/* Während des Umbruchs hängt das Dokument unsichtbar, aber gelayoutet im Baum */
+.rt-measure { position: absolute; left: -10000px; top: 0; width: 780px; }
+/* Eine Seite ist ein Blatt: helles Papier, feste Maße, Kopf und Fuß */
+.rt-page {
+  width: 748px; min-height: 1042px; box-sizing: border-box; padding: 24px 24px 20px;
+  background: #fff; color: #14171a; display: flex; flex-direction: column;
+  box-shadow: 0 6px 22px rgba(0,0,0,.35); font-size: 12px; line-height: 1.5;
+}
+.rt-page .rt-body { flex: 1; }
+.rt-head, .rt-foot { display: flex; justify-content: space-between; gap: 12px; font-size: 9.5px; color: #6b7280; letter-spacing: .02em; }
+.rt-head { border-bottom: .75pt solid #d1d5db; padding-bottom: 5px; margin-bottom: 14px; }
+.rt-foot { border-top: .75pt solid #d1d5db; padding-top: 5px; margin-top: 14px; }
+.rt-pageno { font-variant-numeric: tabular-nums; }
+
+.rt-h { margin: 16px 0 8px; }
+.rt-h:first-child { margin-top: 0; }
+.rt-h1 { border-bottom: 1.4pt solid #14171a; padding-bottom: 5px; }
+.rt-h1 h2 { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.rt-h2 h3 { font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #374151; }
+.rt-h span { display: block; font-size: 10.5px; color: #6b7280; margin-top: 2px; }
+.rt-page p { margin: 0 0 8px; max-width: 78ch; }
+.rt-lead { font-size: 13px; line-height: 1.55; }
+.rt-note { font-size: 11px; color: #4b5563; }
+.rt-dim { color: #6b7280; font-size: 10.5px; }
+
+table.rt { width: 100%; border-collapse: collapse; font-size: 11px; margin: 6px 0 12px; }
+table.rt th { text-align: left; font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: #6b7280;
+  border-bottom: .75pt solid #9ca3af; padding: 4px 6px 4px 0; font-weight: 600; }
+table.rt td { padding: 5px 6px 5px 0; border-bottom: .5pt solid #e5e7eb; vertical-align: top; }
+table.rt td.n, table.rt th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.rt td b { font-weight: 600; }
+table.rt td span.rt-dim { display: block; }
+table.rt.rt-first td { padding-top: 7px; padding-bottom: 7px; }
+
+.rt-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: .75pt solid #d1d5db; margin: 10px 0 12px; }
+.rt-kpis > div { padding: 8px 10px; border-right: .5pt solid #e5e7eb; border-bottom: .5pt solid #e5e7eb; }
+.rt-kpis > div:nth-child(3n) { border-right: 0; }
+.rt-kpis > div:nth-last-child(-n+3) { border-bottom: 0; }
+.rt-kpis span { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: .07em; color: #6b7280; }
+.rt-kpis b { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.rt-tally { display: flex; gap: 6px; margin: 10px 0 14px; }
+.rt-t { flex: 1; border: .75pt solid #d1d5db; padding: 6px 8px; }
+.rt-t b { display: block; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.rt-t span { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; }
+.rt-t-ok   { border-left: 3pt solid #15803d; } .rt-t-ok b { color: #15803d; }
+.rt-t-warn { border-left: 3pt solid #b45309; } .rt-t-warn b { color: #b45309; }
+.rt-t-crit { border-left: 3pt solid #b91c1c; } .rt-t-crit b { color: #b91c1c; }
+.rt-t-unklar, .rt-t-missing { border-left: 3pt solid #9ca3af; } .rt-t-unklar b, .rt-t-missing b { color: #6b7280; }
+
+.rt-f { border-left: 2.5pt solid #d1d5db; padding: 7px 0 7px 10px; margin: 0 0 9px; break-inside: avoid; }
+.rt-f-ok { border-left-color: #15803d; } .rt-f-warn { border-left-color: #b45309; } .rt-f-crit { border-left-color: #b91c1c; }
+.rt-f-unklar, .rt-f-missing { border-left-color: #d1d5db; }
+.rt-f-head { display: flex; align-items: baseline; gap: 7px; }
+.rt-f-head b { font-size: 12.5px; font-weight: 600; flex: 1; }
+.rt-f-val { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.rt-dot { width: 7px; height: 7px; border-radius: 50%; background: #9ca3af; flex: none; }
+.rt-dot.rt-ok { background: #15803d; } .rt-dot.rt-warn { background: #b45309; } .rt-dot.rt-crit { background: #b91c1c; }
+.rt-f-meta { font-size: 10px; color: #6b7280; margin: 2px 0 4px; }
+.rt-f p { margin: 3px 0 5px; font-size: 11.5px; }
+.rt-f-facts { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 10.5px; color: #374151; margin-bottom: 4px; }
+.rt-f-facts i { color: #6b7280; font-style: normal; }
+.rt-f-act { margin: 4px 0 0; padding-left: 16px; font-size: 11px; }
+.rt-f-act li { margin: 2px 0; }
+.rt-steps { margin: 4px 0 10px; padding-left: 18px; font-size: 11.5px; }
+.rt-steps li { margin: 4px 0; }
+.rt-steps b { display: block; }
+.rt-steps span { color: #4b5563; }
+
+/* Deckblatt */
+.rt-cover { justify-content: flex-start; }
+.rt-cover-top { display: flex; align-items: center; gap: 10px; padding-bottom: 20px; border-bottom: 1.4pt solid #14171a; }
+.rt-cover-top .brand-mark { background: #14171a; border: 0; color: #fff; width: 34px; height: 34px; border-radius: 5px; }
+.rt-cover-top b { display: block; font-size: 13px; }
+.rt-cover-top span { display: block; font-size: 10.5px; color: #6b7280; }
+.rt-cover h1 { font-size: 25px; font-weight: 600; letter-spacing: -.02em; margin: 42px 0 6px; }
+.rt-cover-sub { font-size: 12.5px; color: #4b5563; margin-bottom: 26px; }
+.rt-cover-facts { border-top: .75pt solid #d1d5db; }
+.rt-cover-facts > div { display: flex; gap: 14px; padding: 7px 0; border-bottom: .5pt solid #e5e7eb; }
+.rt-cover-facts span { width: 170px; flex: none; font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: #6b7280; padding-top: 1px; }
+.rt-cover-facts b { font-size: 12.5px; font-weight: 600; }
+.rt-cover-tally { margin-top: 28px; }
+.rt-cover-note { margin-top: auto; font-size: 10.5px; color: #4b5563; border-top: .75pt solid #d1d5db; padding-top: 10px; }
+
+/* Inhaltsverzeichnis */
+.rt-toc-title { font-size: 16px; font-weight: 600; border-bottom: 1.4pt solid #14171a; padding-bottom: 5px; margin-bottom: 12px; }
+.rt-toc { list-style: none; counter-reset: rt; margin: 0; padding: 0; }
+.rt-toc li { counter-increment: rt; display: flex; align-items: baseline; gap: 8px; padding: 7px 0; border-bottom: .5pt solid #e5e7eb; font-size: 12.5px; }
+.rt-toc li::before { content: counter(rt) "."; width: 20px; color: #6b7280; font-variant-numeric: tabular-nums; }
+.rt-toc-label { font-weight: 600; }
+.rt-toc-dots { flex: 1; border-bottom: 1px dotted #9ca3af; transform: translateY(-3px); }
+.rt-toc-page { font-variant-numeric: tabular-nums; color: #374151; }
+
+/* Schlussseite mit QR */
+.rt-qr { display: flex; gap: 18px; align-items: flex-start; margin-top: 10px; }
+.rt-qr-img { flex: none; border: .75pt solid #d1d5db; padding: 8px; background: #fff; line-height: 0; }
+.rt-qr-txt { flex: 1; }
+.rt-url { font-family: var(--mono); font-size: 10px; color: #374151; word-break: break-all; }
+
+/* Nur am Bildschirm: im Druck ist die Seite 186 mm breit und würde sonst
+   fälschlich das Handy-Layout bekommen. */
+@media screen and (max-width: 820px) {
+  .rt-doc-wrap { padding: 10px 6px 40px; }
+  .rt-page { width: 100%; min-height: 0; padding: 16px 14px; box-shadow: 0 3px 12px rgba(0,0,0,.3); }
+  .rt-kpis { grid-template-columns: repeat(2, 1fr); }
+  .rt-kpis > div:nth-child(3n) { border-right: .5pt solid #e5e7eb; }
+  .rt-kpis > div:nth-child(2n) { border-right: 0; }
+  .rt-tally { flex-wrap: wrap; }
+  .rt-t { flex: 1 1 30%; }
+  .rt-cover h1 { font-size: 20px; margin-top: 24px; }
+  .rt-cover-facts span { width: 118px; }
+  .rt-qr { flex-direction: column; }
   .lbl-hide { display: none; }
 }
+@page { size: A4; margin: 12mm; }
 @media print {
   .rep-bar { display: none !important; }
-  .report { max-width: none; padding: 0; gap: 14px; }
-  .rep-cover { break-after: page; border: 0; padding: 0; }
-  .rep-sec { break-inside: auto; }
-  .rep-sec > h2 { break-after: avoid; }
-  .rep-toc { break-after: page; }
-  .rep-toc a { color: #000; }
-  .report .card, .report .finding, .report .kpis, .report .chk { break-inside: avoid; }
+  body.report-mode { background: #fff; }
+  .rt-doc-wrap { display: block; padding: 0; }
+  /* Volle Breite und feste Mindesthöhe. Kein overflow:hidden – ein zu voller
+     Block soll lieber auf ein zweites Blatt laufen als verschwinden. */
+  #full-report.rt-doc-wrap { display: block !important; padding: 0 !important; }
+  #full-report .rt-page { width: 100%; min-height: 271mm; height: auto; box-shadow: none; padding: 0; break-after: page; }
+  #full-report .rt-page:last-child { break-after: auto; }
+  .rt-f, table.rt tr, .rt-kpis, .rt-tally { break-inside: avoid; }
 }
 </style>
 </head>
@@ -1239,6 +1325,282 @@ const store = {
   set(k, v)   { try { localStorage.setItem('obdstudio.' + k, JSON.stringify(v)); } catch (e) {} },
   del(k)      { try { localStorage.removeItem('obdstudio.' + k); } catch (e) {} }
 };
+/* ===== QR-Code erzeugen ============================================
+   Vollständiger QR-Encoder nach ISO/IEC 18004, Byte-Modus, Versionen
+   1 bis 40. Kein Dienst, keine Bibliothek: der Code entsteht im
+   Browser, damit ein Link auf Papier oder Bildschirm weitergegeben
+   werden kann, ohne dass er irgendwo hochgeladen wird.
+   ================================================================== */
+
+/* Zwei kanonische Tabellen statt einer großen: Fehlerkorrektur-Bytes je Block
+   und Blockzahl je Version und Stufe. Alles andere folgt daraus rechnerisch –
+   das erspart eine 40-zeilige Tabelle, in der sich Tippfehler verstecken. */
+const QR_LEVELS = { L: 0, M: 1, Q: 2, H: 3 };
+const QR_EC_PER_BLOCK = [
+  [7,10,15,20,26,18,20,24,30,18,20,24,26,30,22,24,28,30,28,28,28,28,30,30,26,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30],
+  [10,16,26,18,24,16,18,22,22,26,30,22,22,24,24,28,28,26,26,26,26,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28],
+  [13,22,18,26,18,24,18,22,20,24,28,26,24,20,30,24,28,28,26,30,28,30,30,30,30,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30],
+  [17,28,22,16,22,28,26,26,24,28,24,28,22,24,24,30,28,28,26,28,30,24,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30]
+];
+const QR_NUM_BLOCKS = [
+  [1,1,1,1,1,2,2,2,2,4,4,4,4,4,6,6,6,6,7,8,8,9,9,10,12,12,12,13,14,15,16,17,18,19,19,20,21,22,24,25],
+  [1,1,1,2,2,4,4,4,5,5,5,8,9,9,10,10,11,13,14,16,17,17,18,20,21,23,25,26,28,29,31,33,35,37,38,40,43,45,47,49],
+  [1,1,2,2,4,4,6,6,8,8,8,10,12,16,12,17,16,18,21,20,23,23,25,27,29,34,34,35,38,40,43,45,48,51,53,56,59,62,65,68],
+  [1,1,2,4,4,4,5,6,8,8,11,11,16,16,18,16,19,21,25,25,25,34,30,32,35,37,40,42,45,48,51,54,57,60,63,66,70,74,77,81]
+];
+const QR_ALIGN = [[], [], [6,18], [6,22], [6,26], [6,30], [6,34], [6,22,38], [6,24,42], [6,26,46],
+  [6,28,50], [6,30,54], [6,32,58], [6,34,62], [6,26,46,66], [6,26,48,70], [6,26,50,74], [6,30,54,78],
+  [6,30,56,82], [6,30,58,86], [6,34,62,90], [6,28,50,72,94], [6,26,50,74,98], [6,30,54,78,102],
+  [6,28,54,80,106], [6,32,58,84,110], [6,30,58,86,114], [6,34,62,90,118], [6,26,50,74,98,122],
+  [6,30,54,78,102,126], [6,26,52,78,104,130], [6,30,56,82,108,134], [6,34,60,86,112,138],
+  [6,30,58,86,114,142], [6,34,62,90,118,146], [6,30,54,78,102,126,150], [6,24,50,76,102,128,154],
+  [6,28,54,80,106,132,158], [6,32,58,84,110,136,162], [6,26,54,82,110,138,166], [6,30,58,86,114,142,170]];
+
+/* Rohdatenmodule einer Version: Fläche minus Funktionsmuster */
+function qrRawDataModules(v) {
+  let r = (16 * v + 128) * v + 64;
+  if (v >= 2) { const n = Math.floor(v / 7) + 2; r -= (25 * n - 10) * n - 55; }
+  if (v >= 7) r -= 36;
+  return r;
+}
+function qrTotalCodewords(v) { return Math.floor(qrRawDataModules(v) / 8); }
+
+/* Blockaufteilung: kurze und lange Blöcke ergeben sich aus Gesamtzahl und Blockanzahl */
+function qrBlockLayout(version, level) {
+  const li = QR_LEVELS[level];
+  const ecLen = QR_EC_PER_BLOCK[li][version - 1];
+  const numBlocks = QR_NUM_BLOCKS[li][version - 1];
+  const dataCw = qrTotalCodewords(version) - ecLen * numBlocks;
+  const shortLen = Math.floor(dataCw / numBlocks);
+  const numLong = dataCw % numBlocks;
+  return { ecLen, numBlocks, shortLen, numLong, dataCw };
+}
+
+const QR_FORMAT_BITS = [
+  0x77C4,0x72F3,0x7DAA,0x789D,0x662F,0x6318,0x6C41,0x6976,   // L, Masken 0-7
+  0x5412,0x5125,0x5E7C,0x5B4B,0x45F9,0x40CE,0x4F97,0x4AA0,   // M
+  0x355F,0x3068,0x3F31,0x3A06,0x24B4,0x2183,0x2EDA,0x2BED,   // Q
+  0x1689,0x13BE,0x1CE7,0x19D0,0x0762,0x0255,0x0D0C,0x083B];  // H
+const QR_VERSION_BITS = [0x07C94,0x085BC,0x09A99,0x0A4D3,0x0BBF6,0x0C762,0x0D847,0x0E60D,0x0F928,0x10B78,
+  0x1145D,0x12A17,0x13532,0x149A6,0x15683,0x168C9,0x177EC,0x18EC4,0x191E1,0x1AFAB,0x1B08E,0x1CC1A,0x1D33F,
+  0x1ED75,0x1F250,0x209D5,0x216F0,0x228BA,0x2379F,0x24B0B,0x2542E,0x26A64,0x27541,0x28C69];
+
+/* Galois-Feld 256 für Reed-Solomon */
+const QR_EXP = new Uint8Array(512), QR_LOG = new Uint8Array(256);
+(function () {
+  let x = 1;
+  for (let i = 0; i < 255; i++) { QR_EXP[i] = x; QR_LOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11D; }
+  for (let i = 255; i < 512; i++) QR_EXP[i] = QR_EXP[i - 255];
+})();
+function qrMul(a, b) { return a && b ? QR_EXP[QR_LOG[a] + QR_LOG[b]] : 0; }
+function qrRsPoly(n) {
+  let poly = [1];
+  for (let i = 0; i < n; i++) {
+    const next = new Array(poly.length + 1).fill(0);
+    /* poly × (x + α^i): erst um eine Stelle schieben, dann mit α^i gewichtet addieren */
+    for (let j = 0; j < poly.length; j++) { next[j] ^= poly[j]; next[j + 1] ^= qrMul(poly[j], QR_EXP[i]); }
+    poly = next;
+  }
+  return poly;
+}
+function qrRsEncode(data, ecLen) {
+  const gen = qrRsPoly(ecLen), res = new Uint8Array(data.length + ecLen);
+  res.set(data);
+  for (let i = 0; i < data.length; i++) {
+    const factor = res[i]; if (!factor) continue;
+    for (let j = 0; j < gen.length; j++) res[i + j] ^= qrMul(gen[j], factor);
+  }
+  return res.slice(data.length);
+}
+
+function qrCapacity(version, level) { return qrBlockLayout(version, level).dataCw; }
+/* Kleinste Version, in die der Text passt */
+function qrPickVersion(byteLen, level) {
+  for (let v = 1; v <= 40; v++) {
+    const cci = v < 10 ? 8 : 16;
+    const bits = 4 + cci + byteLen * 8;
+    if (bits <= qrCapacity(v, level) * 8) return v;
+  }
+  return 0;
+}
+
+function qrEncodeData(bytes, version, level) {
+  const cci = version < 10 ? 8 : 16;
+  const cap = qrCapacity(version, level);
+  const bits = [];
+  const push = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >> i) & 1); };
+  push(0b0100, 4);                       // Byte-Modus
+  push(bytes.length, cci);
+  for (const b of bytes) push(b, 8);
+  const capBits = cap * 8;
+  for (let i = 0; i < 4 && bits.length < capBits; i++) bits.push(0);      // Abschluss
+  while (bits.length % 8) bits.push(0);
+  const data = new Uint8Array(cap);
+  for (let i = 0; i < bits.length; i += 8) {
+    let b = 0; for (let k = 0; k < 8; k++) b = (b << 1) | (bits[i + k] || 0);
+    data[i / 8] = b;
+  }
+  const pad = [0xEC, 0x11];
+  for (let i = Math.ceil(bits.length / 8), k = 0; i < cap; i++, k++) data[i] = pad[k % 2];
+
+  /* Blöcke bilden, Fehlerkorrektur je Block, dann verschränken */
+  const L = qrBlockLayout(version, level);
+  const ecLen = L.ecLen, blocks = [], ecs = [];
+  let pos = 0;
+  for (let i = 0; i < L.numBlocks; i++) {
+    const len = L.shortLen + (i >= L.numBlocks - L.numLong ? 1 : 0);
+    const b = data.slice(pos, pos + len); pos += len;
+    blocks.push(b); ecs.push(qrRsEncode(b, ecLen));
+  }
+  const out = [];
+  const maxData = L.shortLen + (L.numLong ? 1 : 0);
+  for (let i = 0; i < maxData; i++) for (const b of blocks) if (i < b.length) out.push(b[i]);
+  for (let i = 0; i < ecLen; i++) for (const b of ecs) out.push(b[i]);
+  return out;
+}
+
+function qrBuildMatrix(version, level, codewords, mask) {
+  const size = version * 4 + 17;
+  const m = [], reserved = [];
+  for (let i = 0; i < size; i++) { m.push(new Uint8Array(size)); reserved.push(new Uint8Array(size)); }
+  const setF = (r, c, v) => { if (r >= 0 && c >= 0 && r < size && c < size) { m[r][c] = v; reserved[r][c] = 1; } };
+  /* Suchmuster mit Trennlinie */
+  const finder = (r0, c0) => {
+    for (let r = -1; r <= 7; r++) for (let c = -1; c <= 7; c++) {
+      const inner = r >= 0 && r <= 6 && c >= 0 && c <= 6 &&
+        (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4));
+      setF(r0 + r, c0 + c, inner ? 1 : 0);
+    }
+  };
+  finder(0, 0); finder(0, size - 7); finder(size - 7, 0);
+  /* Taktmuster */
+  for (let i = 8; i < size - 8; i++) { setF(6, i, i % 2 === 0 ? 1 : 0); setF(i, 6, i % 2 === 0 ? 1 : 0); }
+  /* Ausrichtungsmuster */
+  const al = QR_ALIGN[version];
+  for (const r of al) for (const c of al) {
+    if ((r <= 8 && c <= 8) || (r <= 8 && c >= size - 9) || (r >= size - 9 && c <= 8)) continue;
+    for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++)
+      setF(r + dr, c + dc, Math.max(Math.abs(dr), Math.abs(dc)) !== 1 ? 1 : 0);
+  }
+  setF(size - 8, 8, 1);                                   // dunkles Modul
+  /* Formatbereiche reservieren */
+  for (let i = 0; i < 9; i++) { if (!reserved[8][i]) setF(8, i, 0); if (!reserved[i][8]) setF(i, 8, 0); }
+  for (let i = 0; i < 8; i++) { if (!reserved[8][size - 1 - i]) setF(8, size - 1 - i, 0); if (!reserved[size - 1 - i][8]) setF(size - 1 - i, 8, 0); }
+  if (version >= 7) for (let i = 0; i < 18; i++) { const r = Math.floor(i / 3), c = i % 3; setF(size - 11 + c, r, 0); setF(r, size - 11 + c, 0); }
+
+  /* Daten einweben, von rechts unten im Zickzack */
+  const maskFn = [
+    (r, c) => (r + c) % 2 === 0, (r, c) => r % 2 === 0, (r, c) => c % 3 === 0, (r, c) => (r + c) % 3 === 0,
+    (r, c) => (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0, (r, c) => (r * c) % 2 + (r * c) % 3 === 0,
+    (r, c) => ((r * c) % 2 + (r * c) % 3) % 2 === 0, (r, c) => ((r + c) % 2 + (r * c) % 3) % 2 === 0
+  ][mask];
+  let bit = 0, upward = true;                        // Richtung wechselt je Spaltenpaar
+  const total = codewords.length * 8;
+  for (let col = size - 1; col > 0; col -= 2) {
+    if (col === 6) col--;                            // die senkrechte Taktspalte wird übersprungen
+    for (let i = 0; i < size; i++) {
+      const row = upward ? size - 1 - i : i;
+      for (let k = 0; k < 2; k++) {
+        const c = col - k;
+        if (reserved[row][c]) continue;
+        let v = 0;
+        if (bit < total) { v = (codewords[bit >> 3] >> (7 - (bit & 7))) & 1; bit++; }
+        m[row][c] = maskFn(row, c) ? v ^ 1 : v;
+      }
+    }
+    upward = !upward;
+  }
+  /* Formatinformation */
+  const fmt = QR_FORMAT_BITS[QR_LEVELS[level] * 8 + mask];
+  for (let i = 0; i < 15; i++) {
+    const v = (fmt >> i) & 1;
+    /* senkrechte Kopie links neben dem oberen Suchmuster, waagerechte darunter */
+    if (i < 6) m[i][8] = v;
+    else if (i < 8) m[i + 1][8] = v;
+    else m[size - 15 + i][8] = v;
+    if (i < 8) m[8][size - 1 - i] = v;
+    else if (i === 8) m[8][7] = v;
+    else m[8][14 - i] = v;
+  }
+  m[size - 8][8] = 1;
+  /* Versionsinformation ab Version 7 */
+  if (version >= 7) {
+    const vb = QR_VERSION_BITS[version - 7];
+    for (let i = 0; i < 18; i++) {
+      const v = (vb >> i) & 1, r = Math.floor(i / 3), c = i % 3;
+      m[size - 11 + c][r] = v; m[r][size - 11 + c] = v;
+    }
+  }
+  return m;
+}
+
+/* Strafpunkte nach Norm – die Maske mit den wenigsten gewinnt */
+function qrPenalty(m) {
+  const n = m.length; let p = 0;
+  const run = get => {
+    for (let a = 0; a < n; a++) {
+      let last = -1, len = 0;
+      for (let b = 0; b < n; b++) {
+        const v = get(a, b);
+        if (v === last) { len++; if (len === 5) p += 3; else if (len > 5) p += 1; }
+        else { last = v; len = 1; }
+      }
+    }
+  };
+  run((a, b) => m[a][b]); run((a, b) => m[b][a]);
+  for (let r = 0; r < n - 1; r++) for (let c = 0; c < n - 1; c++)
+    if (m[r][c] === m[r][c + 1] && m[r][c] === m[r + 1][c] && m[r][c] === m[r + 1][c + 1]) p += 3;
+  const pat = [1,0,1,1,1,0,1,0,0,0,0], pat2 = [0,0,0,0,1,0,1,1,1,0,1];
+  const hit = read => {                                   // read(i) liefert das i-te Modul der Elfergruppe
+    let ok1 = true, ok2 = true;
+    for (let i = 0; i < 11; i++) { const v = read(i); if (v !== pat[i]) ok1 = false; if (v !== pat2[i]) ok2 = false; }
+    return ok1 || ok2;
+  };
+  for (let r = 0; r < n; r++) for (let c = 0; c + 10 < n; c++) if (hit(i => m[r][c + i])) p += 40;
+  for (let c = 0; c < n; c++) for (let r = 0; r + 10 < n; r++) if (hit(i => m[r + i][c])) p += 40;
+  let dark = 0;
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) dark += m[r][c];
+  p += Math.floor(Math.abs(dark * 100 / (n * n) - 50) / 5) * 10;
+  return p;
+}
+
+/* Hauptfunktion: Text → Matrix aus 0/1 */
+function qrEncode(text, level) {
+  level = level || 'L';
+  const bytes = Array.from(new TextEncoder().encode(String(text)));
+  const version = qrPickVersion(bytes.length, level);
+  if (!version) throw new Error('Der Inhalt ist zu lang für einen QR-Code (' + bytes.length + ' Bytes, höchstens ' + qrCapacity(40, level) + ').');
+  const cw = qrEncodeData(bytes, version, level);
+  let best = null, bestP = Infinity;
+  for (let mask = 0; mask < 8; mask++) {
+    const m = qrBuildMatrix(version, level, cw, mask);
+    const p = qrPenalty(m);
+    if (p < bestP) { bestP = p; best = m; }
+  }
+  return { matrix: best, version, level, size: best.length, bytes: bytes.length };
+}
+
+/* Matrix als SVG – druckbar und beliebig skalierbar */
+function qrSvg(text, opts) {
+  opts = opts || {};
+  const q = qrEncode(text, opts.level || 'L');
+  const quiet = opts.quiet === undefined ? 4 : opts.quiet;
+  const n = q.size + quiet * 2;
+  const parts = [];
+  for (let r = 0; r < q.size; r++) {
+    let c = 0;
+    while (c < q.size) {
+      if (!q.matrix[r][c]) { c++; continue; }
+      let len = 0;
+      while (c + len < q.size && q.matrix[r][c + len]) len++;
+      parts.push('M' + (c + quiet) + ' ' + (r + quiet) + 'h' + len + 'v1h-' + len + 'z');
+      c += len;
+    }
+  }
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + n + ' ' + n + '" width="' + (opts.px || 160) + '" height="' + (opts.px || 160) + '" shape-rendering="crispEdges" role="img" aria-label="QR-Code">' +
+    '<rect width="' + n + '" height="' + n + '" fill="' + (opts.bg || '#ffffff') + '"/>' +
+    '<path d="' + parts.join('') + '" fill="' + (opts.fg || '#000000') + '"/></svg>';
+}
 /* ============================================================
    CSV-Parser — robust, formatunabhängig, streaming-fähig
    Unterstützt:
@@ -14329,108 +14691,42 @@ function vehicleEvidence(ds) {
 function closeVehicleDialog() { const o = $('#veh-dlg'); if (o) o.remove(); }
 
 /* ===== Live-Aufzeichnung vom Adapter ================================ */
-/* ===== Vollständiger Bericht =======================================
-   Baut alle Bereiche untereinander in eine eigene Druckansicht: Deckblatt,
-   Inhaltsverzeichnis, dann die Abschnitte mit aufgeklappten Befunden.
-   Danach räumt der Modus sich vollständig wieder ab.
-   ================================================================== */
-const REPORT_SECTIONS = ['overview', 'diag', 'tyres', 'fields', 'series', 'dist', 'map', 'akte', 'buy', 'data'];
-/* Umfänge: nicht jeder Bericht muss alles enthalten */
-const REPORT_SCOPES = {
-  voll:      { label: 'Vollständig', hint: 'alle Bereiche', sections: REPORT_SECTIONS },
-  technik:   { label: 'Technik',     hint: 'Motorzustand ohne Karte und Kaufcheck', sections: ['overview', 'diag', 'tyres', 'fields', 'dist', 'data'] },
-  werkstatt: { label: 'Werkstatt',   hint: 'Befunde und Kennzahlen für die Übergabe', sections: ['overview', 'diag'] },
-  kauf:      { label: 'Kauf',        hint: 'Befunde, Kaufcheck, Fahrzeugakte', sections: ['overview', 'diag', 'buy', 'akte'] }
-};
-
-async function buildReport(opts) {
-  opts = opts || {};
-  const pick = opts.sections || REPORT_SECTIONS;
-  const host = el('div', { id: 'full-report', class: 'report' });
-  const ds = App.ds, prof = App.profile, T = (ds && ds.trip) || {};
-  const now = new Date();
-  const tally = App.diag && App.diag.tally ? App.diag.tally : null;
-
-  /* --- Deckblatt --- */
-  const kpiRow = [];
-  if (ds) {
-    kpiRow.push(['Fahrtdauer', fmtDur(ds.duration)], ['Strecke', isFinite(T.dist) ? fmt(T.dist, 2) + ' km' : '–'],
-      ['⌀ Geschwindigkeit', isFinite(T.speedAvgMoving) ? fmt(T.speedAvgMoving, 0) + ' km/h' : '–'],
-      ['Verbrauch', isFinite(T.consAvg) ? fmt(T.consAvg, 1) + ' L/100km' : '–']);
-  }
-  host.appendChild(el('section', { class: 'rep-cover' },
-    el('div', { class: 'rep-brand' }, el('div', { class: 'brand-mark' }, 'OBD'),
-      el('div', {}, el('b', {}, 'Telemetrie Studio'), el('span', {}, 'Auswertung einer OBD2-Aufzeichnung'))),
-    el('h1', {}, prof ? prof.name : 'Fahrzeugbericht'),
-    el('p', { class: 'rep-sub' }, (App.fileName || 'ohne Datei') + ' · erstellt am ' + now.toLocaleDateString('de-DE') + ' um ' + now.toLocaleTimeString('de-DE').slice(0, 5)),
-    prof ? el('p', { class: 'rep-sub' }, profileSpecLine(prof) || prof.engine || '') : null,
-    App.vin ? el('p', { class: 'rep-sub' }, 'Fahrgestellnummer ' + App.vin.vin + (App.vin.modelYear ? ' · Modelljahr ' + App.vin.modelYear : '')) : null,
-    kpiRow.length ? el('div', { class: 'rep-kpis' }, kpiRow.map(([k, v]) => el('div', {}, el('span', {}, k), el('b', {}, v)))) : null,
-    tally ? el('div', { class: 'rep-tally' },
-      el('span', { class: 'badge ok' }, (tally.ok || 0) + ' unauffällig'),
-      el('span', { class: 'badge warn' }, (tally.warn || 0) + ' grenzwertig'),
-      el('span', { class: 'badge crit' }, (tally.crit || 0) + ' auffällig'),
-      el('span', { class: 'badge mute' }, (tally.unklar || 0) + ' nicht bewertbar'),
-      el('span', { class: 'badge mute' }, (tally.missing || 0) + ' PID fehlt')) : null,
-    el('p', { class: 'rep-note' }, 'Alle Werte stammen aus dieser einen Aufzeichnung. Bewertungen vergleichen die Messung mit den hinterlegten Werksangaben; wo die Datenlage nicht reicht, steht „nicht bewertbar“ statt einer Ampel. Der Bericht ersetzt keine Werkstattprüfung.')));
-
-  /* --- Inhaltsverzeichnis --- */
-  const toc = el('ol', { class: 'rep-toc' });
-  host.appendChild(el('section', { class: 'rep-sec' }, el('h2', {}, 'Inhalt'), toc));
-
-  /* --- Abschnitte --- */
-  const built = [];
-  for (const id of pick) {
-    const sec = SECTIONS.find(s => s.id === id);
-    if (!sec || (sec.data && !App.ds)) continue;
-    const wrap = el('section', { class: 'rep-sec', id: 'rep-' + id });
-    wrap.appendChild(el('h2', {}, sec.label));
-    wrap.appendChild(el('p', { class: 'rep-sub' }, sec.sub));
-    const page = el('div', { class: 'page' });
-    wrap.appendChild(page);
-    try { BUILDERS[id](page); }
-    catch (e) { page.appendChild(noteBox('crit', 'Dieser Abschnitt konnte nicht aufgebaut werden', e.message)); }
-    host.appendChild(wrap);
-    built.push({ id, label: sec.label });
-    toc.appendChild(el('li', {}, el('a', { href: '#rep-' + id }, sec.label), el('span', { class: 'rep-dot' }), el('span', { class: 'dim2' }, sec.sub)));
-    await new Promise(r => setTimeout(r, 0));                       // Ereignisschleife atmen lassen
-  }
-  /* Alles aufklappen, Bedienelemente aus dem Bericht nehmen */
-  host.querySelectorAll('details').forEach(d => { d.open = true; });
-  host.querySelectorAll('.info-panel').forEach(p => p.remove());
-  host.querySelectorAll('input, select, textarea').forEach(n => { n.setAttribute('readonly', 'readonly'); n.setAttribute('tabindex', '-1'); });
-  return { host, built };
-}
-
-async function openReport(scopeKey) {
+/* ===== Bericht öffnen und schließen ================================ */
+async function openReport(kindKey) {
+  const key = kindKey || store.get('reportKind', 'werkstatt');
+  store.set('reportKind', key);
   const old = document.getElementById('full-report');
-  if (old && !scopeKey) return;
-  if (old) closeReport(true);
-  const key = scopeKey || store.get('reportScope', 'voll');
-  const scope = REPORT_SCOPES[key] || REPORT_SCOPES.voll;
-  store.set('reportScope', key);
-  const bar = document.querySelector('.rep-bar') || el('div', { class: 'rep-bar' });
-  bar.innerHTML = ''; bar.appendChild(el('span', {}, 'Bericht wird zusammengestellt …'));
-  if (!bar.isConnected) document.body.appendChild(bar);
+  if (old && !kindKey) return;
+  if (old) old.remove();
   document.body.classList.add('report-mode');
-  const { host, built } = await buildReport({ sections: scope.sections });
-  document.body.appendChild(host);
+  const bar = document.querySelector('.rep-bar') || el('div', { class: 'rep-bar' });
+  bar.innerHTML = ''; bar.appendChild(el('span', { class: 'dim' }, 'Bericht wird gesetzt …'));
+  if (!bar.isConnected) document.body.appendChild(bar);
+  await new Promise(r => setTimeout(r, 30));
+  let doc;
+  try { doc = await buildReportDoc(key); }
+  catch (e) {
+    bar.innerHTML = '';
+    bar.append(el('span', { class: 'dim' }, 'Bericht fehlgeschlagen: ' + (e.message || e)),
+      el('button', { class: 'btn sm', type: 'button', onclick: () => closeReport() }, 'Zurück'));
+    console.error(e);
+    return;
+  }
+  document.body.appendChild(doc.node);
   const sel = el('select', { class: 'sel', onchange: e => openReport(e.target.value) },
-    Object.keys(REPORT_SCOPES).map(k => el('option', { value: k, selected: k === key ? true : null },
-      REPORT_SCOPES[k].label + ' – ' + REPORT_SCOPES[k].hint)));
+    Object.keys(REPORT_KINDS).map(k => el('option', { value: k, selected: k === key ? true : null },
+      REPORT_KINDS[k].label + ' – ' + REPORT_KINDS[k].hint)));
   bar.innerHTML = '';
   bar.append(
-    el('span', { class: 'field' }, el('span', { class: 'dim' }, 'Umfang'), sel),
-    el('span', { class: 'dim2' }, built.length + ' Abschnitte · ' + (App.fileName || 'ohne Datei')),
+    el('span', { class: 'field' }, el('span', { class: 'dim' }, 'Bericht'), sel),
+    el('span', { class: 'dim2' }, doc.pages + ' Seiten · ' + doc.parts + ' Abschnitte'),
     el('button', { class: 'btn primary sm', type: 'button', onclick: () => window.print() }, icon('print'), 'Drucken oder als PDF sichern'),
     el('button', { class: 'btn sm', type: 'button', onclick: () => closeReport() }, 'Zurück zur Auswertung'));
-  requestAnimationFrame(() => Chart.all.forEach(c => { try { c.resize(); c.draw(); } catch (e) {} }));
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
-function closeReport(keepMode) {
+function closeReport() {
   const host = document.getElementById('full-report');
-  if (host) { Chart.all.slice().forEach(c => { if (c.host && host.contains(c.host)) c.destroy(); }); host.remove(); }
-  if (keepMode) return;
+  if (host) host.remove();
   const bar = document.querySelector('.rep-bar'); if (bar) bar.remove();
   document.body.classList.remove('report-mode');
   requestAnimationFrame(() => Chart.all.forEach(c => { try { c.resize(); c.draw(); } catch (e) {} }));
@@ -15326,6 +15622,512 @@ function baseName() {
 
   window.addEventListener('resize', debounce(() => { Chart.all.forEach(c => { c.resize(); c.draw(); }); if (App.map) { App.map.resize(); App.map.draw(); } }, 140));
 })();
+/* ===== Bericht ======================================================
+   Ein eigenes Dokument, keine abfotografierte Oberfläche: feste Seiten
+   im A4-Format, Kopf- und Fußzeile mit Seitenzahl, Inhaltsverzeichnis
+   mit echten Seitenzahlen, am Ende eine Seite mit QR-Code und Link.
+
+   Der Inhalt ist auf das zugeschnitten, was eine Werkstatt oder ein
+   Käufer braucht: Befunde mit Messwert, Sollbereich, Bedingung und
+   Maßnahme; Kennzahlen als Tabelle; keine Bedienelemente, keine
+   Erklärkästen, keine Wiederholungen.
+   ================================================================== */
+
+/* A4 bei 96 dpi: 297 mm hoch, minus 12 mm Rand oben und unten (@page), minus
+   Kopf- und Fußzeile. Bleibt rund 930 px für den Inhalt einer Seite. */
+const REP_PAGE_H = 950;      // Body-Raum je Blatt in px (A4 minus Ränder, Kopf und Fuß)
+const REP_PAGE_W = 700;
+
+const REPORT_KINDS = {
+  werkstatt: { label: 'Werkstatt', hint: 'Befunde, Sollwerte, Prüfschritte',
+    parts: ['zusammenfassung', 'befunde', 'fahrt', 'aufzeichnung'] },
+  kauf:      { label: 'Kauf',      hint: 'Zustand, Kaufcheck, Fahrzeugakte',
+    parts: ['zusammenfassung', 'befunde', 'kaufcheck', 'akte', 'fahrt'] },
+  technik:   { label: 'Technik',   hint: 'alles Messbare mit Statistik',
+    parts: ['zusammenfassung', 'befunde', 'fahrt', 'gaenge', 'tacho', 'messgroessen', 'ereignisse', 'daten'] },
+  kurz:      { label: 'Kurzfassung', hint: 'eine Seite',
+    parts: ['zusammenfassung'] }
+};
+
+const REP_STATUS_LABEL = { ok: 'unauffällig', warn: 'grenzwertig', crit: 'auffällig', unklar: 'nicht bewertbar', missing: 'PID fehlt' };
+
+function repEl(tag, cls, ...kids) { return el(tag, cls ? { class: cls } : {}, ...kids); }
+function repRow(cells, opts) {
+  opts = opts || {};
+  return el('tr', opts.cls ? { class: opts.cls } : {}, cells.map((c, i) =>
+    el(opts.head ? 'th' : 'td', { class: (opts.num && opts.num.includes(i)) ? 'n' : null }, c)));
+}
+function repTable(head, rows, cls) {
+  return el('table', { class: 'rt' + (cls ? ' ' + cls : '') },
+    head ? el('thead', {}, repRow(head, { head: true })) : null,
+    el('tbody', {}, ...rows));
+}
+function repH(level, text, sub) {
+  return el('div', { class: 'rt-h rt-h' + level },
+    el(level === 1 ? 'h2' : 'h3', {}, text), sub ? el('span', {}, sub) : null);
+}
+
+/* ---------- Bausteine ---------- */
+function repSummary(ds, diag, prof, gears) {
+  const out = [], T = (ds && ds.trip) || {};
+  const t = diag && diag.tally ? diag.tally : { ok: 0, warn: 0, crit: 0, unklar: 0, missing: 0 };
+  const findings = (diag && diag.results) || [];
+  const auffaellig = findings.filter(r => r.status === 'crit');
+  const grenz = findings.filter(r => r.status === 'warn');
+
+  out.push(repH(1, 'Zusammenfassung'));
+  /* Urteil in einem Satz */
+  const urteil = auffaellig.length
+    ? auffaellig.length + ' Prüfung' + (auffaellig.length > 1 ? 'en liegen' : ' liegt') + ' außerhalb des Sollbereichs, ' + grenz.length + ' im Grenzbereich.'
+    : grenz.length
+      ? 'Keine Prüfung liegt außerhalb des Sollbereichs; ' + grenz.length + ' Wert' + (grenz.length > 1 ? 'e liegen' : ' liegt') + ' im Grenzbereich.'
+      : 'Alle ' + t.ok + ' auswertbaren Prüfungen liegen innerhalb ihrer Sollbereiche.';
+  out.push(el('p', { class: 'rt-lead' }, urteil +
+    ' Bewertet wurden ' + (t.ok + t.warn + t.crit) + ' von ' + findings.length + ' Regeln; für ' + (t.unklar + t.missing) +
+    ' fehlten die nötigen Messgrößen oder Fahrsituationen.'));
+
+  const kpis = [
+    ['Fahrtdauer', ds ? fmtDur(ds.duration) : '–'],
+    ['Strecke', isFinite(T.dist) ? fmt(T.dist, 1) + ' km' : '–'],
+    ['⌀ in Bewegung', isFinite(T.speedAvgMoving) ? fmt(T.speedAvgMoving, 0) + ' km/h' : '–'],
+    ['Verbrauch', isFinite(T.consAvg) ? fmt(T.consAvg, 1) + ' L/100km' : '–'],
+    ['Kühlmittel max.', isFinite(T.coolantMax) ? fmt(T.coolantMax, 0) + ' °C' : '–'],
+    ['Warmlaufzeit', isFinite(T.warmupTime) ? fmtDur(T.warmupTime) : (T.startedWarm ? 'startete warm' : '–')]
+  ];
+  out.push(el('div', { class: 'rt-kpis' }, kpis.map(([k, v]) => el('div', {}, el('span', {}, k), el('b', {}, v)))));
+
+  /* Ampel */
+  out.push(el('div', { class: 'rt-tally' },
+    [['ok', t.ok], ['warn', t.warn], ['crit', t.crit], ['unklar', t.unklar], ['missing', t.missing]].map(([k, n]) =>
+      el('div', { class: 'rt-t rt-t-' + k }, el('b', {}, String(n)), el('span', {}, REP_STATUS_LABEL[k])))));
+
+  /* Handlungsbedarf zuerst */
+  const list = auffaellig.concat(grenz).slice(0, 8);
+  if (list.length) {
+    out.push(repH(2, 'Was zuerst zu prüfen ist'));
+    out.push(repTable(['Befund', 'Messwert', 'Sollbereich', 'Nächster Schritt'],
+      list.map(r => repRow([
+        el('div', {}, el('b', {}, r.title), el('span', { class: 'rt-dim' }, r.group + ' · ' + REP_STATUS_LABEL[r.status])),
+        isFinite(r.value) ? fmt(r.value, r.dec === undefined ? 2 : r.dec) + (r.unit ? ' ' + r.unit : '') : '–',
+        r.ref || '–',
+        (r.action && r.action.length ? r.action[0] : (r.text || '').split('. ')[0] + '.')
+      ], { num: [1] })), 'rt-first'));
+  } else {
+    out.push(el('p', { class: 'rt-note' }, 'Aus dieser Aufzeichnung ergibt sich kein Handlungsbedarf. Das ist eine Momentaufnahme: erst mehrere Fahrten desselben Fahrzeugs zeigen, ob ein Wert wandert.'));
+  }
+  if (gears && gears.gears && gears.gears.length) {
+    const named = gears.gearbox && (gears.gearbox.mode === 'table' || gears.gearbox.mode === 'count');
+    out.push(el('p', { class: 'rt-note' }, 'Getriebe: ' + gears.gears.length + ' ' + (named ? 'Gänge erkannt' : 'Übersetzungsstufen gemessen') +
+      (gears.gearbox && gears.gearbox.label ? ' (' + gears.gearbox.label + ')' : '') + '.'));
+  }
+  return out;
+}
+
+function repFindings(diag) {
+  const out = [];
+  const results = (diag && diag.results) || [];
+  if (!results.length) return out;
+  out.push(repH(1, 'Befunde im Einzelnen', 'Messwert gegen hinterlegte Werksangabe'));
+  const order = { crit: 0, warn: 1, ok: 2, unklar: 3, missing: 4 };
+  const groups = new Map();
+  results.slice().sort((a, b) => (order[a.status] - order[b.status]) || a.group.localeCompare(b.group))
+    .forEach(r => { if (!groups.has(r.group)) groups.set(r.group, []); groups.get(r.group).push(r); });
+  for (const [grp, list] of groups) {
+    out.push(repH(2, grp));
+    for (const r of list) {
+      const bewertet = r.status === 'ok' || r.status === 'warn' || r.status === 'crit';
+      const kids = [
+        el('div', { class: 'rt-f-head' },
+          el('span', { class: 'rt-dot rt-' + r.status }),
+          el('b', {}, r.title),
+          el('span', { class: 'rt-f-val' }, bewertet && isFinite(r.value)
+            ? fmt(r.value, r.dec === undefined ? 2 : r.dec) + (r.unit ? ' ' + r.unit : '')
+            : REP_STATUS_LABEL[r.status]))
+      ];
+      const meta = [];
+      if (r.ref) meta.push('Soll ' + r.ref);
+      if (r.cond) meta.push('gilt bei: ' + r.cond);
+      if (r.specDerived) meta.push('Sollwert klassenbasiert, nicht aus dem Profil');
+      if (r.confidence) meta.push('Aussagekraft ' + r.confidence);
+      if (meta.length) kids.push(el('div', { class: 'rt-f-meta' }, meta.join(' · ')));
+      const txt = bewertet ? r.text : (r.note || (r.missing ? 'Nicht aufgezeichnet: ' + r.missing.join(', ') : ''));
+      if (txt) kids.push(el('p', {}, txt));
+      if (bewertet && r.extra && r.extra.length)
+        kids.push(el('div', { class: 'rt-f-facts' }, r.extra.slice(0, 6).map(([k, v]) => el('span', {}, el('i', {}, k), ' ' + v))));
+      if (r.action && r.action.length)
+        kids.push(el('ul', { class: 'rt-f-act' }, r.action.map(a => el('li', {}, a))));
+      out.push(el('div', { class: 'rt-f rt-f-' + r.status }, ...kids));
+    }
+  }
+  return out;
+}
+
+function repDrive(ds, prof) {
+  const out = [], T = (ds && ds.trip) || {};
+  if (!ds) return out;
+  out.push(repH(1, 'Fahrt und Fahrzeug'));
+  const specs = (prof && prof.specs) || {};
+  const rows = [
+    ['Fahrzeugprofil', prof ? prof.name : 'keines gewählt'],
+    ['Motor', prof ? (prof.engine || '–') : '–'],
+    ['Werksangaben', specs.powerPS ? specs.powerPS + ' PS · ' + specs.torqueNm + ' Nm · Begrenzer ' + specs.redline + ' min⁻¹' : '–'],
+    ['Aufzeichnung', App.fileName || '–'],
+    ['Zeitraum', timeFormatterFor(ds)(ds.t0) + ' – ' + timeFormatterFor(ds)(ds.t1) + ' (' + fmtDur(ds.duration) + ')'],
+    ['Messpunkte', fmt(ds.parsed && ds.parsed.meta ? ds.parsed.meta.rows : ds.N, 0) + ' Zeilen · Raster ' + fmt(ds.step, 1) + ' s']
+  ];
+  if (App.vin) rows.push(['Fahrgestellnummer', App.vin.vin + (App.vin.maker ? ' · ' + App.vin.maker : '') + (App.vin.modelYear ? ' · Modelljahr ' + App.vin.modelYear : '')]);
+  out.push(repTable(null, rows.map(r => repRow([el('b', {}, r[0]), r[1]]))));
+
+  out.push(repH(2, 'Kennzahlen der Fahrt'));
+  const num = (v, d, u) => isFinite(v) ? fmt(v, d) + (u ? ' ' + u : '') : '–';
+  const k = [
+    ['Strecke', num(T.dist, 2, 'km') + (T.distSource ? ' (Quelle: ' + T.distSource + ')' : '')],
+    ['In Bewegung', fmtDur(T.movingTime) + ' von ' + fmtDur(ds.duration)],
+    ['Stillstand', fmtDur(T.stoppedTime) + ' · ' + (ds.events ? ds.events.stops.length : 0) + ' Stopps'],
+    ['Geschwindigkeit', 'Ø ' + num(T.speedAvgMoving, 0, 'km/h') + ' · max ' + num(T.speedMax, 0, 'km/h')],
+    ['Drehzahl', 'max ' + num(T.rpmMax, 0, 'min⁻¹') + (specs.redline ? ' (' + fmt(T.rpmMax / specs.redline * 100, 0) + ' % des Begrenzers)' : '')],
+    ['Verbrauch', num(T.consAvg, 1, 'L/100km') + ' · ' + num(T.fuelUsed, 2, 'L') + (isFinite(T.cost) ? ' · ' + fmt(T.cost, 2) + ' €' : '')],
+    ['CO₂', num(T.co2, 2, 'kg') + (isFinite(T.co2PerKm) ? ' · ' + fmt(T.co2PerKm, 0) + ' g/km' : '')],
+    ['Kühlmittel', 'Start ' + num(T.coolantStart, 0, '°C') + ' · max ' + num(T.coolantMax, 0, '°C') + (isFinite(T.warmupTime) ? ' · warm nach ' + fmtDur(T.warmupTime) : '')],
+    ['Volllast', ds.events ? fmtDur(ds.events.wot.reduce((a, w) => a + w.dur, 0)) + ' in ' + ds.events.wot.length + ' Zügen' : '–'],
+    ['Klopfereignisse', ds.events ? String(ds.events.knock.length) : '–']
+  ];
+  out.push(repTable(null, k.map(r => repRow([el('b', {}, r[0]), r[1]]))));
+  if (ds.events && ds.events.sprints && ds.events.sprints.length) {
+    out.push(repH(2, 'Gemessene Beschleunigungswerte', 'aus dem Geschwindigkeitsverlauf, keine Messstrecke'));
+    out.push(repTable(['Messung', 'Zeit', '⌀ Beschleunigung'],
+      ds.events.sprints.map(s => repRow([s.from + '–' + s.to + ' km/h', fmt(s.dur, 2) + ' s',
+        fmt((s.to - s.from) / 3.6 / s.dur / 9.81, 2) + ' g'], { num: [1, 2] }))));
+  }
+  return out;
+}
+
+function repGears(gears) {
+  const out = [];
+  if (!gears || !gears.gears || !gears.gears.length) return out;
+  out.push(repH(1, 'Übersetzungen und Schaltverhalten'));
+  const named = gears.gearbox && (gears.gearbox.mode === 'table' || gears.gearbox.mode === 'count');
+  out.push(el('p', { class: 'rt-note' }, named
+    ? 'Die Gangnummern stammen aus dem angegebenen Getriebe' + (gears.gearbox.label ? ' (' + gears.gearbox.label + ')' : '') + '.'
+    : 'Ohne Getriebeangabe werden die gemessenen Stufen nach Übersetzung nummeriert; die Nummern müssen nicht den Gangnummern entsprechen.'));
+  out.push(repTable(['Stufe', 'km/h je 1000 min⁻¹', 'Messpunkte', 'Geschwindigkeitsbereich', 'Abweichung zur Tabelle'],
+    gears.gears.map(g => repRow([g.label, fmt(g.kmhPer1000, 1), fmt(g.n || 0, 0),
+      isFinite(g.vMin) ? fmt(g.vMin, 0) + '–' + fmt(g.vMax, 0) + ' km/h' : '–',
+      isFinite(g.dev) ? (g.dev >= 0 ? '+' : '') + fmt(g.dev * 100, 1) + ' %' : '–'], { num: [1, 2, 3, 4] }))));
+  const sa = App.ds ? shiftAnalysis(App.ds, gears) : { ok: false };
+  if (sa.ok) {
+    out.push(repH(2, 'Schaltvorgänge', sa.n + ' Wechsel · Median der Schaltdauer ' + fmt(sa.durMedian, 1) + ' s'));
+    out.push(repTable(['Wechsel', 'Anzahl', 'Drehzahl davor', 'danach', 'Pedal'],
+      sa.up.concat(sa.down).map(u => repRow([sa.labelOf(u.from) + ' → ' + sa.labelOf(u.to), String(u.n),
+        isFinite(u.rpmMed) ? fmt(u.rpmMed, 0) : '–', isFinite(u.rpmAfter) ? fmt(u.rpmAfter, 0) : '–',
+        isFinite(u.pedMed) ? fmt(u.pedMed, 0) + ' %' : '–'], { num: [1, 2, 3, 4] }))));
+  }
+  return out;
+}
+
+function repTyres(ds, prof) {
+  const out = [];
+  if (!ds) return out;
+  const r = speedRatioAnalysis(ds.G, ds.grid);
+  if (!r.ok) return out;
+  const ecu = rollCircumNow();
+  const mounted = parseTyre(store.get('tyreMounted', (prof && prof.specs && prof.specs.tyre) || ''));
+  const it = tyreInterpretation(r.k, ecu, mounted);
+  out.push(repH(1, 'Tacho, Tempomat und Bereifung'));
+  out.push(repTable(null, [
+    repRow([el('b', {}, 'Reifenfaktor'), fmt(r.k, 4) + ' (GPS ÷ Radsensor, Median aus ' + fmt(r.n, 0) + ' ruhigen Sekunden)']),
+    repRow([el('b', {}, 'Radsensor gegenüber GPS'), ((1 / r.k - 1) >= 0 ? '+' : '') + fmt((1 / r.k - 1) * 100, 1) + ' % · Streuung ±' + fmt(r.mad * 100, 2) + ' %']),
+    repRow([el('b', {}, 'Wirksamer Abrollumfang'), fmt(it.effectiveCircum, 3) + ' m (Steuergerät rechnet mit ' + fmt(ecu, 3) + ' m)']),
+    mounted ? repRow([el('b', {}, 'Montiert laut Angabe'), mounted.label + ' · Abrollumfang neu ' + fmt(mounted.rollCircum, 3) + ' m' +
+      (isFinite(it.devMountedPct) ? ' · Abweichung ' + (it.devMountedPct >= 0 ? '+' : '') + fmt(it.devMountedPct, 1) + ' %' : '')]) : null,
+    repRow([el('b', {}, 'Tempomat bei 130'), fmt(cruiseTable(r.k, 0, 0, [130])[0].real, 1) + ' km/h tatsächlich'])
+  ].filter(Boolean)));
+  return out;
+}
+
+function repMetrics(ds) {
+  const out = [];
+  if (!ds) return out;
+  const list = Array.from(ds.metrics.values()).filter(m => ds.stats[m.id] && ds.stats[m.id].n > 5)
+    .sort((a, b) => (a.group || '').localeCompare(b.group || '') || a.label.localeCompare(b.label));
+  if (!list.length) return out;
+  out.push(repH(1, 'Messgrößen im Überblick', list.length + ' Größen mit Statistik über die ganze Fahrt'));
+  out.push(repTable(['Messgröße', 'Einheit', 'Min', 'Median', 'Ø', 'Max', 'Abdeckung'],
+    list.map(m => {
+      const s = ds.stats[m.id], cov = ds.coverage[m.id];
+      return repRow([m.label, m.unit || '–', fmt(s.min, m.decimals), fmt(s.median, m.decimals),
+        fmt(s.meanW, m.decimals), fmt(s.max, m.decimals), isFinite(cov) ? fmt(cov * 100, 0) + ' %' : '–'], { num: [2, 3, 4, 5, 6] });
+    })));
+  return out;
+}
+
+function repEvents(ds) {
+  const out = [];
+  if (!ds) return out;
+  const ev = driveEvents(ds);
+  const notes = sortNotes(store.get(notesKey(driveId(ds, App.fileName)), []));
+  if (!ev.length && !notes.length) return out;
+  out.push(repH(1, 'Ereignisse und Anmerkungen'));
+  if (notes.length) {
+    out.push(repH(2, 'Anmerkungen des Fahrers'));
+    out.push(repTable(['Zeit', 'Anmerkung'], notes.map(n => repRow([timeFormatterFor(ds)(n.t), n.text]))));
+  }
+  if (ev.length) {
+    const counts = {};
+    ev.forEach(e => { counts[e.kind] = (counts[e.kind] || 0) + 1; });
+    out.push(repH(2, 'Erkannte Ereignisse', Object.keys(counts).map(k => EVENT_KINDS[k].label + ': ' + counts[k]).join(' · ')));
+    out.push(repTable(['Zeit', 'Ereignis', 'Einzelheiten'],
+      ev.slice(0, 40).map(e => repRow([e.time, EVENT_KINDS[e.kind].label, e.label + (e.detail ? ' · ' + e.detail : '')]))));
+  }
+  return out;
+}
+
+function repBuy(prof) {
+  const out = [];
+  if (typeof inspections !== 'function') return out;
+  const list = inspections();
+  const insp = list && list.length ? list[0] : null;
+  if (!insp) return out;
+  const checks = checksFor(prof, insp);
+  const marked = checks.filter(c => insp.marks[c.id]);
+  if (!marked.length) return out;
+  const sc = inspectionScore(insp, prof);
+  out.push(repH(1, 'Kaufcheck', (insp.name || 'Besichtigung') + ' · ' + marked.length + ' von ' + checks.length + ' Punkten geprüft'));
+  const kopf = [['Fahrzeug', insp.name || '–'], ['Erstzulassung', insp.year || '–'], ['Kilometerstand', insp.km ? insp.km + ' km' : '–'],
+    ['Preis', insp.price ? insp.price + ' €' : '–'], ['Verkäufer', insp.seller || '–'], ['FIN', insp.vin || '–']];
+  out.push(repTable(null, kopf.map(r => repRow([el('b', {}, r[0]), r[1]]))));
+  const bad = checks.filter(c => insp.marks[c.id] === 'bad');
+  if (bad.length) {
+    out.push(repH(2, 'Befunde bei der Besichtigung', bad.length + ' Punkte auffällig' + (sc && sc.ko ? ' · davon ' + sc.ko + ' K.-o.-Kriterien' : '')));
+    out.push(repTable(['Punkt', 'Phase', 'Worum es geht', 'Kosten'],
+      bad.map(c => repRow([el('b', {}, c.title), c.phase || '–', (c.what || '').slice(0, 160), c.cost || '–']))));
+  }
+  const ok = checks.filter(c => insp.marks[c.id] === 'ok').length;
+  const na = checks.filter(c => insp.marks[c.id] === 'na').length;
+  out.push(el('p', { class: 'rt-note' }, ok + ' Punkte in Ordnung, ' + bad.length + ' auffällig, ' + na + ' übersprungen, ' +
+    (checks.length - marked.length) + ' offen.'));
+  return out;
+}
+
+async function repAkte(prof) {
+  const out = [];
+  let rows = [];
+  try { rows = await akteAll(); } catch (e) { return out; }
+  if (prof) rows = rows.filter(r => !r.profileId || r.profileId === prof.id);
+  if (rows.length < 2) return out;
+  rows.sort((a, b) => a.date - b.date);
+  out.push(repH(1, 'Fahrzeugakte', rows.length + ' gespeicherte Fahrten'));
+  out.push(repTable(['Datum', 'Strecke', 'Verbrauch', 'Kühlmittel max.', 'Klopfen', 'Befunde (ok/grenz/auff.)'],
+    rows.map(r => repRow([AKTE_FMT_DATE(r.date), isFinite(r.dist) ? fmt(r.dist, 1) + ' km' : '–',
+      isFinite(r.consAvg) ? fmt(r.consAvg, 1) + ' L' : '–', isFinite(r.coolantMax) ? fmt(r.coolantMax, 0) + ' °C' : '–',
+      String(r.knock || 0), r.tally ? (r.tally.ok || 0) + ' / ' + (r.tally.warn || 0) + ' / ' + (r.tally.crit || 0) : '–'],
+      { num: [1, 2, 3, 4] }))));
+  const bl = baselineRules(rows).slice(0, 10);
+  if (bl.length) {
+    out.push(repH(2, 'Eigener Normalbereich', 'aus den gespeicherten Fahrten gelernt, unabhängig vom Werksband'));
+    out.push(repTable(['Befund', 'Fahrten', 'Normalwert', 'Streuband', 'Trend je 30 Tage'],
+      bl.map(({ id, b }) => {
+        const rule = DIAG_RULES.find(x => x.id === id);
+        return repRow([rule ? rule.title : id, String(b.n), fmt(b.median, 2) + (b.unit ? ' ' + b.unit : ''),
+          '±' + fmt(3 * b.sigma, 2), (b.slope30 >= 0 ? '+' : '') + fmt(b.slope30, 2)], { num: [1, 2, 3, 4] });
+      })));
+  }
+  return out;
+}
+
+function repNextRecording(diag) {
+  const out = [];
+  if (!diag || typeof buildAssist !== 'function') return out;
+  const a = buildAssist(diag.results, App.ds ? Object.keys(App.ds.G) : [], App.profile);
+  if (a) { a.pids = a.pids || []; a.situations = a.situations || []; }
+  if (!a || (!a.pids.length && !a.situations.length)) return out;
+  out.push(repH(1, 'Damit die nächste Aufzeichnung mehr beantwortet'));
+  if (a.pids.length) {
+    out.push(repH(2, 'In der OBD-App zusätzlich aktivieren'));
+    out.push(repTable(['Messgröße', 'PID', 'Öffnet Prüfungen'],
+      a.pids.slice(0, 14).map(p => repRow([p.label, p.code || '–', String(p.rules.length)], { num: [2] }))));
+  }
+  if (a.situations.length) {
+    out.push(repH(2, 'So fahren'));
+    out.push(el('ol', { class: 'rt-steps' }, a.situations.map(s => el('li', {}, el('b', {}, s.title), el('span', {}, s.text)))));
+  }
+  return out;
+}
+
+/* ---------- Seitenumbruch ---------- */
+/* Blöcke der Reihe nach in Seiten füllen; ein Block, der nicht mehr passt,
+   beginnt die nächste Seite. Tabellen dürfen umbrechen und bekommen dann
+   ihre Kopfzeile erneut. */
+function repPaginate(blocks, meta) {
+  /* Der Umbruch geschieht am echten Layout: jeder Block wird eingehängt und die
+     Höhe der Seite gemessen. Ein Ersatzrahmen kam auf andere Werte, weil
+     Ränder im Fluss verschmelzen und Tabellen anders umbrechen. */
+  const doc = el('div', { class: 'rt-doc rt-measure' });
+  let page = null, body = null, pageNo = 0;
+  document.body.appendChild(doc);
+  const newPage = () => {
+    pageNo++;
+    body = el('div', { class: 'rt-body' });
+    page = el('section', { class: 'rt-page' },
+      el('div', { class: 'rt-head' }, el('span', {}, meta.title), el('span', {}, meta.sub)),
+      body,
+      el('div', { class: 'rt-foot' }, el('span', {}, meta.foot), el('span', { class: 'rt-pageno' }, 'Seite ' + pageNo)));
+    doc.appendChild(page);
+    return pageNo;
+  };
+  newPage();
+  for (const b of blocks) {
+    if (b.page && body.children.length) newPage();
+    if (b.mark) b.mark.page = pageNo;
+    body.appendChild(b.node);
+    if (body.scrollHeight > REP_PAGE_H && body.children.length > 1) {
+      body.removeChild(b.node);
+      newPage();
+      if (b.mark) b.mark.page = pageNo;
+      body.appendChild(b.node);
+    }
+    /* Ein Block, der für sich allein höher ist als eine Seite, läuft im Druck auf
+       mehrere Blätter. Der Zähler springt entsprechend weiter, damit die
+       Seitenzahlen im Verzeichnis stimmen. */
+    if (body.scrollHeight > REP_PAGE_H && body.children.length === 1) {
+      pageNo += Math.ceil(body.scrollHeight / REP_PAGE_H) - 1;
+      newPage();
+    }
+  }
+  doc.classList.remove('rt-measure');
+  doc.remove();
+  return { doc, pages: pageNo };
+}
+
+
+/* ---------- Zusammenbau ---------- */
+async function buildReportDoc(kindKey) {
+  const kind = REPORT_KINDS[kindKey] || REPORT_KINDS.werkstatt;
+  const ds = App.ds, prof = App.profile, diag = App.diag, gears = App.gears;
+  const now = new Date();
+  const title = prof ? prof.name : 'Fahrzeugbericht';
+  const meta = { title, sub: (App.fileName || 'ohne Aufzeichnung') + ' · ' + now.toLocaleDateString('de-DE'),
+                 foot: 'OBD Telemetrie Studio · ' + kind.label + 'bericht' };
+
+  /* Deckblatt */
+  const T = (ds && ds.trip) || {};
+  const t = diag && diag.tally ? diag.tally : null;
+  const cover = el('section', { class: 'rt-page rt-cover' },
+    el('div', { class: 'rt-cover-top' },
+      el('div', { class: 'brand-mark' }, 'OBD'),
+      el('div', {}, el('b', {}, 'OBD Telemetrie Studio'), el('span', {}, kind.label + 'bericht · ' + kind.hint))),
+    el('h1', {}, title),
+    el('p', { class: 'rt-cover-sub' },
+      (prof ? (profileSpecLine(prof) || prof.engine || '') : 'kein Fahrzeugprofil gewählt')),
+    el('div', { class: 'rt-cover-facts' },
+      [['Aufzeichnung', App.fileName || '–'],
+       ['Gefahren am', ds ? timeFormatterFor(ds)(ds.t0) + ' · ' + fmtDur(ds.duration) : '–'],
+       ['Strecke', isFinite(T.dist) ? fmt(T.dist, 1) + ' km' : '–'],
+       ['Bericht erstellt', now.toLocaleDateString('de-DE') + ' um ' + now.toLocaleTimeString('de-DE').slice(0, 5)],
+       App.vin ? ['Fahrgestellnummer', App.vin.vin] : null].filter(Boolean)
+        .map(([k, v]) => el('div', {}, el('span', {}, k), el('b', {}, v)))),
+    t ? el('div', { class: 'rt-tally rt-cover-tally' },
+      [['ok', t.ok], ['warn', t.warn], ['crit', t.crit], ['unklar', t.unklar], ['missing', t.missing]].map(([k, n]) =>
+        el('div', { class: 'rt-t rt-t-' + k }, el('b', {}, String(n)), el('span', {}, REP_STATUS_LABEL[k])))) : null,
+    el('p', { class: 'rt-cover-note' },
+      'Dieser Bericht wertet eine einzelne OBD2-Aufzeichnung aus und stellt die Messwerte den hinterlegten Werksangaben des Triebwerks gegenüber. ' +
+      'Er ersetzt keine Werkstattprüfung: eine Fahrt ist eine Momentaufnahme, und was nicht aufgezeichnet wurde, kann nicht bewertet werden.'));
+
+  /* Inhalte je nach Umfang */
+  const parts = [];
+  const add = (key, nodes) => { if (nodes && nodes.length) parts.push({ key, nodes }); };
+  for (const p of kind.parts) {
+    if (p === 'zusammenfassung') add(p, repSummary(ds, diag, prof, gears));
+    else if (p === 'befunde') add(p, repFindings(diag));
+    else if (p === 'fahrt') add(p, repDrive(ds, prof));
+    else if (p === 'gaenge') add(p, repGears(gears));
+    else if (p === 'tacho') add(p, repTyres(ds, prof));
+    else if (p === 'messgroessen') add(p, repMetrics(ds));
+    else if (p === 'ereignisse') add(p, repEvents(ds));
+    else if (p === 'kaufcheck') add(p, repBuy(prof));
+    else if (p === 'akte') add(p, await repAkte(prof));
+    else if (p === 'daten') add(p, repMetrics(ds));
+    else if (p === 'aufzeichnung') add(p, repNextRecording(diag));
+  }
+
+  /* Inhaltsverzeichnis: Platzhalter, Seitenzahlen kommen nach dem Umbruch */
+  const tocRows = [];
+  const toc = el('section', { class: 'rt-page rt-toc-sheet' },
+    el('div', { class: 'rt-head' }, el('span', {}, title), el('span', {}, meta.sub)),
+    el('div', { class: 'rt-body' },
+      el('h2', { class: 'rt-toc-title' }, 'Inhalt'),
+      el('ol', { class: 'rt-toc' })),
+    el('div', { class: 'rt-foot' }, el('span', {}, meta.foot), el('span', { class: 'rt-pageno' }, 'Seite 2')));
+  const tocList = toc.querySelector('.rt-toc');
+
+  /* Blöcke für den Umbruch: erste Überschrift jedes Teils markiert den Eintrag */
+  const blocks = [];
+  parts.forEach((part, i) => {
+    part.nodes.forEach((n, j) => {
+      const mark = j === 0 ? { key: part.key, node: n } : null;
+      if (mark) part.mark = mark;
+      blocks.push({ node: n, mark: mark || undefined, page: j === 0 && i > 0 });
+    });
+  });
+
+  const { doc, pages } = repPaginate(blocks, meta);
+
+  /* Verzeichnis füllen: Seitenzahl = Umbruchseite + 2 (Deckblatt und Inhalt davor) */
+  parts.forEach(part => {
+    const h = part.nodes[0];
+    const label = h.querySelector ? (h.querySelector('h2, h3') || {}).textContent : part.key;
+    const sub = h.querySelector && h.querySelector('span') ? h.querySelector('span').textContent : '';
+    const no = (part.mark && part.mark.page ? part.mark.page : 1) + 2;
+    tocRows.push({ label, sub, no });
+    tocList.appendChild(el('li', {},
+      el('span', { class: 'rt-toc-label' }, label || part.key),
+      el('span', { class: 'rt-toc-dots' }),
+      el('span', { class: 'rt-toc-page' }, String(no))));
+  });
+
+  /* Schlussseite: Herkunft, Grenzen, QR-Code */
+  const url = location.origin + location.pathname;
+  let shareUrlStr = null;
+  try { if (ds && diag) shareUrlStr = shareUrl(await encodeShare(shareSummary(ds, diag, prof, gears, App.fileName))); } catch (e) {}
+  const qrTarget = shareUrlStr && shareUrlStr.length < 2400 ? shareUrlStr : url;
+  let qr = null;
+  try { qr = qrSvg(qrTarget, { px: 190, quiet: 3, fg: '#000000', bg: '#ffffff' }); } catch (e) { qr = null; }
+  const last = el('section', { class: 'rt-page rt-last' },
+    el('div', { class: 'rt-head' }, el('span', {}, title), el('span', {}, meta.sub)),
+    el('div', { class: 'rt-body' },
+      repH(1, 'Woher diese Zahlen stammen'),
+      el('p', {},
+        'Alle Werte stammen aus der oben genannten Aufzeichnung und wurden im Browser ausgewertet – es wurden keine Daten hochgeladen. ' +
+        'Die Sollbereiche kommen aus einem hinterlegten Katalog von Triebwerksdaten; wo für das gewählte Profil keine Werksangabe vorlag, ' +
+        'wird gegen einen Klassenwert geprüft, und der Befund sagt das ausdrücklich.'),
+      el('p', {},
+        'Was der Bericht nicht kann: Er misst nichts, was das Steuergerät nicht liefert, und er sieht das Fahrzeug nicht. ' +
+        'Verschleiß an Bremsen, Fahrwerk, Karosserie und alles Mechanische bleibt außen vor. Eine einzelne Fahrt ist eine Momentaufnahme; ' +
+        'belastbar wird ein Wert erst im Verlauf über mehrere Aufzeichnungen desselben Fahrzeugs.'),
+      repH(2, 'Auswertung selbst öffnen'),
+      el('div', { class: 'rt-qr' },
+        qr ? el('div', { class: 'rt-qr-img', html: qr }) : null,
+        el('div', { class: 'rt-qr-txt' },
+          el('p', {}, shareUrlStr === qrTarget && shareUrlStr
+            ? 'Der Code führt zu dieser Auswertung: Kennzahlen und Befunde sind im Link selbst enthalten, ohne Server und ohne Konto. Wer ihn öffnet, sieht dieselbe Zusammenfassung im eigenen Browser.'
+            : 'Der Code führt zum Werkzeug. Dort lässt sich die zugehörige CSV-Datei laden und dieselbe Auswertung erzeugen.'),
+          el('p', { class: 'rt-url' }, qrTarget.length > 120 ? qrTarget.slice(0, 117) + '…' : qrTarget),
+          el('p', { class: 'rt-dim' }, 'Werkzeug: ' + url))),
+      el('p', { class: 'rt-dim', style: { marginTop: '18px' } },
+        'Erstellt mit OBD Telemetrie Studio am ' + now.toLocaleDateString('de-DE') + '. Läuft vollständig im Browser, quelloffen, ohne Datenübertragung.')),
+    el('div', { class: 'rt-foot' }, el('span', {}, meta.foot), el('span', { class: 'rt-pageno' }, 'Seite ' + (pages + 3))));
+
+  const wrap = el('div', { id: 'full-report', class: 'rt-doc-wrap' }, cover, toc);
+  Array.from(doc.children).forEach(p => wrap.appendChild(p));
+  wrap.appendChild(last);
+  /* Kopf- und Fußzeilen der Inhaltsseiten um zwei verschieben (Deckblatt, Inhalt) */
+  wrap.querySelectorAll('.rt-page .rt-pageno').forEach(n => {
+    if (n.closest('.rt-last') || n.closest('.rt-toc-sheet') || n.closest('.rt-cover')) return;
+    const m = /Seite (\d+)/.exec(n.textContent);
+    if (m) n.textContent = 'Seite ' + (+m[1] + 2);
+  });
+  return { node: wrap, pages: pages + 3, parts: tocRows.length, kind };
+}
 </script>
 </body>
 </html>

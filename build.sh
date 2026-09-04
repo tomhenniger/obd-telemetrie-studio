@@ -14,6 +14,7 @@ OUT=index.html
   cat src/10-body.html
   echo '<script>'
   cat src/20-util.js
+  cat src/20b-qr.js
   cat src/21-parse.js
   cat src/21b-vin.js
   cat src/21c-vcds.js
@@ -39,6 +40,7 @@ OUT=index.html
   cat src/31c-assist.js
   cat src/31d-dtc.js
   cat src/32-app.js
+  cat src/33-report.js
   echo '</script>'
   cat src/99-tail.html
 } > "$OUT"

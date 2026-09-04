@@ -20,7 +20,7 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 - [x] Wiederkehrende Abschnitte innerhalb einer Fahrt (60-m-Raster, Durchfahrten mit Dauer und Tempo). Vergleich über mehrere Fahrten bleibt offen – dafür müssten Routen in der Akte liegen. (2026-09-04)
 
 ### Werkstatt und Kauf
-- [x] Drucken und vollständiger Bericht: Deckblatt, Inhaltsverzeichnis, alle Bereiche in einem Dokument, vier Umfänge, helles Druck-Layout, als PDF sicherbar. (2026-09-04)
+- [x] Bericht als eigenes Dokument: A4-Seiten mit Kopf- und Fußzeile, Deckblatt, Inhaltsverzeichnis mit echten Seitenzahlen, verdichtete Befundtabellen, Schlussseite mit QR-Code und Link. Vier Zuschnitte (Werkstatt, Kauf, Technik, Kurzfassung). (2026-09-04)
 - [x] Teilen per Link: Zusammenfassung gepackt in der Adresse (ohne Route, ohne Rohdaten), Empfänger sieht sie auf dem Startbildschirm. QR-Code offen. (2026-09-04)
 - [x] Datenschutz-Schnitt: Start und Ziel (je 500 m) werden bei der Tempolimit-Abfrage weggelassen (Voreinstellung an). Exporte enthalten keine Koordinaten. (2026-09-04)
 
@@ -31,7 +31,7 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 
 ## Offen
 
-- [ ] QR-Code für den Teilen-Link.
+- [x] QR-Code: eigener Encoder (Byte-Modus, Versionen 1–40), im Bericht auf der Schlussseite; gegen den Referenz-Encoder von OpenCV geprüft. (2026-09-04)
 - [ ] Verläufe zweier Fahrten übereinanderlegen (setzt Rohdaten in der Akte voraus).
 - [ ] Wiederkehrende Abschnitte über mehrere Fahrten vergleichen (dito).
 
