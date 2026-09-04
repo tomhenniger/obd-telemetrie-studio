@@ -117,7 +117,7 @@ function buildPackage(ds, profile, fileName, opts) {
   const step = ds.step * f;
   const G = {};
   for (const id in ds.G) if (ds.G[id]) G[id] = pkgPackSeries(pkgThinSeries(ds.G[id], f));
-  const tr = ds.track;
+  const tr = opts.ohneRoute ? null : ds.track;
   const track = tr ? {
     n: tr.n, lat: pkgPackCoords(tr.lat, 1e7), lon: pkgPackCoords(tr.lon, 1e7),
     alt: tr.alt ? pkgPackCoords(tr.alt, 100) : null,
@@ -143,6 +143,7 @@ function buildPackage(ds, profile, fileName, opts) {
     speedSrc: ds.speedSrc && ds.speedSrc.length ? pkgPackSeries(pkgThinSeries(Float64Array.from(ds.speedSrc), f)) : null,
     cacRefSource: ds.cacRefSource || null, boostDerived: !!ds.boostDerived, boostR2: ds.boostR2,
     track,
+    ohneRoute: !!opts.ohneRoute,
     rollCircum: opts.rollCircum || null,
     gearbox: opts.gearbox || null,
     notizen: opts.notes || [],

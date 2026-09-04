@@ -1,7 +1,7 @@
 # Changelog — 2026-09-04
 
 ## Neue Features
-- **Vollständige Auswertung weitergeben**: Im Teilen-Dialog erzeugt „Auswertung als Datei“ ein Paket mit Zeitreihen, Route, Statistik, Ereignissen und Fahrzeugprofil. Wer es auf die Startseite zieht, sieht dieselbe Auswertung wie der Absender und kann alle Ansichten bedienen – Karte, Zeitreihen, Kennfelder, Diagnose, Bericht. Die Rohdatei bleibt beim Absender. Beispiel: 108 km und 91 Minuten ergeben 340 KB, die Demofahrt 96 KB. Messreihen werden dafür auf ein Zehntausendstel ihrer Spanne quantisiert und feine Raster auf eine Messung je Sekunde ausgedünnt.
+- **Vollständige Auswertung weitergeben**: Im Teilen-Dialog erzeugt „Auswertung als Datei“ ein Paket mit Zeitreihen, Route (abwählbar), Statistik, Ereignissen und Fahrzeugprofil. Wer es auf die Startseite zieht, sieht dieselbe Auswertung wie der Absender und kann alle Ansichten bedienen – Karte, Zeitreihen, Kennfelder, Diagnose, Bericht. Die Rohdatei bleibt beim Absender. Beispiel: 108 km und 91 Minuten ergeben 340 KB, die Demofahrt 96 KB. Messreihen werden dafür auf ein Zehntausendstel ihrer Spanne quantisiert und feine Raster auf eine Messung je Sekunde ausgedünnt.
 - **Teilen-Knopf in der Kopfzeile**: neben „Bericht“. Öffnet einen Dialog mit QR-Code, Link, „Link kopieren“, der Teilen-Funktion des Geräts (wo vorhanden) und „QR als Bild“. Der Empfänger sieht die Zusammenfassung im eigenen Browser und arbeitet dort interaktiv weiter, statt ein PDF zu bekommen. Tastenkürzel: T teilt, B erzeugt den Bericht. Die frühere Teilen-Karte auf der KI-Seite entfällt.
 - **Bericht als eigenes Dokument**: Der Knopf „Bericht“ erzeugt kein Abbild der Oberfläche mehr, sondern ein gesetztes Dokument in A4-Seiten – Deckblatt, Inhaltsverzeichnis mit echten Seitenzahlen, Kopf- und Fußzeile auf jeder Seite, Schlussseite mit Herkunft, Grenzen und QR-Code. Die Befunde stehen als Liste mit Messwert, Sollbereich, Bedingung, Erklärung und Prüfschritten; Kennzahlen und Messgrößen als Tabellen. Vier Zuschnitte: Werkstatt (Befunde und Prüfschritte), Kauf (mit Kaufcheck und Akte), Technik (alles Messbare), Kurzfassung (eine Seite). Der Seitenumbruch wird am echten Layout gerechnet, deshalb stimmen Anzeige und PDF überein (Beispiel: 12, 21 oder 4 Seiten).
 - **QR-Code**: eigener Encoder im Werkzeug (Byte-Modus, Versionen 1 bis 40, Fehlerkorrektur wählbar), ohne fremden Dienst. Auf der Schlussseite des Berichts führt er zur geteilten Auswertung, sonst zum Werkzeug. Gegen den Referenz-Encoder von OpenCV Modul für Modul geprüft.
@@ -35,6 +35,7 @@
 
 
 ## UI-Änderungen
+- Teilen-Dialog sagt jetzt, wann sich das Paket gegenüber der CSV lohnt (Größe, sofort offen, Route weglassen) – und dass die CSV sonst die ehrlichere Wahl ist.
 - Tempolimits: eine Anfrage je Fahrt statt Abschnitten. Die Route wird formtreu vereinfacht (Douglas–Peucker, Punkte bleiben an Knicken, Toleranz wächst nur bis zum Budget von 650 Punkten) und der Suchkorridor wächst um die Toleranz mit – so schneiden lange Fahrten keine Kurven mehr aus dem Korridor. Ladebalken-Kurve quadratisch statt exponentiell.
 - Tempolimits: Fortschrittsanzeige beim Laden (laufender Balken mit Sekundenzähler, KB-Zähler beim Empfang, Zuordnungsphase) statt einer Textzeile.
 

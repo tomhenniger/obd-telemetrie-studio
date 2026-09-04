@@ -3070,9 +3070,12 @@ async function openShareDialog() {
   /* Vollständige Auswertung als Datei */
   const pkgInfo = el('p', { class: 'dim2', style: { fontSize: '11.5px', marginTop: '8px', lineHeight: '1.5' } },
     'Enthält Zeitreihen, Route, Statistik, Ereignisse und das Fahrzeugprofil – alles, was die Ansichten brauchen. Die Rohdatei bleibt bei dir.');
+  const routeBox = el('input', { type: 'checkbox', checked: store.get('pkgRoute', true) ? true : null,
+    onchange: e => store.set('pkgRoute', !!e.target.checked) });
   const makePkg = async () => {
     const pkg = buildPackage(App.ds, App.profile, App.fileName, {
       rollCircum: rollCircumNow(), gearbox: store.get('gearbox', null),
+      ohneRoute: !store.get('pkgRoute', true),
       notes: sortNotes(store.get(notesKey(driveId(App.ds, App.fileName)), [])),
       dtc: activeDtcCodes ? activeDtcCodes() : []
     });
@@ -3103,9 +3106,14 @@ async function openShareDialog() {
   } }, icon('share'), 'Paket teilen …') : null;
   body.appendChild(el('div', { class: 'lbl-eng', style: { margin: '16px 0 6px' } }, 'Vollständige Auswertung weitergeben'));
   body.appendChild(el('p', { class: 'dim', style: { fontSize: '12.5px', lineHeight: '1.6', margin: '0 0 8px' } },
-    'Der Link oben trägt nur die Zusammenfassung – eine Adresse fasst keine Messreihen. Wer alles sehen soll, bekommt die Auswertung als Datei: Karte, Zeitreihen, Kennfelder, Diagnose, genauso bedienbar wie hier.'));
-  body.appendChild(el('div', { class: 'chiprow' }, pkgBtn, pkgShare));
+    'Wer alles sehen soll, bekommt die Auswertung als Datei: Karte, Zeitreihen, Kennfelder, Diagnose, genauso bedienbar wie hier.'));
+  body.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center' } }, pkgBtn, pkgShare,
+    el('label', { class: 'field', style: { cursor: 'pointer' } }, routeBox, el('span', { class: 'dim' }, 'Route mitgeben'))));
   body.appendChild(pkgInfo);
+  body.appendChild(el('p', { class: 'dim2', style: { fontSize: '11.5px', lineHeight: '1.55', marginTop: '8px' } },
+    'Statt des Pakets kannst du auch die CSV-Datei selbst schicken – dann hat der Empfänger die Rohdaten und kann alles neu rechnen. ' +
+    'Das Paket lohnt sich, wenn die Aufzeichnung für den Weg zu groß ist (eine Stunde Fahrt sind schnell 30 MB, das Paket bleibt bei einigen hundert Kilobyte), ' +
+    'wenn es beim Empfänger sofort offen sein soll, oder wenn die Route nicht mitgehen darf.'));
 
   body.appendChild(el('div', { class: 'lbl-eng', style: { margin: '16px 0 6px' } }, 'Was der Empfänger sieht'));
   const t = App.diag.tally || {};

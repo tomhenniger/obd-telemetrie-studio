@@ -116,3 +116,20 @@ test('Paket dünnt feine Raster auf eine Messung je Sekunde aus, Ereigniszeiten 
     assert.ok(Math.abs(ds.grid[s.i1] - back.grid[t.i1]) <= 1.001);
   }
 });
+
+test('Paket ohne Route: Kennzahlen bleiben, Positionen fehlen', async () => {
+  const ds = await drive();
+  assert.ok(ds.track && ds.track.n > 5, 'Testfahrt hat eine Route');
+  const ohne = g('buildPackage')(ds, null, 'f.csv', { ohneRoute: true, raster: 'voll' });
+  assert.equal(ohne.track, null);
+  assert.equal(ohne.ohneRoute, true);
+  const json = g('pkgStringify')(ohne);
+  assert.ok(!/"lat"|"lon"/.test(json), 'keine Positionsdaten im Paket');
+  const back = g('datasetFromPackage')(g('pkgParse')(json));
+  assert.equal(back.track, null);
+  assert.ok(Math.abs(back.trip.dist - ds.trip.dist) < 1e-9, 'Streckenlänge bleibt erhalten');
+  assert.ok(back.G.rpm && back.G.rpm.length === ds.N, 'Messreihen bleiben vollständig');
+  /* Mit Route ist sie drin */
+  const mit = g('buildPackage')(ds, null, 'f.csv', { raster: 'voll' });
+  assert.ok(mit.track && mit.track.n === ds.track.n);
+});
