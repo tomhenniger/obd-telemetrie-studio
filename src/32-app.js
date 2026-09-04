@@ -1406,11 +1406,12 @@ BUILDERS.fields = function (page) {
             items.push(kpi('Median über die Züge', fmt(pa.median, 0), 'kW', pa.pulls.length + ' Volllastzüge ausgewertet'));
             if (pa.specKW) items.push(kpi('Gegen Werksangabe', (pa.devPct >= 0 ? '+' : '') + fmt(pa.devPct, 0), '%', 'Werk ' + fmt(pa.specKW, 0) + ' kW · ' + (Math.abs(pa.devPct) < 20 ? 'im Rahmen der Annahmen' : 'Annahmen prüfen')));
           }
-          if (ma.ok) items.push(kpi('Masse aus Beschleunigung', fmt(ma.median, 0), 'kg', (ma.specKg ? 'Werk ' + fmt(ma.specKg, 0) + ' kg · ' + (ma.devKg >= 0 ? '+' : '') + fmt(ma.devKg, 0) + ' kg · ' : '') + 'Streuung ' + fmt(ma.p25, 0) + '–' + fmt(ma.p75, 0) + ' kg'));
+          if (ma.ok) items.push(kpi('Masse aus Beschleunigung', fmt(ma.median, 0), 'kg', (ma.specKg ? 'Werk ' + fmt(ma.specKg, 0) + ' kg · ' + (ma.devKg >= 0 ? '+' : '') + fmt(ma.devKg, 0) + ' kg · ' : '') + 'hängt an der Leistung aus dem Verbrauch'));
           pHost.appendChild(el('div', { class: 'grid kpis' }, ...items));
           pHost.appendChild(el('p', { class: 'dim2', style: { marginTop: '10px', fontSize: '11.5px', lineHeight: '1.5' } },
             'Angenommen: Masse ' + fmt(P.mass, 0) + ' kg, cW ' + fmt(P.cd, 2) + ', Stirnfläche ' + fmt(P.area, 2) + ' m², Rollwiderstand ' + fmt(P.crr, 3) + ', Antriebsstrang-Wirkungsgrad ' + fmt(P.driveline * 100, 0) + ' %. ' +
-            'Steigung fließt aus dem Höhenprofil ein, soweit vorhanden.'));
+            'Steigung fließt aus dem Höhenprofil ein, soweit vorhanden. Beschleunigung wird über drei Sekunden ausgeglichen, je Zug zählt das 90. Perzentil – ein einzelner GPS-Sprung soll nicht als Leistungsspitze durchgehen. ' +
+            'Die Massenschätzung rechnet mit der Leistung aus dem Kraftstofffluss: ist die zu hoch angesetzt, fällt die Masse zu groß aus.'));
         }
         page.appendChild(card('Leistung aus der Fahrphysik', {
           hint: 'zweite Schätzung, unabhängig vom Kraftstofffluss',
