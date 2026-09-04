@@ -27,9 +27,9 @@ test('VCDS: Format erkennen, Kanäle mit Einheit übernehmen, STAMP verwerfen', 
   const lines = v.text.trim().split('\n');
   assert.equal(lines[0], '"SECONDS";"Engine speed (/min)";"Mass air / rev (mg/str)";"Coolant temp. (°C)";"Ignition angle (°KW)"');
   assert.equal(v.channels.length, 4);
-  assert.equal(lines[1], '0;798;320.5;88;6');
+  assert.equal(lines[1], '0.0;798;320.5;88.0;6.0', 'Zahlen bleiben, wie sie im Log stehen');
   assert.equal(v.rows, 4, 'vier Messzeilen, Blockkopf mittendrin ignoriert');
-  assert.equal(lines[4], '2;1600;415;89.5;13.5');
+  assert.equal(lines[4], '2.0;1600;415.0;89.5;13.5');
 });
 
 test('VCDS: unbrauchbare Eingaben melden sich verständlich', () => {
