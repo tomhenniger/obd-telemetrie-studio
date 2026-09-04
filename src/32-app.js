@@ -569,7 +569,53 @@ BUILDERS.series = function (page) {
   }
   brush.draw(); update();
 
-  Chart.onHover('series', x => { if (cc.readout.isConnected) updateReadout(cc.readout, x, App.ts); });
+  /* --- Anmerkungen und Ereignisse --- */
+  let lastHover = null;
+  const nk = notesKey(driveId(ds, App.fileName));
+  const noteTime = el('span', { class: 'field dim', style: { minWidth: '150px' } }, 'Zeiger auf das Diagramm setzen');
+  const noteInput = el('input', { class: 'inp', type: 'text', placeholder: 'z. B. hier hat es geruckelt', style: { flex: '1 1 220px', minWidth: '0' },
+    onkeydown: e => { if (e.key === 'Enter') addNote(); } });
+  const noteList = el('div', {});
+  const evToggle = el('button', { class: 'chip', type: 'button', 'aria-pressed': store.get('showEvents', true) ? 'true' : 'false',
+    onclick: () => { const v = !store.get('showEvents', true); store.set('showEvents', v); evToggle.setAttribute('aria-pressed', v ? 'true' : 'false'); update(); renderNotes(); } },
+    'Ereignisse einblenden');
+  function renderNotes() {
+    noteList.innerHTML = '';
+    const notes = sortNotes(store.get(nk, []));
+    if (!notes.length) { noteList.appendChild(el('p', { class: 'dim2', style: { margin: '10px 0 0', fontSize: '12px' } }, 'Noch keine Anmerkung. Zeiger oder Finger auf die Stelle im Diagramm, Text eingeben, setzen.')); }
+    else noteList.appendChild(el('div', { class: 'assist-list', style: { marginTop: '10px' } }, ...notes.map((n, i) =>
+      el('div', { class: 'dtc-row' },
+        el('button', { class: 'dtc-code', type: 'button', title: 'Im Diagramm zeigen', onclick: () => { Chart.emitHover(n.t, null); if (App.map) App.map.setMarkerTime(n.t); } }, xFormatter()(n.t)),
+        el('div', { class: 'dtc-t', style: { flex: '1' } }, el('b', {}, n.text)),
+        el('button', { class: 'btn icon sm ghost', type: 'button', 'aria-label': 'Anmerkung löschen', onclick: () => { const l = sortNotes(store.get(nk, [])); l.splice(i, 1); store.set(nk, l); renderNotes(); update(); akteAutoSave(); } }, icon('x'))))));
+    if (store.get('showEvents', true)) {
+      if (!ds._events) ds._events = driveEvents(ds);
+      const kinds = {}; ds._events.forEach(e => { kinds[e.kind] = (kinds[e.kind] || 0) + 1; });
+      noteList.appendChild(el('div', { class: 'legend', style: { marginTop: '10px' } }, ...Object.keys(kinds).map(k =>
+        el('span', { class: 'li' }, el('b', { style: { color: EVENT_KINDS[k].color, fontWeight: '700' } }, EVENT_KINDS[k].code), EVENT_KINDS[k].label + ' (' + kinds[k] + ')'))));
+    }
+  }
+  function addNote() {
+    const text = noteInput.value.trim(); if (!text) { noteInput.focus(); return; }
+    const t = lastHover !== null ? lastHover : (App.range[0] + App.range[1]) / 2;
+    const l = sortNotes(store.get(nk, [])); l.push({ t, text }); store.set(nk, l);
+    noteInput.value = ''; renderNotes(); update(); akteAutoSave();
+  }
+  page.appendChild(card('Anmerkungen und Ereignisse', {
+    hint: 'eigene Marker an Zeitpunkten – landen in Akte und KI-Prompt',
+    info: { read: 'Zeiger oder Finger auf die Stelle im Verlauf, Text eingeben, „Anmerkung setzen“. Die Anmerkung erscheint als gestrichelte Linie mit N im Verlauf und als Pin auf der Karte, wird mit der Fahrt in der Akte gespeichert und steht im KI-Prompt. Ereignisse erkennt das Werkzeug selbst: S Stopp, V Volllastzug, M gemessener Sprint, K Klopfregelung, B starke Bremsung, W Betriebswarm.',
+            good: 'Eine Anmerkung „ruckelt beim Beschleunigen“ neben einem K-Marker ist die Art Zusammenhang, die aus Zahlen allein nie hervorgeht.',
+            bad: 'Zu viele Marker verdecken die Kurve – Ereignisse lassen sich ausblenden.' }
+  },
+    el('div', { class: 'chiprow', style: { alignItems: 'center' } }, noteTime, noteInput,
+      el('button', { class: 'btn', type: 'button', onclick: addNote }, 'Anmerkung setzen'), evToggle),
+    noteList));
+  renderNotes();
+
+  Chart.onHover('series', x => {
+    if (cc.readout.isConnected) updateReadout(cc.readout, x, App.ts);
+    if (x !== null && x !== undefined) { lastHover = x; noteTime.textContent = 'Stelle: ' + xFormatter()(x); }
+  });
 };
 
 const GROUP_ORDER = ['motor', 'boost', 'temp', 'fuel', 'cons', 'drive', 'calc', 'misc'];
@@ -607,8 +653,22 @@ function drawTimeseries(cc, ids, range, whole) {
     }
   }
   cc.chart.axes = axes;
+  /* Sollbänder: grüner Bereich der Werksangabe hinter der Kurve, nur für Reihen mit eigener Achse */
+  const bandColor = getComputedStyle(document.documentElement).getPropertyValue('--chart-band').trim() || 'rgba(79,207,146,.10)';
+  cc.chart.refBands = series.filter(s => s.axis >= 0).map(s => { const b = specBandFor(s.id, App.profile); return b ? { axis: s.axis, lo: b[0], hi: b[1], color: bandColor } : null; }).filter(Boolean);
+  cc.chart.marks = whole ? [] : driveMarks(ds);
   cc.chart.setData({ series, bands, xRange: range, xFormat: xFormatter() });
   legendItems(cc.legend, series);
+}
+
+/* Marker für Verläufe und Karte: Anmerkungen immer, Ereignisse wenn eingeblendet */
+function driveMarks(ds) {
+  const notes = sortNotes(store.get(notesKey(driveId(ds, App.fileName)), []))
+    .map(n => ({ t: n.t, kind: 'note', code: 'N', color: EVENT_KINDS.note.color, label: 'N · ' + (n.text.length > 22 ? n.text.slice(0, 21) + '…' : n.text), dashed: true, text: n.text }));
+  if (!store.get('showEvents', true)) return notes;
+  if (!ds._events) ds._events = driveEvents(ds);
+  return notes.concat(ds._events.map(e => ({ t: e.t, kind: e.kind, code: e.code, color: e.color, label: e.code, text: e.label })))
+    .sort((a, b) => a.t - b.t);
 }
 
 function updateReadout(node, x, ids) {
@@ -854,7 +914,21 @@ BUILDERS.map = function (page) {
       rampRow.appendChild(el('span', { class: 'li', style: { display: 'inline-flex', alignItems: 'center', gap: '5px', marginRight: '10px' } },
         el('i', { style: { display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: catColor(c) } }), CAT_LABEL[c])));
   }
-  requestAnimationFrame(() => { map.resize(); paint(); map.fit(); });
+  /* Marker: Ereignisse und Anmerkungen als Pins */
+  const pinRow = el('div', { class: 'legend' });
+  c.appendChild(pinRow);
+  function paintPins() {
+    pinRow.innerHTML = '';
+    const marks = driveMarks(ds);
+    const pins = marks.map(m => { const ti = bisect(tr.t, m.t); return ti >= 0 && ti < tr.n ? { lat: tr.lat[ti], lon: tr.lon[ti], color: m.color, code: m.code, label: m.text } : null; }).filter(Boolean);
+    map.setPins(pins);
+    const kinds = {}; marks.forEach(m => { kinds[m.kind] = (kinds[m.kind] || 0) + 1; });
+    const tg = el('button', { class: 'chip', type: 'button', style: { minHeight: '26px', padding: '2px 9px' }, 'aria-pressed': store.get('showEvents', true) ? 'true' : 'false',
+      onclick: () => { store.set('showEvents', !store.get('showEvents', true)); paintPins(); } }, 'Ereignisse');
+    pinRow.appendChild(tg);
+    Object.keys(kinds).forEach(k => pinRow.appendChild(el('span', { class: 'li' }, el('b', { style: { color: EVENT_KINDS[k].color, fontWeight: '700' } }, EVENT_KINDS[k].code), EVENT_KINDS[k].label + ' (' + kinds[k] + ')')));
+  }
+  requestAnimationFrame(() => { map.resize(); paint(); paintPins(); map.fit(); });
 
   function paint() {
     if (App.mapMetric === '__limits') { paintLimits(); return; }
@@ -2089,7 +2163,7 @@ BUILDERS.ai = function (page) {
 
   function build(k) {
     store.set('aiDetail', k);
-    xml = buildAiPrompt(k);
+    xml = buildAiPrompt(k, store.get('aiVariant', 'analyse'));
     out.textContent = xml;
     const kb = xml.length / 1024;
     const tok = Math.round(xml.length / 3.6 / 100) * 100;
@@ -2107,6 +2181,12 @@ BUILDERS.ai = function (page) {
       onclick: e => { Array.from(e.target.parentNode.children).forEach(b =>
         b.setAttribute('aria-pressed', b === e.target ? 'true' : 'false')); build(k); } },
       AI_DETAIL[k].label)));
+  const vkey = store.get('aiVariant', 'analyse');
+  const vseg = el('div', { class: 'seg' }, Object.keys(AI_VARIANTS).map(k =>
+    el('button', { type: 'button', 'aria-pressed': k === vkey ? 'true' : 'false', title: AI_VARIANTS[k].hint,
+      onclick: e => { store.set('aiVariant', k); Array.from(e.target.parentNode.children).forEach(b =>
+        b.setAttribute('aria-pressed', b === e.target ? 'true' : 'false')); build(store.get('aiDetail', 'standard')); } },
+      AI_VARIANTS[k].label)));
 
   page.appendChild(noteBox('info', 'Was das ist',
     'Dieses Werkzeug rechnet die Fahrt aus, ordnet sie in Sollbereiche ein und sagt, wo die Datenlage für ein Urteil nicht reicht. ' +
@@ -2116,7 +2196,7 @@ BUILDERS.ai = function (page) {
 
   page.appendChild(card('Prompt erzeugen', {
     hint: 'die Rohdatei bleibt außen vor — 28 MB passen in kein Kontextfenster',
-    tools: seg,
+    tools: [vseg, seg],
     info: {
       read: 'Die Stufe steuert, wie fein die Zeitreihe aufgelöst wird und ob die Werteverteilungen mitgehen. „Kompakt“ enthält Kennzahlen und Befunde mit einem Messpunkt alle 15 Sekunden, „Vollständig“ alle zwei Sekunden.',
       good: 'Für die meisten Fragen reicht „Standard“. Wenn das Modell sich über die Länge beschwert oder abschneidet, eine Stufe zurück.',

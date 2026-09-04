@@ -158,14 +158,34 @@ function findingCard(r) {
 }
 
 /* Diagramm-Karte mit Host + Chart-Instanz */
+function exportChartPng(chart, title) {
+  const src = chart.canvas, dpr = chart.dpr || 1, pad = 16, head = 34;
+  const c = document.createElement('canvas');
+  c.width = src.width + pad * 2 * dpr; c.height = src.height + (head + pad) * dpr;
+  const x = c.getContext('2d'), cs = getComputedStyle(document.documentElement);
+  x.fillStyle = cs.getPropertyValue('--surface').trim() || '#191c1f'; x.fillRect(0, 0, c.width, c.height);
+  x.save(); x.scale(dpr, dpr); x.textBaseline = 'top';
+  x.fillStyle = cs.getPropertyValue('--text-1').trim() || '#ecebe4'; x.font = '600 13px Barlow, system-ui, sans-serif'; x.fillText(title || 'Diagramm', pad, 10);
+  x.fillStyle = cs.getPropertyValue('--text-3').trim() || '#888'; x.font = '10.5px Barlow, system-ui, sans-serif'; x.textAlign = 'right';
+  x.fillText('OBD Telemetrie Studio' + (typeof App !== 'undefined' && App.fileName ? ' · ' + App.fileName : ''), c.width / dpr - pad, 12);
+  x.restore(); x.drawImage(src, pad * dpr, head * dpr);
+  const a = document.createElement('a');
+  a.href = c.toDataURL('image/png'); a.download = (title || 'diagramm').replace(/[^\wäöüÄÖÜß-]+/g, '_') + '.png';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
 function chartCard(title, opts, chartOpts) {
   opts = opts || {};
+  let chart = null;
+  const dl = el('button', { class: 'btn icon sm ghost', type: 'button', title: 'Diagramm als Bild speichern', 'aria-label': 'Diagramm als Bild speichern',
+    onclick: () => { if (chart) exportChartPng(chart, title); } }, icon('dl'));
+  opts = Object.assign({}, opts, { tools: [].concat(opts.tools || [], [dl]) });
   const host = el('div', { class: 'chart-host' });
   const readout = opts.readout ? el('div', { class: 'readout' }, '—') : null;
   const legend = opts.legend !== false ? el('div', { class: 'legend' }) : null;
   const extra = opts.extra || null;
   const c = card(title, opts, readout, extra, host, legend);
-  const chart = new Chart(host, Object.assign({ height: opts.height || 260 }, chartOpts || {}));
+  chart = new Chart(host, Object.assign({ height: opts.height || 260 }, chartOpts || {}));
   return { node: c, host, chart, legend, readout };
 }
 

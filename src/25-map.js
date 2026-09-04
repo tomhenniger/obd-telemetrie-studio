@@ -154,6 +154,7 @@ class TrackMap {
     return [y2lat(cy + (py - this.h / 2) / TILE, z), x2lon(cx + (px - this.w / 2) / TILE, z)];
   }
   setTrack(track, colorFn) { this.track = track; this.colorFn = colorFn; this.draw(); }
+  setPins(pins) { this.pins = pins || []; this.draw(); }
   fit(pad) {
     const t = this.track; if (!t || !t.n) return;
     pad = pad || 28;
@@ -278,6 +279,7 @@ class TrackMap {
       const s = this.project(t.lat[0], t.lon[0]), e = this.project(t.lat[t.n - 1], t.lon[t.n - 1]);
       this._pin(s[0], s[1], THEME.ok, 'A');
       this._pin(e[0], e[1], THEME.crit, 'B');
+      for (const pn of (this.pins || [])) { const q = this.project(pn.lat, pn.lon); if (Math.abs(q[0]) < this.w * 2 && Math.abs(q[1]) < this.h * 2) this._pin(q[0], q[1], pn.color, pn.code); }
 
       const mk = this.marker !== null && this.marker !== undefined ? this.marker : this.hoverIdx;
       if (mk !== null && mk !== undefined && mk >= 0 && mk < t.n) {

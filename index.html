@@ -2830,6 +2830,84 @@ function computeGears(ds, rollCircumM, gbx, redline) {
   for (let i = 1; i < gears.length; i++) res.spread.push(gears[i - 1].k / gears[i].k);
   return res;
 }
+/* ===== Ereignisse, Anmerkungen, Sollbänder =========================
+   Ereignisse sind Zeitpunkte, die auf Karte und Verläufen als Marker
+   erscheinen: Stopps, Volllastzüge, Klopfereignisse, starke Bremsungen,
+   Warmlauf-Ende, gemessene Sprints. Anmerkungen sind Marker des Nutzers.
+   Sollbänder sind die grünen Bereiche, die der Verlauf einer Messgröße
+   hinterlegt bekommt.
+   ================================================================== */
+
+const EVENT_KINDS = {
+  stop:   { code: 'S', label: 'Stopp',          color: '#8a9099' },
+  wot:    { code: 'V', label: 'Volllastzug',    color: '#ee6b5b' },
+  sprint: { code: 'M', label: 'Messung',        color: '#e9b44c' },
+  knock:  { code: 'K', label: 'Klopfregelung',  color: '#c9a0dc' },
+  brake:  { code: 'B', label: 'Starke Bremsung',color: '#f0a06a' },
+  warm:   { code: 'W', label: 'Betriebswarm',   color: '#4fcf92' },
+  note:   { code: 'N', label: 'Anmerkung',      color: '#ecebe4' }
+};
+
+/* Ereignisse einer Fahrt aus den bereits erkannten Segmenten plus zwei eigenen Erkennungen */
+function driveEvents(ds) {
+  const out = [];
+  if (!ds || !ds.grid) return out;
+  const grid = ds.grid, G = ds.G || {}, ev = ds.events || {};
+  const xf = typeof timeFormatterFor === 'function' ? timeFormatterFor(ds) : (v => String(Math.round(v)));
+  (ev.stops || []).forEach(s => out.push({ kind: 'stop', t: s.t0, i: s.i0, label: 'Stopp ' + fmtDur(s.dur), detail: 'Stillstand ' + fmtDur(s.dur) }));
+  (ev.wot || []).forEach(s => out.push({ kind: 'wot', t: grid[s.i0], i: s.i0,
+    label: 'Volllast' + (isFinite(s.rpmMax) && s.rpmMax > 0 ? ' bis ' + fmt(s.rpmMax, 0) + ' min⁻¹' : ''),
+    detail: (isFinite(s.speedMax) && s.speedMax > 0 ? 'bis ' + fmt(s.speedMax, 0) + ' km/h' : '') + (isFinite(s.boostMax) && s.boostMax > 0 ? ' · Ladedruck ' + fmt(s.boostMax, 2) + ' bar' : '') }));
+  (ev.sprints || []).forEach(s => out.push({ kind: 'sprint', t: s.t0 !== undefined ? s.t0 : grid[s.i0], i: s.i0,
+    label: (s.from !== undefined ? s.from + '–' + s.to + ' km/h' : 'Sprint') + (isFinite(s.dur) ? ' in ' + fmt(s.dur, 2) + ' s' : ''), detail: '' }));
+  (ev.knock || []).forEach(s => out.push({ kind: 'knock', t: s.t0, i: s.i0, label: 'Klopfregelung ' + fmt(s.drop, 1) + '°',
+    detail: 'Zündwinkel bis ' + fmt(s.timingMin, 1) + '° bei ' + fmt(s.rpmMax, 0) + ' min⁻¹' }));
+  /* Starke Bremsungen: Längsbeschleunigung unter -0,3 g für mindestens eine Sekunde */
+  if (G.accel && G.speed_mix) {
+    const step = grid.length > 1 ? grid[1] - grid[0] : 1;
+    let i = 0;
+    while (i < grid.length) {
+      if (G.accel[i] < -0.3) {
+        let j = i, mn = 0, mi = i;
+        while (j < grid.length && G.accel[j] < -0.2) { if (G.accel[j] < mn) { mn = G.accel[j]; mi = j; } j++; }
+        if ((j - i) * step >= 1) out.push({ kind: 'brake', t: grid[mi], i: mi, label: 'Bremsung ' + fmt(mn, 2) + ' g',
+          detail: 'aus ' + fmt(G.speed_mix[i], 0) + ' km/h' + (G.speed_mix[j - 1] === G.speed_mix[j - 1] ? ' auf ' + fmt(G.speed_mix[j - 1], 0) : '') });
+        i = j;
+      } else i++;
+    }
+  }
+  /* Warmlauf-Ende: Kühlmittel erreicht 80 °C, wenn es unter 60 °C gestartet ist */
+  if (G.coolant) {
+    let start = NaN;
+    for (let i = 0; i < grid.length; i++) if (G.coolant[i] === G.coolant[i]) { start = G.coolant[i]; break; }
+    if (start < 60) for (let i = 0; i < grid.length; i++) if (G.coolant[i] >= 80) {
+      out.push({ kind: 'warm', t: grid[i], i, label: 'Betriebswarm nach ' + fmtDur(grid[i] - ds.t0), detail: 'Kühlmittel 80 °C, Start bei ' + fmt(start, 0) + ' °C' }); break;
+    }
+  }
+  out.sort((a, b) => a.t - b.t);
+  out.forEach(e => { e.time = xf(e.t); e.code = EVENT_KINDS[e.kind].code; e.color = EVENT_KINDS[e.kind].color; });
+  return out;
+}
+
+/* Sollbänder je Messgröße: [lo, hi] oder null. Werksangaben aus dem Profil, sonst Klassenwerte. */
+function specBandFor(id, profile) {
+  const P = (profile && profile.specs) || {};
+  switch (id) {
+    case 'coolant':    return P.coolantGreen || [85, 105];
+    case 'oil_temp':   return P.oilGreen || [85, 125];
+    case 'trans_temp': return [70, 105];
+    case 'ltft_b1': case 'ltft_b2': case 'ltft_mean': return [-5, 5];
+    case 'stft_b1': case 'stft_b2': return [-8, 8];
+    case 'batt':       return [13.4, 14.8];
+    case 'cat_temp':   return [400, 850];
+    case 'lambda':     return [0.97, 1.03];
+    default: return null;
+  }
+}
+
+/* Anmerkungen: [{ t, text }] je Fahrt, im Browser gespeichert */
+function notesKey(driveIdStr) { return 'notes:' + driveIdStr; }
+function sortNotes(list) { return (list || []).filter(n => n && isFinite(n.t) && n.text).sort((a, b) => a.t - b.t); }
 /* ============================================================
    Canvas-Diagramm-Engine — Zeitreihen, Histogramme, Streudiagramme,
    2D-Dichte, Sparklines. Kein externes Framework.
@@ -3055,6 +3133,26 @@ class Chart {
       this._drawLine(s, ax);
     }
     ctx.restore();
+
+    // Marker: Ereignisse und Anmerkungen als senkrechte Linien mit Kürzel
+    if (this.marks && this.marks.length) {
+      ctx.save(); ctx.beginPath(); ctx.rect(P.x, P.y - 2, P.w, P.h + 4); ctx.clip();
+      ctx.font = '600 10px ' + FONT_UI; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+      let lastX = -Infinity, row = 0;
+      for (const m of this.marks) {
+        const px = Math.round(this.xScale(m.t)) + .5; if (px < P.x || px > P.x + P.w) continue;
+        ctx.strokeStyle = m.color || THEME.axis; ctx.lineWidth = m.dashed ? 1 : 1.2; ctx.setLineDash(m.dashed ? [3, 3] : []);
+        ctx.beginPath(); ctx.moveTo(px, P.y); ctx.lineTo(px, P.y + P.h); ctx.stroke(); ctx.setLineDash([]);
+        if (m.label) {
+          row = px - lastX < 60 ? (row + 1) % 3 : 0;          // dicht liegende Marker versetzt beschriften
+          const w = ctx.measureText(m.label).width + 8, y = P.y + 3 + row * 15;
+          ctx.fillStyle = 'rgba(8,9,10,.7)'; ctx.fillRect(px + 2, y, w, 13);
+          ctx.fillStyle = m.color || THEME.axis; ctx.fillText(m.label, px + 6, y + 2);
+          lastX = px;
+        }
+      }
+      ctx.restore();
+    }
 
     // Rahmen
     ctx.strokeStyle = THEME.gridB; ctx.lineWidth = 1;
@@ -3483,6 +3581,7 @@ class TrackMap {
     return [y2lat(cy + (py - this.h / 2) / TILE, z), x2lon(cx + (px - this.w / 2) / TILE, z)];
   }
   setTrack(track, colorFn) { this.track = track; this.colorFn = colorFn; this.draw(); }
+  setPins(pins) { this.pins = pins || []; this.draw(); }
   fit(pad) {
     const t = this.track; if (!t || !t.n) return;
     pad = pad || 28;
@@ -3607,6 +3706,7 @@ class TrackMap {
       const s = this.project(t.lat[0], t.lon[0]), e = this.project(t.lat[t.n - 1], t.lon[t.n - 1]);
       this._pin(s[0], s[1], THEME.ok, 'A');
       this._pin(e[0], e[1], THEME.crit, 'B');
+      for (const pn of (this.pins || [])) { const q = this.project(pn.lat, pn.lon); if (Math.abs(q[0]) < this.w * 2 && Math.abs(q[1]) < this.h * 2) this._pin(q[0], q[1], pn.color, pn.code); }
 
       const mk = this.marker !== null && this.marker !== undefined ? this.marker : this.hoverIdx;
       if (mk !== null && mk !== undefined && mk >= 0 && mk < t.n) {
@@ -7001,14 +7101,34 @@ function findingCard(r) {
 }
 
 /* Diagramm-Karte mit Host + Chart-Instanz */
+function exportChartPng(chart, title) {
+  const src = chart.canvas, dpr = chart.dpr || 1, pad = 16, head = 34;
+  const c = document.createElement('canvas');
+  c.width = src.width + pad * 2 * dpr; c.height = src.height + (head + pad) * dpr;
+  const x = c.getContext('2d'), cs = getComputedStyle(document.documentElement);
+  x.fillStyle = cs.getPropertyValue('--surface').trim() || '#191c1f'; x.fillRect(0, 0, c.width, c.height);
+  x.save(); x.scale(dpr, dpr); x.textBaseline = 'top';
+  x.fillStyle = cs.getPropertyValue('--text-1').trim() || '#ecebe4'; x.font = '600 13px Barlow, system-ui, sans-serif'; x.fillText(title || 'Diagramm', pad, 10);
+  x.fillStyle = cs.getPropertyValue('--text-3').trim() || '#888'; x.font = '10.5px Barlow, system-ui, sans-serif'; x.textAlign = 'right';
+  x.fillText('OBD Telemetrie Studio' + (typeof App !== 'undefined' && App.fileName ? ' · ' + App.fileName : ''), c.width / dpr - pad, 12);
+  x.restore(); x.drawImage(src, pad * dpr, head * dpr);
+  const a = document.createElement('a');
+  a.href = c.toDataURL('image/png'); a.download = (title || 'diagramm').replace(/[^\wäöüÄÖÜß-]+/g, '_') + '.png';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
 function chartCard(title, opts, chartOpts) {
   opts = opts || {};
+  let chart = null;
+  const dl = el('button', { class: 'btn icon sm ghost', type: 'button', title: 'Diagramm als Bild speichern', 'aria-label': 'Diagramm als Bild speichern',
+    onclick: () => { if (chart) exportChartPng(chart, title); } }, icon('dl'));
+  opts = Object.assign({}, opts, { tools: [].concat(opts.tools || [], [dl]) });
   const host = el('div', { class: 'chart-host' });
   const readout = opts.readout ? el('div', { class: 'readout' }, '—') : null;
   const legend = opts.legend !== false ? el('div', { class: 'legend' }) : null;
   const extra = opts.extra || null;
   const c = card(title, opts, readout, extra, host, legend);
-  const chart = new Chart(host, Object.assign({ height: opts.height || 260 }, chartOpts || {}));
+  chart = new Chart(host, Object.assign({ height: opts.height || 260 }, chartOpts || {}));
   return { node: c, host, chart, legend, readout };
 }
 
@@ -9091,6 +9211,31 @@ const AI_RULES = [
   'Antworte auf Deutsch, sachlich und ohne Panikmache. Wenn alles unauffällig ist, sage das klar, statt Auffälligkeiten zu konstruieren.'
 ];
 
+const AI_VARIANTS = {
+  analyse: { label: 'Tiefenanalyse', hint: 'vollständige technische Bewertung',
+    role: 'Du bist ein erfahrener Kfz-Diagnosetechniker. Du liest Messwerte kritisch, unterscheidest Messung von Rechenwert und sagst offen, wenn die Datenlage für eine Aussage nicht reicht.',
+    tasks: null,
+    questions: ['Welcher der Befunde verdient als erstes eine zweite Aufzeichnung, und wie muss die Fahrt dafür aussehen?',
+                'Gibt es eine Messgröße, deren Verlauf du sehen möchtest, weil die Statistik allein nicht reicht?',
+                'Welche Annahme in den Sollwerten würdest du für dieses Triebwerk anzweifeln?'] },
+  werkstatt: { label: 'Werkstatt-Übergabe', hint: 'kurze Vorbereitung für den Termin auf der Bühne',
+    role: 'Du bist Kfz-Meister und bekommst dieses Fahrzeug demnächst auf die Hebebühne. Du liest die Messwerte als Vorbereitung auf den Termin und schreibst für deine Mechaniker.',
+    tasks: ['Schreibe eine Übergabe von höchstens einer halben Seite: was geprüft werden soll, in welcher Reihenfolge, mit welcher Erwartung.',
+            'Nenne je Prüfpunkt den Messwert, der den Verdacht begründet, und was ein unauffälliges Ergebnis der Prüfung bedeuten würde.',
+            'Trenne klar zwischen Befund, Vermutung und Routinekontrolle.',
+            'Schätze den Zeitaufwand jeder Prüfung grob in Minuten.'],
+    questions: ['Welche Prüfung machst du zuerst, wenn nur eine Stunde Zeit ist?', 'Welche Teile sollten vorsorglich bereitliegen?',
+                'Welche Messung kann die Werkstatt machen, die diese Aufzeichnung nicht kann?'] },
+  kauf: { label: 'Kaufberatung', hint: 'Befunde gegen Preis und Risiko abwägen',
+    role: 'Du berätst jemanden, der dieses Fahrzeug gebraucht kaufen möchte. Du wägst Befunde gegen Preis und Risiko ab, bleibst nüchtern und redest weder schön noch schlecht.',
+    tasks: ['Bewerte den Motorzustand aus Käufersicht in einer von drei Stufen – unbedenklich, verhandelbar, Finger weg – und begründe die Stufe aus den Messwerten.',
+            'Nenne, was vor dem Kauf noch geprüft oder gefahren werden muss, und was der Verkäufer belegen sollte.',
+            'Schätze, welche Befunde Kosten nach sich ziehen, in welcher Größenordnung und wie sicher diese Einschätzung ist.',
+            'Formuliere drei Fragen an den Verkäufer, die sich direkt aus den Daten ergeben.'],
+    questions: ['Welcher Befund wäre für dich ein Grund, vom Kauf abzusehen?', 'Welchen Preisnachlass rechtfertigen die verhandelbaren Punkte ungefähr?',
+                'Was würdest du bei der Probefahrt gezielt provozieren, um einen Verdacht zu prüfen?'] }
+};
+
 const AI_TASKS = [
   'Fasse den technischen Zustand des Motors in wenigen Sätzen zusammen.',
   'Benenne die drei auffälligsten Punkte, jeweils mit der Messgröße, auf die du dich stützt.',
@@ -9108,9 +9253,10 @@ const AI_LIMITS = [
 ];
 
 /* --- Hauptfunktion: erzeugt das komplette XML-Dokument --- */
-function buildAiPrompt(detailKey) {
+function buildAiPrompt(detailKey, variantKey) {
   const ds = App.ds, prof = App.profile;
   const D = AI_DETAIL[detailKey] || AI_DETAIL.standard;
+  const V = AI_VARIANTS[variantKey] || AI_VARIANTS.analyse;
   const L = [];
   const p = (s) => L.push(s);
   const xf = ds ? timeFormatterFor(ds) : null;
@@ -9125,10 +9271,9 @@ function buildAiPrompt(detailKey) {
     'Die Rohdatei mit mehreren hunderttausend Messpunkten ist bewusst nicht enthalten — stattdessen findest du hier ' +
     'die Statistik jeder Messgröße, die Ergebnisse eines Diagnose-Regelwerks gegen hinterlegte Werksangaben, ' +
     'die erkannten Fahrereignisse und eine heruntergerechnete Zeitreihe.</was-ist-das>');
-  p('  <rolle>Du bist ein erfahrener Kfz-Diagnosetechniker. Du liest Messwerte kritisch, unterscheidest Messung von Rechenwert ' +
-    'und sagst offen, wenn die Datenlage für eine Aussage nicht reicht.</rolle>');
+  p('  <rolle>' + xtext(V.role) + '</rolle>');
   p('  <aufgabe>');
-  AI_TASKS.forEach(t => p('    <punkt>' + xtext(t) + '</punkt>'));
+  (V.tasks || AI_TASKS).forEach(t => p('    <punkt>' + xtext(t) + '</punkt>'));
   p('  </aufgabe>');
   p('  <umgang-mit-den-daten>');
   AI_RULES.forEach(r => p('    <regel>' + xtext(r) + '</regel>'));
@@ -9510,7 +9655,18 @@ function buildAiPrompt(detailKey) {
     p('');
   }
 
+  /* ---- Anmerkungen des Fahrers ---- */
+  const marks = sortNotes(store.get(notesKey(driveId(ds, App.fileName)), []));
+  if (marks.length) {
+    p('<anmerkungen anzahl="' + marks.length + '" hinweis="vom Fahrer gesetzt; Zeitpunkte beziehen sich auf die Zeitreihe">');
+    marks.forEach(m => p('  <anmerkung' + xattr({ zeit: xf ? xf(m.t) : round(m.t, 0) }) + '>' + xtext(m.text) + '</anmerkung>'));
+    p('</anmerkungen>');
+    p('');
+  }
   appendInspection(p);
+  p('<rueckfragen hinweis="Beantworte diese Fragen am Ende deiner Antwort in einem eigenen Abschnitt.">');
+  V.questions.forEach(q => p('  <frage>' + xtext(q) + '</frage>'));
+  p('</rueckfragen>');
   p('</obd-fahrtanalyse>');
   return L.join('\n');
 }
@@ -9614,7 +9770,8 @@ function driveSummary(ds, diag, gears, profile, fileName) {
     })) : [],
     tally: diag && diag.tally ? diag.tally : null,
     dtc: (typeof activeDtcCodes === 'function') ? activeDtcCodes() : [],
-    notes: ''
+    notes: '',
+    marks: sortNotes(store.get(notesKey(driveId(ds, fileName)), [])).map(n => ({ t: n.t, text: n.text }))
   };
 }
 
@@ -10641,7 +10798,53 @@ BUILDERS.series = function (page) {
   }
   brush.draw(); update();
 
-  Chart.onHover('series', x => { if (cc.readout.isConnected) updateReadout(cc.readout, x, App.ts); });
+  /* --- Anmerkungen und Ereignisse --- */
+  let lastHover = null;
+  const nk = notesKey(driveId(ds, App.fileName));
+  const noteTime = el('span', { class: 'field dim', style: { minWidth: '150px' } }, 'Zeiger auf das Diagramm setzen');
+  const noteInput = el('input', { class: 'inp', type: 'text', placeholder: 'z. B. hier hat es geruckelt', style: { flex: '1 1 220px', minWidth: '0' },
+    onkeydown: e => { if (e.key === 'Enter') addNote(); } });
+  const noteList = el('div', {});
+  const evToggle = el('button', { class: 'chip', type: 'button', 'aria-pressed': store.get('showEvents', true) ? 'true' : 'false',
+    onclick: () => { const v = !store.get('showEvents', true); store.set('showEvents', v); evToggle.setAttribute('aria-pressed', v ? 'true' : 'false'); update(); renderNotes(); } },
+    'Ereignisse einblenden');
+  function renderNotes() {
+    noteList.innerHTML = '';
+    const notes = sortNotes(store.get(nk, []));
+    if (!notes.length) { noteList.appendChild(el('p', { class: 'dim2', style: { margin: '10px 0 0', fontSize: '12px' } }, 'Noch keine Anmerkung. Zeiger oder Finger auf die Stelle im Diagramm, Text eingeben, setzen.')); }
+    else noteList.appendChild(el('div', { class: 'assist-list', style: { marginTop: '10px' } }, ...notes.map((n, i) =>
+      el('div', { class: 'dtc-row' },
+        el('button', { class: 'dtc-code', type: 'button', title: 'Im Diagramm zeigen', onclick: () => { Chart.emitHover(n.t, null); if (App.map) App.map.setMarkerTime(n.t); } }, xFormatter()(n.t)),
+        el('div', { class: 'dtc-t', style: { flex: '1' } }, el('b', {}, n.text)),
+        el('button', { class: 'btn icon sm ghost', type: 'button', 'aria-label': 'Anmerkung löschen', onclick: () => { const l = sortNotes(store.get(nk, [])); l.splice(i, 1); store.set(nk, l); renderNotes(); update(); akteAutoSave(); } }, icon('x'))))));
+    if (store.get('showEvents', true)) {
+      if (!ds._events) ds._events = driveEvents(ds);
+      const kinds = {}; ds._events.forEach(e => { kinds[e.kind] = (kinds[e.kind] || 0) + 1; });
+      noteList.appendChild(el('div', { class: 'legend', style: { marginTop: '10px' } }, ...Object.keys(kinds).map(k =>
+        el('span', { class: 'li' }, el('b', { style: { color: EVENT_KINDS[k].color, fontWeight: '700' } }, EVENT_KINDS[k].code), EVENT_KINDS[k].label + ' (' + kinds[k] + ')'))));
+    }
+  }
+  function addNote() {
+    const text = noteInput.value.trim(); if (!text) { noteInput.focus(); return; }
+    const t = lastHover !== null ? lastHover : (App.range[0] + App.range[1]) / 2;
+    const l = sortNotes(store.get(nk, [])); l.push({ t, text }); store.set(nk, l);
+    noteInput.value = ''; renderNotes(); update(); akteAutoSave();
+  }
+  page.appendChild(card('Anmerkungen und Ereignisse', {
+    hint: 'eigene Marker an Zeitpunkten – landen in Akte und KI-Prompt',
+    info: { read: 'Zeiger oder Finger auf die Stelle im Verlauf, Text eingeben, „Anmerkung setzen“. Die Anmerkung erscheint als gestrichelte Linie mit N im Verlauf und als Pin auf der Karte, wird mit der Fahrt in der Akte gespeichert und steht im KI-Prompt. Ereignisse erkennt das Werkzeug selbst: S Stopp, V Volllastzug, M gemessener Sprint, K Klopfregelung, B starke Bremsung, W Betriebswarm.',
+            good: 'Eine Anmerkung „ruckelt beim Beschleunigen“ neben einem K-Marker ist die Art Zusammenhang, die aus Zahlen allein nie hervorgeht.',
+            bad: 'Zu viele Marker verdecken die Kurve – Ereignisse lassen sich ausblenden.' }
+  },
+    el('div', { class: 'chiprow', style: { alignItems: 'center' } }, noteTime, noteInput,
+      el('button', { class: 'btn', type: 'button', onclick: addNote }, 'Anmerkung setzen'), evToggle),
+    noteList));
+  renderNotes();
+
+  Chart.onHover('series', x => {
+    if (cc.readout.isConnected) updateReadout(cc.readout, x, App.ts);
+    if (x !== null && x !== undefined) { lastHover = x; noteTime.textContent = 'Stelle: ' + xFormatter()(x); }
+  });
 };
 
 const GROUP_ORDER = ['motor', 'boost', 'temp', 'fuel', 'cons', 'drive', 'calc', 'misc'];
@@ -10679,8 +10882,22 @@ function drawTimeseries(cc, ids, range, whole) {
     }
   }
   cc.chart.axes = axes;
+  /* Sollbänder: grüner Bereich der Werksangabe hinter der Kurve, nur für Reihen mit eigener Achse */
+  const bandColor = getComputedStyle(document.documentElement).getPropertyValue('--chart-band').trim() || 'rgba(79,207,146,.10)';
+  cc.chart.refBands = series.filter(s => s.axis >= 0).map(s => { const b = specBandFor(s.id, App.profile); return b ? { axis: s.axis, lo: b[0], hi: b[1], color: bandColor } : null; }).filter(Boolean);
+  cc.chart.marks = whole ? [] : driveMarks(ds);
   cc.chart.setData({ series, bands, xRange: range, xFormat: xFormatter() });
   legendItems(cc.legend, series);
+}
+
+/* Marker für Verläufe und Karte: Anmerkungen immer, Ereignisse wenn eingeblendet */
+function driveMarks(ds) {
+  const notes = sortNotes(store.get(notesKey(driveId(ds, App.fileName)), []))
+    .map(n => ({ t: n.t, kind: 'note', code: 'N', color: EVENT_KINDS.note.color, label: 'N · ' + (n.text.length > 22 ? n.text.slice(0, 21) + '…' : n.text), dashed: true, text: n.text }));
+  if (!store.get('showEvents', true)) return notes;
+  if (!ds._events) ds._events = driveEvents(ds);
+  return notes.concat(ds._events.map(e => ({ t: e.t, kind: e.kind, code: e.code, color: e.color, label: e.code, text: e.label })))
+    .sort((a, b) => a.t - b.t);
 }
 
 function updateReadout(node, x, ids) {
@@ -10926,7 +11143,21 @@ BUILDERS.map = function (page) {
       rampRow.appendChild(el('span', { class: 'li', style: { display: 'inline-flex', alignItems: 'center', gap: '5px', marginRight: '10px' } },
         el('i', { style: { display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: catColor(c) } }), CAT_LABEL[c])));
   }
-  requestAnimationFrame(() => { map.resize(); paint(); map.fit(); });
+  /* Marker: Ereignisse und Anmerkungen als Pins */
+  const pinRow = el('div', { class: 'legend' });
+  c.appendChild(pinRow);
+  function paintPins() {
+    pinRow.innerHTML = '';
+    const marks = driveMarks(ds);
+    const pins = marks.map(m => { const ti = bisect(tr.t, m.t); return ti >= 0 && ti < tr.n ? { lat: tr.lat[ti], lon: tr.lon[ti], color: m.color, code: m.code, label: m.text } : null; }).filter(Boolean);
+    map.setPins(pins);
+    const kinds = {}; marks.forEach(m => { kinds[m.kind] = (kinds[m.kind] || 0) + 1; });
+    const tg = el('button', { class: 'chip', type: 'button', style: { minHeight: '26px', padding: '2px 9px' }, 'aria-pressed': store.get('showEvents', true) ? 'true' : 'false',
+      onclick: () => { store.set('showEvents', !store.get('showEvents', true)); paintPins(); } }, 'Ereignisse');
+    pinRow.appendChild(tg);
+    Object.keys(kinds).forEach(k => pinRow.appendChild(el('span', { class: 'li' }, el('b', { style: { color: EVENT_KINDS[k].color, fontWeight: '700' } }, EVENT_KINDS[k].code), EVENT_KINDS[k].label + ' (' + kinds[k] + ')')));
+  }
+  requestAnimationFrame(() => { map.resize(); paint(); paintPins(); map.fit(); });
 
   function paint() {
     if (App.mapMetric === '__limits') { paintLimits(); return; }
@@ -12161,7 +12392,7 @@ BUILDERS.ai = function (page) {
 
   function build(k) {
     store.set('aiDetail', k);
-    xml = buildAiPrompt(k);
+    xml = buildAiPrompt(k, store.get('aiVariant', 'analyse'));
     out.textContent = xml;
     const kb = xml.length / 1024;
     const tok = Math.round(xml.length / 3.6 / 100) * 100;
@@ -12179,6 +12410,12 @@ BUILDERS.ai = function (page) {
       onclick: e => { Array.from(e.target.parentNode.children).forEach(b =>
         b.setAttribute('aria-pressed', b === e.target ? 'true' : 'false')); build(k); } },
       AI_DETAIL[k].label)));
+  const vkey = store.get('aiVariant', 'analyse');
+  const vseg = el('div', { class: 'seg' }, Object.keys(AI_VARIANTS).map(k =>
+    el('button', { type: 'button', 'aria-pressed': k === vkey ? 'true' : 'false', title: AI_VARIANTS[k].hint,
+      onclick: e => { store.set('aiVariant', k); Array.from(e.target.parentNode.children).forEach(b =>
+        b.setAttribute('aria-pressed', b === e.target ? 'true' : 'false')); build(store.get('aiDetail', 'standard')); } },
+      AI_VARIANTS[k].label)));
 
   page.appendChild(noteBox('info', 'Was das ist',
     'Dieses Werkzeug rechnet die Fahrt aus, ordnet sie in Sollbereiche ein und sagt, wo die Datenlage für ein Urteil nicht reicht. ' +
@@ -12188,7 +12425,7 @@ BUILDERS.ai = function (page) {
 
   page.appendChild(card('Prompt erzeugen', {
     hint: 'die Rohdatei bleibt außen vor — 28 MB passen in kein Kontextfenster',
-    tools: seg,
+    tools: [vseg, seg],
     info: {
       read: 'Die Stufe steuert, wie fein die Zeitreihe aufgelöst wird und ob die Werteverteilungen mitgehen. „Kompakt“ enthält Kennzahlen und Befunde mit einem Messpunkt alle 15 Sekunden, „Vollständig“ alle zwei Sekunden.',
       good: 'Für die meisten Fragen reicht „Standard“. Wenn das Modell sich über die Länge beschwert oder abschneidet, eine Stufe zurück.',

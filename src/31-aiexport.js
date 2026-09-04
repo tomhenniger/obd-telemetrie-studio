@@ -58,6 +58,31 @@ const AI_RULES = [
   'Antworte auf Deutsch, sachlich und ohne Panikmache. Wenn alles unauffällig ist, sage das klar, statt Auffälligkeiten zu konstruieren.'
 ];
 
+const AI_VARIANTS = {
+  analyse: { label: 'Tiefenanalyse', hint: 'vollständige technische Bewertung',
+    role: 'Du bist ein erfahrener Kfz-Diagnosetechniker. Du liest Messwerte kritisch, unterscheidest Messung von Rechenwert und sagst offen, wenn die Datenlage für eine Aussage nicht reicht.',
+    tasks: null,
+    questions: ['Welcher der Befunde verdient als erstes eine zweite Aufzeichnung, und wie muss die Fahrt dafür aussehen?',
+                'Gibt es eine Messgröße, deren Verlauf du sehen möchtest, weil die Statistik allein nicht reicht?',
+                'Welche Annahme in den Sollwerten würdest du für dieses Triebwerk anzweifeln?'] },
+  werkstatt: { label: 'Werkstatt-Übergabe', hint: 'kurze Vorbereitung für den Termin auf der Bühne',
+    role: 'Du bist Kfz-Meister und bekommst dieses Fahrzeug demnächst auf die Hebebühne. Du liest die Messwerte als Vorbereitung auf den Termin und schreibst für deine Mechaniker.',
+    tasks: ['Schreibe eine Übergabe von höchstens einer halben Seite: was geprüft werden soll, in welcher Reihenfolge, mit welcher Erwartung.',
+            'Nenne je Prüfpunkt den Messwert, der den Verdacht begründet, und was ein unauffälliges Ergebnis der Prüfung bedeuten würde.',
+            'Trenne klar zwischen Befund, Vermutung und Routinekontrolle.',
+            'Schätze den Zeitaufwand jeder Prüfung grob in Minuten.'],
+    questions: ['Welche Prüfung machst du zuerst, wenn nur eine Stunde Zeit ist?', 'Welche Teile sollten vorsorglich bereitliegen?',
+                'Welche Messung kann die Werkstatt machen, die diese Aufzeichnung nicht kann?'] },
+  kauf: { label: 'Kaufberatung', hint: 'Befunde gegen Preis und Risiko abwägen',
+    role: 'Du berätst jemanden, der dieses Fahrzeug gebraucht kaufen möchte. Du wägst Befunde gegen Preis und Risiko ab, bleibst nüchtern und redest weder schön noch schlecht.',
+    tasks: ['Bewerte den Motorzustand aus Käufersicht in einer von drei Stufen – unbedenklich, verhandelbar, Finger weg – und begründe die Stufe aus den Messwerten.',
+            'Nenne, was vor dem Kauf noch geprüft oder gefahren werden muss, und was der Verkäufer belegen sollte.',
+            'Schätze, welche Befunde Kosten nach sich ziehen, in welcher Größenordnung und wie sicher diese Einschätzung ist.',
+            'Formuliere drei Fragen an den Verkäufer, die sich direkt aus den Daten ergeben.'],
+    questions: ['Welcher Befund wäre für dich ein Grund, vom Kauf abzusehen?', 'Welchen Preisnachlass rechtfertigen die verhandelbaren Punkte ungefähr?',
+                'Was würdest du bei der Probefahrt gezielt provozieren, um einen Verdacht zu prüfen?'] }
+};
+
 const AI_TASKS = [
   'Fasse den technischen Zustand des Motors in wenigen Sätzen zusammen.',
   'Benenne die drei auffälligsten Punkte, jeweils mit der Messgröße, auf die du dich stützt.',
@@ -75,9 +100,10 @@ const AI_LIMITS = [
 ];
 
 /* --- Hauptfunktion: erzeugt das komplette XML-Dokument --- */
-function buildAiPrompt(detailKey) {
+function buildAiPrompt(detailKey, variantKey) {
   const ds = App.ds, prof = App.profile;
   const D = AI_DETAIL[detailKey] || AI_DETAIL.standard;
+  const V = AI_VARIANTS[variantKey] || AI_VARIANTS.analyse;
   const L = [];
   const p = (s) => L.push(s);
   const xf = ds ? timeFormatterFor(ds) : null;
@@ -92,10 +118,9 @@ function buildAiPrompt(detailKey) {
     'Die Rohdatei mit mehreren hunderttausend Messpunkten ist bewusst nicht enthalten — stattdessen findest du hier ' +
     'die Statistik jeder Messgröße, die Ergebnisse eines Diagnose-Regelwerks gegen hinterlegte Werksangaben, ' +
     'die erkannten Fahrereignisse und eine heruntergerechnete Zeitreihe.</was-ist-das>');
-  p('  <rolle>Du bist ein erfahrener Kfz-Diagnosetechniker. Du liest Messwerte kritisch, unterscheidest Messung von Rechenwert ' +
-    'und sagst offen, wenn die Datenlage für eine Aussage nicht reicht.</rolle>');
+  p('  <rolle>' + xtext(V.role) + '</rolle>');
   p('  <aufgabe>');
-  AI_TASKS.forEach(t => p('    <punkt>' + xtext(t) + '</punkt>'));
+  (V.tasks || AI_TASKS).forEach(t => p('    <punkt>' + xtext(t) + '</punkt>'));
   p('  </aufgabe>');
   p('  <umgang-mit-den-daten>');
   AI_RULES.forEach(r => p('    <regel>' + xtext(r) + '</regel>'));
@@ -477,7 +502,18 @@ function buildAiPrompt(detailKey) {
     p('');
   }
 
+  /* ---- Anmerkungen des Fahrers ---- */
+  const marks = sortNotes(store.get(notesKey(driveId(ds, App.fileName)), []));
+  if (marks.length) {
+    p('<anmerkungen anzahl="' + marks.length + '" hinweis="vom Fahrer gesetzt; Zeitpunkte beziehen sich auf die Zeitreihe">');
+    marks.forEach(m => p('  <anmerkung' + xattr({ zeit: xf ? xf(m.t) : round(m.t, 0) }) + '>' + xtext(m.text) + '</anmerkung>'));
+    p('</anmerkungen>');
+    p('');
+  }
   appendInspection(p);
+  p('<rueckfragen hinweis="Beantworte diese Fragen am Ende deiner Antwort in einem eigenen Abschnitt.">');
+  V.questions.forEach(q => p('  <frage>' + xtext(q) + '</frage>'));
+  p('</rueckfragen>');
   p('</obd-fahrtanalyse>');
   return L.join('\n');
 }

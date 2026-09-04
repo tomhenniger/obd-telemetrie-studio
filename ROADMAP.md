@@ -12,7 +12,7 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 - [ ] Schaltanalyse: Schaltpunkte je Gang, Schaltdauer aus dem Drehzahleinbruch, Zeitanteil je Gang. Mittel.
 - [ ] Ladedruckaufbau je Volllastzug (Spool-Zeit), Trend in der Akte. Klein bis mittel.
 - [ ] Thermomanagement-Profil: Kühlmittel, Öl, Ladeluft, Getriebe in einem Bild, Warmlaufzeit je Größe. Klein.
-- [ ] Ereignisse auf der Karte: Bremsungen, Kickdowns, Klopfereignisse, Warmlauf-Ende als Marker. Klein.
+- [x] Ereignisse auf Karte und Verläufen: Stopps, Volllastzüge, Sprints, Klopfregelung, starke Bremsungen, Betriebswarm als Marker mit Kürzel, ein- und ausblendbar. (2026-09-04)
 
 ### Strecke (auf dem OSM-Matching)
 - [ ] Verbrauch je Straßenabschnitt. Klein.
@@ -49,8 +49,8 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 - [ ] GPX-Track ergänzen, wenn die OBD-App kein GPS hatte. Klein.
 
 ### Erlebnis
-- [ ] Anmerkungen an Zeitpunkte („hier hat es geruckelt“), in Akte und KI-Prompt. Klein.
+- [x] Anmerkungen an Zeitpunkte, als N-Marker in Verlauf und Karte, in Akte und KI-Prompt. (2026-09-04)
 - [ ] Fahrt nacherleben: Zeitraffer mit Marker auf Karte und Zeiger in den Verläufen. Mittel.
-- [ ] Sollband als Schattierung in den Verläufen (Kühlmittel, Ladeluft, Gemisch). Klein.
-- [ ] Diagramme als Bild speichern. Klein.
-- [ ] Prompt-Varianten: Werkstatt-Übergabe, Kaufberatung, Tiefenanalyse, mit Rückfragen-Katalog. Klein.
+- [x] Sollband als Schattierung in den Verläufen (Kühlmittel, Öl, Getriebe, Gemisch, Bordspannung, Kat, Lambda). (2026-09-04)
+- [x] Diagramme als Bild speichern (Knopf an jeder Diagrammkarte, PNG mit Titel). (2026-09-04)
+- [x] Prompt-Varianten Tiefenanalyse, Werkstatt-Übergabe, Kaufberatung mit Rückfragen-Katalog. (2026-09-04)

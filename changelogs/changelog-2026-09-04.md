@@ -1,6 +1,11 @@
 # Changelog — 2026-09-04
 
 ## Neue Features
+- **Anmerkungen an Zeitpunkten** (Zeitreihen): Zeiger auf die Stelle, Text eingeben, setzen. Erscheint als gestrichelte N-Linie im Verlauf und als Pin auf der Karte, wird mit der Fahrt in der Akte gespeichert und steht im KI-Prompt unter `<anmerkungen>`.
+- **Ereignis-Marker** auf Verlauf und Karte: Stopps (S), Volllastzüge (V), gemessene Sprints (M), Klopfregelung (K), starke Bremsungen (B, unter −0,3 g), Betriebswarm (W). Ein- und ausblendbar, mit Legende und Zählern.
+- **Sollbänder** in den Verläufen: Kühlmittel, Öl, Getriebe, Gemischkorrektur, Bordspannung, Kat, Lambda bekommen den grünen Sollbereich (Werksangabe aus dem Profil, sonst Klassenwert) hinterlegt.
+- **Diagramm als Bild speichern**: Knopf an jeder Diagrammkarte, PNG mit Titel und Dateiname.
+- **KI-Prompt in drei Varianten**: Tiefenanalyse, Werkstatt-Übergabe (halbe Seite für den Termin auf der Bühne), Kaufberatung (unbedenklich / verhandelbar / Finger weg), jeweils mit eigenem Rückfragen-Katalog am Ende.
 - **Neuer Bereich „Tacho & Reifen“**: Reifenfaktor aus OBD- gegen GPS-Geschwindigkeit (nur ruhige Sekunden, Median, je Geschwindigkeitsklasse, Streubild), Tempomat-Tabelle mit tatsächlicher Geschwindigkeit inklusive einstellbarer Tacho-Voreilung, Reifenrechner (Größe → Durchmesser und Abrollumfang, wirksamer Umfang aus der Messung, Abweichung als Profilverlust oder falsche Größe, passende Größen), Übernahme des wirksamen Umfangs in die Gangerkennung.
 
 

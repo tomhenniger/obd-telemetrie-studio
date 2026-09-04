@@ -68,7 +68,8 @@ function driveSummary(ds, diag, gears, profile, fileName) {
     })) : [],
     tally: diag && diag.tally ? diag.tally : null,
     dtc: (typeof activeDtcCodes === 'function') ? activeDtcCodes() : [],
-    notes: ''
+    notes: '',
+    marks: sortNotes(store.get(notesKey(driveId(ds, fileName)), [])).map(n => ({ t: n.t, text: n.text }))
   };
 }
 

@@ -224,6 +224,26 @@ class Chart {
     }
     ctx.restore();
 
+    // Marker: Ereignisse und Anmerkungen als senkrechte Linien mit Kürzel
+    if (this.marks && this.marks.length) {
+      ctx.save(); ctx.beginPath(); ctx.rect(P.x, P.y - 2, P.w, P.h + 4); ctx.clip();
+      ctx.font = '600 10px ' + FONT_UI; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+      let lastX = -Infinity, row = 0;
+      for (const m of this.marks) {
+        const px = Math.round(this.xScale(m.t)) + .5; if (px < P.x || px > P.x + P.w) continue;
+        ctx.strokeStyle = m.color || THEME.axis; ctx.lineWidth = m.dashed ? 1 : 1.2; ctx.setLineDash(m.dashed ? [3, 3] : []);
+        ctx.beginPath(); ctx.moveTo(px, P.y); ctx.lineTo(px, P.y + P.h); ctx.stroke(); ctx.setLineDash([]);
+        if (m.label) {
+          row = px - lastX < 60 ? (row + 1) % 3 : 0;          // dicht liegende Marker versetzt beschriften
+          const w = ctx.measureText(m.label).width + 8, y = P.y + 3 + row * 15;
+          ctx.fillStyle = 'rgba(8,9,10,.7)'; ctx.fillRect(px + 2, y, w, 13);
+          ctx.fillStyle = m.color || THEME.axis; ctx.fillText(m.label, px + 6, y + 2);
+          lastX = px;
+        }
+      }
+      ctx.restore();
+    }
+
     // Rahmen
     ctx.strokeStyle = THEME.gridB; ctx.lineWidth = 1;
     ctx.strokeRect(P.x + .5, P.y + .5, P.w - 1, P.h - 1);
