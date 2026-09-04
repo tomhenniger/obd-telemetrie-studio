@@ -278,3 +278,57 @@ function serviceStatus(profile, state, nowMs) {
              kmLeft, daysLeft, status };
   });
 }
+
+/* ===== Zwei Fahrten vergleichen =====================================
+   Stellt die gespeicherten Kennzahlen zweier Fahrten nebeneinander und
+   nennt die Abweichung. Ohne Rohdaten – die stehen nicht in der Akte.
+   ================================================================== */
+const COMPARE_FIELDS = [
+  { k: 'dist',        label: 'Strecke',                 unit: 'km',       dec: 2, dir: 0 },
+  { k: 'duration',    label: 'Dauer',                   unit: 's',        dec: 0, dir: 0, time: true },
+  { k: 'vAvgMoving',  label: '⌀ Geschwindigkeit',       unit: 'km/h',     dec: 1, dir: 0 },
+  { k: 'vMax',        label: 'Höchstgeschwindigkeit',   unit: 'km/h',     dec: 0, dir: 0 },
+  { k: 'consAvg',     label: 'Verbrauch',               unit: 'L/100km',  dec: 1, dir: -1 },
+  { k: 'fuelUsed',    label: 'Kraftstoff',              unit: 'L',        dec: 2, dir: -1 },
+  { k: 'rpmMax',      label: 'Höchstdrehzahl',          unit: 'min⁻¹',    dec: 0, dir: 0 },
+  { k: 'coolantMax',  label: 'Kühlmittel max.',         unit: '°C',       dec: 0, dir: -1 },
+  { k: 'warmupTime',  label: 'Warmlaufzeit',            unit: 's',        dec: 0, dir: -1, time: true },
+  { k: 'stops',       label: 'Stopps',                  unit: '',         dec: 0, dir: 0 },
+  { k: 'knock',       label: 'Klopfereignisse',         unit: '',         dec: 0, dir: -1 },
+  { k: 'wotTime',     label: 'Volllastzeit',            unit: 's',        dec: 0, dir: 0, time: true }
+];
+
+function compareDrives(a, b) {
+  if (!a || !b) return null;
+  const rows = COMPARE_FIELDS.map(f => {
+    const va = a[f.k] === undefined || a[f.k] === null ? NaN : +a[f.k];
+    const vb = b[f.k] === undefined || b[f.k] === null ? NaN : +b[f.k];
+    const diff = isFinite(va) && isFinite(vb) ? vb - va : NaN;
+    const pct = isFinite(diff) && Math.abs(va) > 1e-9 ? diff / Math.abs(va) * 100 : NaN;
+    /* Richtung: -1 = kleiner ist besser, +1 = größer ist besser, 0 = neutral */
+    const better = f.dir === 0 || !isFinite(diff) ? null : (f.dir * diff > 0);
+    return Object.assign({}, f, { a: va, b: vb, diff, pct, better });
+  });
+  /* Befunde, deren Status oder Wert sich geändert hat */
+  const byId = new Map((a.diag || []).map(d => [d.id, d]));
+  const diag = [];
+  for (const d of (b.diag || [])) {
+    const p = byId.get(d.id);
+    if (!p) { diag.push({ id: d.id, from: null, to: d.status, va: null, vb: d.value, unit: d.unit, changed: true }); continue; }
+    const vChanged = p.value !== null && d.value !== null && p.value !== undefined && d.value !== undefined &&
+                     Math.abs(d.value - p.value) > Math.max(0.05, Math.abs(p.value) * 0.1);
+    if (p.status !== d.status || vChanged)
+      diag.push({ id: d.id, from: p.status, to: d.status, va: p.value, vb: d.value, unit: d.unit || p.unit,
+                  changed: true, statusChanged: p.status !== d.status });
+  }
+  const order = { crit: 0, warn: 1, unklar: 2, missing: 3, ok: 4 };
+  diag.sort((x, y) => (order[x.to] === undefined ? 9 : order[x.to]) - (order[y.to] === undefined ? 9 : order[y.to]));
+  /* Gänge nebeneinander */
+  const gears = [];
+  const gb = new Map((b.gears || []).map(g => [g.label, g]));
+  for (const g of (a.gears || [])) {
+    const o = gb.get(g.label);
+    gears.push({ label: g.label, a: g.kmh, b: o ? o.kmh : null, dev: o && g.kmh ? (o.kmh - g.kmh) / g.kmh * 100 : NaN });
+  }
+  return { a, b, rows, diag, gears };
+}

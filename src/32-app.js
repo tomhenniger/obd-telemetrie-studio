@@ -3207,6 +3207,49 @@ BUILDERS.akte = function (page) {
     }, el('div', { class: 'tblwrap' }, matrix)));
 
     /* Verlauf einer Regel */
+    /* --- Zwei Fahrten vergleichen --- */
+    if (shown.length >= 2) {
+      const ids = shown.slice().sort((x, y) => y.date - x.date);
+      const selA = store.get('cmpA', ids[1].id), selB = store.get('cmpB', ids[0].id);
+      const opt = (v, sel) => ids.map(r => el('option', { value: r.id, selected: r.id === v ? true : null },
+        AKTE_FMT_DATE(r.date) + ' · ' + fmt(r.dist || 0, 1) + ' km · ' + (r.file || '')));
+      const sa = el('select', { class: 'sel', onchange: e => { store.set('cmpA', e.target.value); render(); } }, opt(selA));
+      const sb = el('select', { class: 'sel', onchange: e => { store.set('cmpB', e.target.value); render(); } }, opt(selB));
+      const A = ids.find(r => r.id === selA) || ids[1], B = ids.find(r => r.id === selB) || ids[0];
+      const cmp = compareDrives(A, B);
+      const cHost = el('div');
+      cHost.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center', marginBottom: '10px' } },
+        el('span', { class: 'field' }, el('span', { class: 'dim' }, 'vorher'), sa),
+        el('span', { class: 'field' }, el('span', { class: 'dim' }, 'nachher'), sb)));
+      if (A.id === B.id) cHost.appendChild(el('p', { class: 'dim' }, 'Bitte zwei verschiedene Fahrten wählen.'));
+      else {
+        const fmtV = (v, f) => !isFinite(v) ? '–' : f.time ? fmtDur(v) : fmt(v, f.dec) + (f.unit ? ' ' + f.unit : '');
+        cHost.appendChild(el('div', { class: 'tblwrap' }, el('table', { class: 'tbl', style: { minWidth: '520px' } },
+          el('thead', {}, el('tr', {}, el('th', {}, 'Kennzahl'), el('th', {}, 'vorher'), el('th', {}, 'nachher'), el('th', {}, 'Differenz'), el('th', {}, ''))),
+          el('tbody', {}, ...cmp.rows.filter(r => isFinite(r.a) || isFinite(r.b)).map(r => el('tr', {},
+            el('td', {}, r.label), el('td', { class: 'n' }, fmtV(r.a, r)), el('td', { class: 'n' }, fmtV(r.b, r)),
+            el('td', { class: 'n' }, isFinite(r.diff) ? (r.diff >= 0 ? '+' : '') + (r.time ? fmtDur(Math.abs(r.diff)) : fmt(r.diff, r.dec)) + (isFinite(r.pct) ? ' (' + (r.pct >= 0 ? '+' : '') + fmt(r.pct, 1) + ' %)' : '') : '–'),
+            el('td', {}, r.better === null ? null : el('span', { class: 'badge ' + (r.better ? 'ok' : 'warn') }, r.better ? 'besser' : 'schlechter'))))))));
+        if (cmp.diag.length) {
+          cHost.appendChild(el('div', { style: { marginTop: '12px' } },
+            el('div', { class: 'lbl-eng', style: { marginBottom: '6px' } }, 'Veränderte Befunde (' + cmp.diag.length + ')'),
+            el('div', { class: 'tblwrap' }, el('table', { class: 'tbl', style: { minWidth: '480px' } },
+              el('thead', {}, el('tr', {}, el('th', {}, 'Befund'), el('th', {}, 'vorher'), el('th', {}, 'nachher'), el('th', {}, 'Wert'))),
+              el('tbody', {}, ...cmp.diag.slice(0, 20).map(d => el('tr', {},
+                el('td', {}, ruleTitle(d.id)),
+                el('td', {}, d.from ? el('span', { class: 'badge ' + (d.from === 'ok' ? 'ok' : d.from === 'warn' ? 'warn' : d.from === 'crit' ? 'crit' : 'mute') }, d.from) : el('span', { class: 'dim2' }, 'neu')),
+                el('td', {}, el('span', { class: 'badge ' + (d.to === 'ok' ? 'ok' : d.to === 'warn' ? 'warn' : d.to === 'crit' ? 'crit' : 'mute') }, d.to)),
+                el('td', { class: 'n' }, (d.va !== null && d.va !== undefined ? fmt(d.va, 2) : '–') + ' → ' + (d.vb !== null && d.vb !== undefined ? fmt(d.vb, 2) : '–') + (d.unit ? ' ' + d.unit : '')))))))));
+        } else cHost.appendChild(el('p', { class: 'dim', style: { marginTop: '12px' } }, 'Kein Befund hat sich zwischen diesen Fahrten geändert.'));
+      }
+      host.appendChild(card('Zwei Fahrten vergleichen', {
+        hint: 'vorher und nachher – etwa vor und nach einer Reparatur',
+        info: { read: 'Beide Fahrten stammen aus der Akte. Die Tabelle stellt die Kennzahlen nebeneinander; „besser“ und „schlechter“ stehen nur dort, wo die Richtung eindeutig ist – weniger Verbrauch ist besser, mehr Strecke ist weder noch. Darunter stehen die Befunde, deren Bewertung oder Wert sich um mehr als zehn Prozent geändert hat.',
+                good: 'Nach einer Reparatur: der behandelte Befund wechselt von auffällig auf unauffällig, der Rest bleibt gleich.',
+                bad: 'Zwei Fahrten sind nur vergleichbar, wenn Strecke und Fahrweise ähnlich waren. Ein Verbrauchsunterschied zwischen Stadtfahrt und Autobahn sagt nichts über den Motor.' }
+      }, cHost));
+    }
+
     /* --- Persönliche Baseline --- */
     {
       const bl = baselineRules(shown).sort((a, b) => Math.abs(b.b.slope30 / (b.b.sigma || 1)) - Math.abs(a.b.slope30 / (a.b.sigma || 1)));

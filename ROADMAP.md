@@ -8,7 +8,7 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 - [x] Tacho & Reifen: Reifenfaktor aus OBD gegen GPS, Tempomat-Tabelle, Reifenrechner mit passenden Größen, wirksamer Umfang für die Gangerkennung. (2026-09-04)
 
 ### Auswertung
-- [ ] Zwei Fahrten überlagern: Verläufe und Kennfelder zweier Aufzeichnungen übereinander (vor/nach Reparatur, Sommer/Winter). Mittel.
+- [x] Zwei Fahrten vergleichen (Akte): Kennzahlen nebeneinander mit Differenz und Richtung, veränderte Befunde, Gangübersetzungen. Verläufe übereinanderlegen bleibt offen – dafür müssten Rohdaten in der Akte liegen. (2026-09-04)
 - [x] Schaltanalyse (Kennfelder): Schaltpunkte je Gangpaar hoch und runter, Drehzahl davor/danach, Schaltdauer, Zeitanteil je Gang, Kickdowns. (2026-09-04)
 - [x] Ladedruckaufbau je Volllastzug als Diagnoseregel (Zeit bis 90 % des Spitzendrucks, Kompressor/Turbo getrennt bewertet), damit auch als Trend in der Akte. (2026-09-04)
 - [x] Wärmehaushalt auf dem Überblick: alle Temperaturen in einem Bild, Startwert, Zeit bis Betriebstemperatur, Niveau der letzten 10 Minuten. (2026-09-04)

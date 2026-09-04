@@ -4,8 +4,11 @@
   "description": "OBD2-CSV-Auswertung als einzelne HTML-Datei",
   "scripts": {
     "build": "./build.sh",
+    "check:build": "./build.sh >/dev/null && node scripts/check-build.js",
     "test": "node --test test/*.test.js",
     "test:real": "OBD_REAL=1 node --test test/real.test.js"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

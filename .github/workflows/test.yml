@@ -13,5 +13,6 @@ jobs:
           node-version: 22
       - run: node --test test/*.test.js
       - run: ./build.sh
+      - run: node scripts/check-build.js
       - name: index.html muss aktuell sein
         run: git diff --exit-code -- index.html || (echo "index.html ist nicht aus src/ gebaut – ./build.sh ausführen und committen" && exit 1)

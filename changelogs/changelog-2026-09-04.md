@@ -1,6 +1,7 @@
 # Changelog — 2026-09-04
 
 ## Neue Features
+- **Zwei Fahrten vergleichen** (Fahrzeugakte): zwei gespeicherte Fahrten auswählen, Kennzahlen nebeneinander mit Differenz, Prozent und Bewertung „besser/schlechter“ dort, wo die Richtung eindeutig ist; darunter alle Befunde, deren Status oder Wert sich geändert hat.
 - **Mehrere Dateien auf einmal**: abgebrochene Aufzeichnungen lassen sich als CSV-Teile zusammen auswählen oder ablegen; sie werden nach Zeit sortiert zu einer Fahrt zusammengesetzt (gleiche Spalten vorausgesetzt). Eine mitgegebene GPX-Datei ergänzt die Route, wenn die OBD-App kein GPS aufgezeichnet hat.
 - **Zusammenfassung teilen** (KI-Prompt): erzeugt einen Link, der Kennzahlen, bewertete Befunde und Fahrzeugprofil gepackt in der Adresse trägt. Kein Server, keine Route, keine Rohdaten. Wer ihn öffnet, sieht die Zusammenfassung als Karte auf dem Startbildschirm.
 - **Persönliche Baseline** (Fahrzeugakte): ab fünf Fahrten lernt die Akte je Befund den Normalbereich dieses Wagens (Median, robustes 3σ-Streuband) und den Trend je 30 Tage. Die aktuelle Fahrt wird dagegen bewertet: „außerhalb der eigenen Norm“ trotz grünem Werksband ist der eigentliche Gewinn.
@@ -34,4 +35,5 @@
 
 
 ## Sonstiges
+- Build-Prüfung: `npm run check:build` und ein CI-Schritt parsen das gebaute `index.html`, damit ein fehlendes Klammerpaar sofort auffällt statt erst im Rauchtest.
 
