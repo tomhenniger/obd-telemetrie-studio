@@ -117,11 +117,15 @@ test('Zuordnung: Punkte entlang einer Straße, Bewertung je Abschnitt, Summen un
 
 test('Abfrage: Route wird ausgedünnt, Overpass-Text enthält Polylinie und Straßenfilter', () => {
   const thin = g('limitsThinTrack'), q = g('limitsOverpassQuery');
-  const n = 2000;
+  const n = 12000;
   const tr = { n, lat: new Float64Array(n), lon: new Float64Array(n) };
-  for (let i = 0; i < n; i++) { tr.lat[i] = 53 + i * 0.00009; tr.lon[i] = 10; }   // 10 m Schritte, 20 km
+  for (let i = 0; i < n; i++) { tr.lat[i] = 53 + i * 0.00009; tr.lon[i] = 10 + 0.002 * Math.sin(i / 40); }   // 10 m Schritte, 120 km, kurvig
   const pts = thin(tr);
-  assert.ok(pts.length <= 650 && pts.length > 200, 'Punkte: ' + pts.length);
+  assert.ok(pts.length <= 650 && pts.length > 100, 'Punkte: ' + pts.length);
+  assert.ok(pts.tolM >= 8 && pts.tolM < 200, 'Toleranz: ' + pts.tolM);
+  /* Gerade Strecke braucht fast keine Punkte, kurze Route bleibt bei 8 m Toleranz */
+  const straight = { n: 500, lat: new Float64Array(500).map((_, i) => 53 + i * 0.00009), lon: new Float64Array(500).fill(10) };
+  const sp = thin(straight); assert.ok(sp.length <= 4, 'Gerade: ' + sp.length); assert.equal(sp.tolM, 8);
   const s = q(pts.slice(0, 3), 25);
   assert.match(s, /^\[out:json\]\[timeout:90\];way\(around:25,53\.00000,10\.00000,/);
   assert.match(s, /\["highway"\]\["highway"!~"\^\(footway\|/);

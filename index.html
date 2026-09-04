@@ -3711,21 +3711,50 @@ const IMPLICIT_LIMITS = {
 };
 
 /* ---------- Route ausdünnen und Abfrage bauen ---------- */
-function limitsThinTrack(tr, minM, maxPts) {
-  minM = minM || 40; maxPts = maxPts || 650;
-  let pts;
-  for (let pass = 0; pass < 8; pass++) {
-    pts = [];
-    let lastLat = NaN, lastLon = NaN;
-    for (let i = 0; i < tr.n; i++) {
-      const la = tr.lat[i], lo = tr.lon[i];
-      if (!(la === la && lo === lo)) continue;
-      if (pts.length && haversine(lastLat, lastLon, la, lo) < minM) continue;
-      pts.push([la, lo]); lastLat = la; lastLon = lo;
+/* Formtreue Vereinfachung (Douglas–Peucker): Punkte bleiben, wo die Route abknickt,
+   auf Geraden fallen sie weg. So passt auch eine lange Fahrt in eine Anfrage, ohne
+   dass die Sehnen Kurven schneiden – die Toleranz wächst nur so weit wie nötig. */
+function limitsSimplify(pts, tolM) {
+  if (pts.length <= 2) return pts.slice();
+  const cosLat = Math.cos(pts[0][0] * Math.PI / 180), mx = 111320 * cosLat, my = 110540;
+  const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
+  const stack = [[0, pts.length - 1]];
+  while (stack.length) {
+    const [a, b] = stack.pop();
+    if (b - a < 2) continue;
+    const ax = pts[a][1] * mx, ay = pts[a][0] * my, bx = pts[b][1] * mx, by = pts[b][0] * my;
+    const vx = bx - ax, vy = by - ay, len2 = vx * vx + vy * vy;
+    let worst = -1, worstD = tolM;
+    for (let i = a + 1; i < b; i++) {
+      const px = pts[i][1] * mx - ax, py = pts[i][0] * my - ay;
+      let d;
+      if (len2 === 0) d = Math.hypot(px, py);
+      else { const t = Math.max(0, Math.min(1, (px * vx + py * vy) / len2)); d = Math.hypot(px - vx * t, py - vy * t); }
+      if (d > worstD) { worstD = d; worst = i; }
     }
-    if (pts.length <= maxPts) break;
-    minM *= 1.6;
+    if (worst >= 0) { keep[worst] = 1; stack.push([a, worst], [worst, b]); }
   }
+  const out = [];
+  for (let i = 0; i < pts.length; i++) if (keep[i]) out.push(pts[i]);
+  return out;
+}
+function limitsThinTrack(tr, startTolM, maxPts) {
+  maxPts = maxPts || 650;
+  const raw = [];
+  let lastLat = NaN, lastLon = NaN;
+  for (let i = 0; i < tr.n; i++) {
+    const la = tr.lat[i], lo = tr.lon[i];
+    if (!(la === la && lo === lo)) continue;
+    if (raw.length && haversine(lastLat, lastLon, la, lo) < 5) continue;   // GPS-Zittern im Stand
+    raw.push([la, lo]); lastLat = la; lastLon = lo;
+  }
+  let tol = startTolM || 8, pts = raw;
+  for (let pass = 0; pass < 12; pass++) {
+    pts = limitsSimplify(raw, tol);
+    if (pts.length <= maxPts) break;
+    tol *= 1.5;
+  }
+  pts.tolM = Math.ceil(tol);
   return pts;
 }
 
@@ -3762,23 +3791,24 @@ const limitsSleep = ms => new Promise(r => setTimeout(r, ms));
 async function fetchLimitWays(tr, onStatus, onPartial) {
   const pts = limitsThinTrack(tr);
   if (pts.length < 2) throw new Error('Zu wenige Positionen für eine Abfrage');
-  const chunks = limitsChunks(pts);
+  const radius = 25 + (pts.tolM || 0);                       // Korridor wächst mit der Vereinfachungstoleranz
+  const chunks = [pts];                                       // eine Anfrage je Fahrt; limitsChunks bleibt für Sonderfälle
   const byId = new Map();
   let osmDate = null;
   for (let c = 0; c < chunks.length; c++) {
     const label = chunks.length > 1 ? 'Abschnitt ' + (c + 1) + ' von ' + chunks.length + ': ' : '';
     const frac = chunks.length > 1 ? c / chunks.length : null;
-    const part = await fetchOverpassChunk(chunks[c], (text) => { if (onStatus) onStatus(label + text, frac); });
+    const part = await fetchOverpassChunk(chunks[c], (text) => { if (onStatus) onStatus(label + text, frac); }, radius);
     part.ways.forEach(w => byId.set(w.id, w));
     osmDate = part.osmDate || osmDate;
     if (onPartial) onPartial({ ways: Array.from(byId.values()), done: c + 1, total: chunks.length });
     if (c < chunks.length - 1) await limitsSleep(700);          // den Server nicht hetzen
   }
-  return { ways: Array.from(byId.values()), fetchedAt: Date.now(), osmDate, points: pts.length, chunks: chunks.length };
+  return { ways: Array.from(byId.values()), fetchedAt: Date.now(), osmDate, points: pts.length, chunks: chunks.length, tolM: pts.tolM, radius };
 }
 
-async function fetchOverpassChunk(pts, onStatus) {
-  const q = limitsOverpassQuery(pts, 25);
+async function fetchOverpassChunk(pts, onStatus, radius) {
+  const q = limitsOverpassQuery(pts, radius || 25);
   let lastErr = null;
   const sleep = limitsSleep;
   /* Zwei Server, zwei Runden: die öffentlichen Overpass-Server drosseln (429) und

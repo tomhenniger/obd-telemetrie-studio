@@ -4,7 +4,7 @@
 
 
 ## UI-Änderungen
-- Tempolimits: die Route wird in Abschnitte von etwa 15 km (höchstens sechs) geteilt und nacheinander abgefragt; der Balken zeigt den echten Fortschritt, die Karte färbt sich abschnittsweise ein, Straßen an den Schnittstellen werden per ID zusammengeführt. Ladebalken-Kurve quadratisch statt exponentiell.
+- Tempolimits: eine Anfrage je Fahrt statt Abschnitten. Die Route wird formtreu vereinfacht (Douglas–Peucker, Punkte bleiben an Knicken, Toleranz wächst nur bis zum Budget von 650 Punkten) und der Suchkorridor wächst um die Toleranz mit – so schneiden lange Fahrten keine Kurven mehr aus dem Korridor. Ladebalken-Kurve quadratisch statt exponentiell.
 - Tempolimits: Fortschrittsanzeige beim Laden (laufender Balken mit Sekundenzähler, KB-Zähler beim Empfang, Zuordnungsphase) statt einer Textzeile.
 
 
