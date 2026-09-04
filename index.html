@@ -893,7 +893,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-clip"/></svg>
         Kaufcheckliste öffnen — ohne Datei
       </button>
-      <input type="file" id="file" accept=".csv,.txt,.gz,.zip,text/csv,text/plain,application/gzip,application/zip" hidden>
+      <input type="file" id="file" multiple accept=".csv,.txt,.gz,.zip,.gpx,text/csv,text/plain,application/gzip,application/zip,application/gpx+xml" hidden>
       <textarea id="pastebox" class="pastebox" rows="1" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"
         placeholder="… oder hier einsetzen (langes Tippen)"></textarea>
     </div>
@@ -7683,6 +7683,135 @@ function handoffFromUrl() {
   const name = q.get('name') || h.get('name');
   return { src, gz, clip, name };
 }
+/* ===== Zusammenfassung teilen und Fahrten zusammenführen ===========
+   Teilen: die Kernaussagen einer Auswertung, gepackt und base64-kodiert
+   in der Adresse. Kein Server, keine Route, keine Rohdaten – wer den
+   Link bekommt, sieht dieselbe Zusammenfassung im eigenen Browser.
+   Zusammenführen: zwei CSV-Teile derselben Fahrt zu einer Datei.
+   ================================================================== */
+
+/* ---------- Teilen ---------- */
+function shareSummary(ds, diag, profile, gears, fileName) {
+  const T = ds.trip || {}, n = (v, d) => (isFinite(v) ? +(+v).toFixed(d === undefined ? 2 : d) : null);
+  return {
+    v: 1,
+    d: fileName || '',
+    p: profile ? profile.id : null,
+    pn: profile ? profile.name : null,
+    t: [n(ds.t0, 0), n(ds.duration, 0)],
+    k: { dist: n(T.dist, 2), moving: n(T.movingTime, 0), vAvg: n(T.speedAvgMoving, 1), vMax: n(T.speedMax, 0),
+         rpmMax: n(ds.stats && ds.stats.rpm ? ds.stats.rpm.max : NaN, 0), cons: n(T.consAvg, 2), fuel: n(T.fuelUsed, 2), co2: n(T.co2, 2),
+         coolMax: n(ds.stats && ds.stats.coolant ? ds.stats.coolant.max : NaN, 0),
+         stops: ds.events && ds.events.stops ? ds.events.stops.length : null },
+    g: gears && gears.gears ? gears.gears.map(g => [g.label, n(g.kmhPer1000, 1)]) : [],
+    f: diag && diag.results ? diag.results.filter(r => r.status === 'ok' || r.status === 'warn' || r.status === 'crit')
+        .map(r => [r.id, r.status[0], n(r.value, 2), r.unit || '']) : [],
+    ta: diag && diag.tally ? [diag.tally.ok || 0, diag.tally.warn || 0, diag.tally.crit || 0] : null
+  };
+}
+
+/* Kompakt kodieren: JSON → gzip (wenn möglich) → base64url */
+async function encodeShare(obj) {
+  const json = JSON.stringify(obj);
+  const bytes = new TextEncoder().encode(json);
+  let payload = bytes, tag = 'r';
+  if (typeof CompressionStream === 'function') {
+    try {
+      const cs = new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+      payload = new Uint8Array(await new Response(cs).arrayBuffer()); tag = 'z';
+    } catch (e) { payload = bytes; tag = 'r'; }
+  }
+  let bin = '';
+  for (let i = 0; i < payload.length; i += 0x8000) bin += String.fromCharCode.apply(null, payload.subarray(i, i + 0x8000));
+  const b64 = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return tag + b64;
+}
+async function decodeShare(str) {
+  if (!str || str.length < 2) return null;
+  const tag = str[0], b64 = str.slice(1).replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(b64 + '='.repeat((4 - b64.length % 4) % 4));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i) & 255;
+  let out = bytes;
+  if (tag === 'z') {
+    if (typeof DecompressionStream !== 'function') throw new Error('Dieser Browser kann den Link nicht entpacken.');
+    const ds = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    out = new Uint8Array(await new Response(ds).arrayBuffer());
+  }
+  const obj = JSON.parse(new TextDecoder().decode(out));
+  if (!obj || obj.v !== 1) throw new Error('Unbekanntes Format in diesem Link.');
+  return obj;
+}
+function shareUrl(code, base) {
+  const b = base || (location.origin + location.pathname);
+  return b + '#s=' + code;
+}
+function shareFromUrl() {
+  const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+  return h.get('s');
+}
+
+/* ---------- CSV-Teile zusammenführen ---------- */
+/* Zwei Aufzeichnungen derselben Fahrt: gleiche Kopfzeile vorausgesetzt, Zeilen
+   aneinanderhängen. Ist die zweite Datei zeitlich früher, wird getauscht. */
+function mergeCsvParts(texts) {
+  const parts = texts.map(t => String(t || '').replace(/^﻿/, '')).filter(t => t.trim());
+  if (parts.length < 2) throw new Error('Zum Zusammenführen braucht es mindestens zwei Dateien.');
+  const headOf = t => t.slice(0, t.indexOf('\n') < 0 ? t.length : t.indexOf('\n')).replace(/\r$/, '');
+  const head = headOf(parts[0]);
+  const norm = h => h.replace(/["\s]/g, '').toLowerCase();
+  for (const p of parts) if (norm(headOf(p)) !== norm(head))
+    throw new Error('Die Dateien haben verschiedene Spalten – sie stammen nicht aus derselben Aufzeichnungseinstellung.');
+  /* erste Zeitspalte je Teil, um die Reihenfolge zu bestimmen */
+  const firstTime = t => {
+    const lines = t.split(/\r?\n/);
+    for (let i = 1; i < Math.min(lines.length, 40); i++) {
+      const cell = lines[i].split(/[;,\t]/)[0].replace(/"/g, '').trim();
+      const v = parseFloat(cell.replace(',', '.'));
+      if (isFinite(v)) return v;
+      const d = Date.parse(cell);
+      if (isFinite(d)) return d / 1000;
+    }
+    return NaN;
+  };
+  const ordered = parts.map(t => ({ t, k: firstTime(t) }))
+    .sort((a, b) => (isFinite(a.k) && isFinite(b.k) ? a.k - b.k : 0));
+  const body = ordered.map((p, i) => {
+    const nl = p.t.indexOf('\n');
+    const rest = nl < 0 ? '' : p.t.slice(nl + 1);
+    return i === 0 ? p.t.replace(/\s+$/, '') : rest.replace(/\s+$/, '');
+  }).filter(x => x);
+  const rows = body.reduce((n, b) => n + b.split('\n').length, 0) - (body.length - 1);
+  return { text: body.join('\n') + '\n', parts: parts.length, rows };
+}
+
+/* ---------- GPX ergänzen ---------- */
+/* Liest <trkpt lat lon><time>; liefert Punkte für den Track, wenn die CSV kein GPS hatte. */
+function parseGpx(text) {
+  const pts = [];
+  const re = /<trkpt[^>]*\blat="([-\d.]+)"[^>]*\blon="([-\d.]+)"[^>]*>([\s\S]*?)<\/trkpt>|<trkpt[^>]*\blon="([-\d.]+)"[^>]*\blat="([-\d.]+)"[^>]*>([\s\S]*?)<\/trkpt>/g;
+  let m;
+  while ((m = re.exec(text))) {
+    const lat = parseFloat(m[1] !== undefined ? m[1] : m[5]);
+    const lon = parseFloat(m[2] !== undefined ? m[2] : m[4]);
+    const inner = m[3] !== undefined ? m[3] : m[6] || '';
+    const tm = /<time>([^<]+)<\/time>/.exec(inner);
+    const ele = /<ele>([-\d.]+)<\/ele>/.exec(inner);
+    const t = tm ? Date.parse(tm[1]) / 1000 : NaN;
+    if (isFinite(lat) && isFinite(lon)) pts.push({ lat, lon, t, alt: ele ? parseFloat(ele[1]) : NaN });
+  }
+  return pts;
+}
+/* GPX-Punkte als zusätzliche Zeilen im Long-Format anhängen (SECONDS;PID;VALUE;UNITS;LATITUDE;LONGTITUDE) */
+function gpxToLongRows(pts, t0) {
+  const rows = [];
+  for (const p of pts) {
+    const t = isFinite(p.t) ? (isFinite(t0) ? p.t - t0 : p.t) : NaN;
+    if (!isFinite(t)) continue;
+    rows.push('"' + t.toFixed(2) + '";"Altitude (GPS)";"' + (isFinite(p.alt) ? p.alt.toFixed(1) : '0') + '";"m";"' + p.lat.toFixed(7) + '";"' + p.lon.toFixed(7) + '";');
+  }
+  return rows;
+}
 /* ============================================================
    Kaufcheck — Prüfpunkte, Messprotokoll und Besichtigungs-Verwaltung
    Die Inhalte stehen weiter unten in BUY_CHECKS, MEASURE_PLAN und PID_SETS.
@@ -10751,11 +10880,39 @@ async function ingest(src) {
     $('#app').hidden = false;
     document.body.classList.remove('no-data');
     if (location.hash || location.search) history.replaceState(null, '', location.pathname);
+    if (App.importNote) { $('#pages').prepend(noteBox('ok', 'Beim Einlesen zusammengesetzt', App.importNote + '. Die Auswertung behandelt das als eine Fahrt.')); App.importNote = null; }
     // Direkt nach dem Import fragen, welches Fahrzeug das ist. Alles Weitere haengt daran.
     setTimeout(() => openVehicleDialog(), 120);
   } catch (e) { loadFailed(e); }
 }
 const loadFile = file => ingest({ kind: 'file', file });
+/* Mehrere Dateien: CSV-Teile werden zusammengeführt, eine GPX-Datei ergänzt die Route. */
+async function loadFiles(files) {
+  const list = Array.from(files || []).filter(Boolean);
+  if (!list.length) return;
+  if (list.length === 1) return loadFile(list[0]);
+  const isGpx = f => /\.gpx$/i.test(f.name);
+  const gpx = list.filter(isGpx), csv = list.filter(f => !isGpx(f));
+  try {
+    if (!csv.length) throw new Error('Eine GPX-Datei allein ergibt keine Auswertung – sie ergänzt eine CSV.');
+    const texts = [];
+    for (const f of csv) texts.push((await toCsvText(new Uint8Array(await f.arrayBuffer()), f.name)).text);
+    let text = texts.length > 1 ? mergeCsvParts(texts).text : texts[0];
+    let note = texts.length > 1 ? csv.length + ' CSV-Teile zusammengeführt' : '';
+    if (gpx.length) {
+      const pts = parseGpx(await gpx[0].text());
+      if (!pts.length) throw new Error('In der GPX-Datei stehen keine Trackpunkte.');
+      const firstNum = parseFloat((text.split(/\r?\n/)[1] || '').split(/[;,\t]/)[0].replace(/"/g, ''));
+      const rel = isFinite(firstNum) && Math.abs(firstNum) < 86400 * 1.2;      // Sekunden seit Start statt Zeitstempel
+      const t0 = rel && isFinite(pts[0].t) ? pts[0].t : 0;
+      const rows = gpxToLongRows(pts, t0);
+      text = text.replace(/\s*$/, '\n') + rows.join('\n') + '\n';
+      note = (note ? note + ', ' : '') + pts.length + ' GPX-Punkte ergänzt';
+    }
+    App.importNote = note;
+    await ingest({ kind: 'text', text, name: csv[0].name });
+  } catch (e) { loadFailed(e); }
+}
 
 /* Zurück zum Startbildschirm — nötig, wenn während einer offenen Auswertung
    eine neue Übergabe hereinkommt. */
@@ -12981,6 +13138,32 @@ BUILDERS.ai = function (page) {
     'als XML-Dokument in die Zwischenablage — mit Anleitung, Fahrzeugprofil, allen Kennzahlen, den Befunden und einer ' +
     'heruntergerechneten Zeitreihe. Das fügst du bei ChatGPT, Claude, Gemini oder einem anderen Sprachmodell ein und stellst deine Fragen.'));
 
+  /* --- Zusammenfassung teilen --- */
+  {
+    const shHost = el('div');
+    const out = el('input', { class: 'inp', readonly: true, style: { flex: '1 1 260px', minWidth: '0' }, onclick: e => e.target.select() });
+    const info = el('p', { class: 'dim2', style: { fontSize: '11.5px', marginTop: '10px' } });
+    const make = async () => {
+      try {
+        const url = shareUrl(await encodeShare(shareSummary(App.ds, App.diag, App.profile, App.gears, App.fileName)));
+        out.value = url;
+        info.textContent = 'Länge ' + fmt(url.length / 1024, 1) + ' KB' + (url.length > 8000
+          ? ' – für manche Messenger zu lang; dann lieber die Bericht-JSON aus der Datenqualität schicken.'
+          : ' – passt in Nachricht und Adresszeile.');
+      } catch (e) { out.value = ''; info.textContent = 'Fehler: ' + (e.message || e); }
+    };
+    shHost.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center' } },
+      el('button', { class: 'btn', type: 'button', onclick: make }, 'Link erzeugen'), out,
+      el('button', { class: 'btn', type: 'button', onclick: async () => { if (!out.value) await make(); try { await navigator.clipboard.writeText(out.value); } catch (e) {} } }, 'Kopieren')));
+    shHost.appendChild(info);
+    page.appendChild(card('Zusammenfassung teilen', {
+      hint: 'Kennzahlen und Befunde in der Adresse – ohne Server, ohne Route',
+      info: { read: 'Der Link enthält die Kennzahlen der Fahrt, die bewerteten Befunde und das Fahrzeugprofil, gepackt und in der Adresse kodiert. Keine Route, keine Rohdaten, keine Zeitreihe. Wer ihn öffnet, sieht dieselbe Zusammenfassung im eigenen Browser – nichts davon läuft über einen Server.',
+              good: 'Für die Werkstatt, den Verkäufer oder ein Forum: kurz, nachvollziehbar, ohne Anhang.',
+              bad: 'Sehr lange Links werden von manchen Messengern abgeschnitten. Der Hinweis unter dem Feld nennt die Länge.' }
+    }, shHost));
+  }
+
   page.appendChild(card('Prompt erzeugen', {
     hint: 'die Rohdatei bleibt außen vor — 28 MB passen in kein Kontextfenster',
     tools: [vseg, seg],
@@ -14086,6 +14269,34 @@ function baseName() {
   applyTheme(saved || 'dark');   // das Gerät ist dunkel; hell nur auf ausdrückliche Wahl
   /* Drucken: helles Schema, aufgeklappte Befunde, nur die aktuelle Seite */
   const printBtn = $('#print'); if (printBtn) printBtn.onclick = () => window.print();
+  /* Geteilte Zusammenfassung: als Karte auf dem Startbildschirm zeigen */
+  (async () => {
+    const code = shareFromUrl(); if (!code) return;
+    const hero = $('#hero').querySelector('div');
+    try {
+      const s = await decodeShare(code);
+      const K = el('div', { class: 'grid kpis' },
+        kpi('Strecke', s.k.dist !== null ? fmt(s.k.dist, 2) : '–', 'km', s.k.moving ? 'davon ' + fmtDur(s.k.moving) + ' in Bewegung' : ''),
+        kpi('⌀ Geschwindigkeit', s.k.vAvg !== null ? fmt(s.k.vAvg, 0) : '–', 'km/h', s.k.vMax !== null ? 'höchstens ' + fmt(s.k.vMax, 0) + ' km/h' : ''),
+        kpi('Verbrauch', s.k.cons !== null ? fmt(s.k.cons, 1) : '–', 'L/100km', s.k.fuel !== null ? fmt(s.k.fuel, 2) + ' L' : ''),
+        kpi('Höchstdrehzahl', s.k.rpmMax !== null ? fmt(s.k.rpmMax, 0) : '–', 'min⁻¹', s.k.coolMax !== null ? 'Kühlmittel max. ' + fmt(s.k.coolMax, 0) + ' °C' : ''));
+      const byStatus = { o: [], w: [], c: [] };
+      (s.f || []).forEach(f => { if (byStatus[f[1]]) byStatus[f[1]].push(f); });
+      const rt = id => { const r = DIAG_RULES.find(x => x.id === id); return r ? r.title : id; };
+      const list = (arr, cls, label) => arr.length ? el('div', { style: { marginTop: '10px' } },
+        el('div', { class: 'lbl-eng', style: { marginBottom: '6px' } }, label + ' (' + arr.length + ')'),
+        el('div', { class: 'chiprow' }, arr.map(f => el('span', { class: 'badge ' + cls }, rt(f[0]) + (f[2] !== null ? ': ' + fmt(f[2], 2) + ' ' + (f[3] || '') : ''))))) : null;
+      hero.prepend(el('div', { style: { width: 'min(720px,100%)', margin: '0 auto 18px' } },
+        card('Geteilte Auswertung' + (s.pn ? ' · ' + s.pn : ''), {
+          hint: (s.d || 'Fahrt') + (s.t && s.t[1] ? ' · ' + fmtDur(s.t[1]) : '') + ' · nur Zusammenfassung, keine Rohdaten',
+          info: { read: 'Diese Zahlen stammen aus einem geteilten Link, nicht aus einer Datei auf diesem Gerät. Route, Zeitreihen und Rohdaten sind nicht enthalten.',
+                  good: 'Für eine schnelle Einschätzung reicht das: Kennzahlen und alle bewerteten Befunde sind enthalten.',
+                  bad: 'Ohne Rohdaten lässt sich nichts nachrechnen. Frage nach der CSV, wenn ein Befund strittig ist.' }
+        }, K, list(byStatus.c, 'crit', 'Auffällig'), list(byStatus.w, 'warn', 'Grenzwertig'), list(byStatus.o, 'ok', 'Unauffällig'),
+          el('p', { class: 'dim2', style: { marginTop: '12px', fontSize: '12px' } }, 'Eigene CSV laden, um eine vollständige Auswertung zu sehen.'))));
+      history.replaceState(null, '', location.pathname);
+    } catch (e) { hero.prepend(noteBox('crit', 'Geteilter Link nicht lesbar', String(e.message || e))); }
+  })();
   let printTheme = null, printOpened = [];
   window.addEventListener('beforeprint', () => {
     printTheme = document.documentElement.getAttribute('data-theme'); applyTheme('light');
@@ -14101,14 +14312,14 @@ function baseName() {
   const fileEl = $('#file');
   $('#pick').addEventListener('click', () => fileEl.click());
   $('#new-file').addEventListener('click', () => fileEl.click());
-  fileEl.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+  fileEl.addEventListener('change', e => { if (e.target.files.length) loadFiles(e.target.files); });
 
   const drop = $('#drop');
   ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
   ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
   drop.addEventListener('drop', e => {
     e.stopPropagation();                          // sonst faengt der window-Handler dieselbe Datei nochmal
-    const f = e.dataTransfer.files[0]; if (f) loadFile(f);
+    if (e.dataTransfer.files.length) loadFiles(e.dataTransfer.files);
   });
   window.addEventListener('dragover', e => e.preventDefault());
   window.addEventListener('drop', e => {

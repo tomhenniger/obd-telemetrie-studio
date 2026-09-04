@@ -1,6 +1,8 @@
 # Changelog — 2026-09-04
 
 ## Neue Features
+- **Mehrere Dateien auf einmal**: abgebrochene Aufzeichnungen lassen sich als CSV-Teile zusammen auswählen oder ablegen; sie werden nach Zeit sortiert zu einer Fahrt zusammengesetzt (gleiche Spalten vorausgesetzt). Eine mitgegebene GPX-Datei ergänzt die Route, wenn die OBD-App kein GPS aufgezeichnet hat.
+- **Zusammenfassung teilen** (KI-Prompt): erzeugt einen Link, der Kennzahlen, bewertete Befunde und Fahrzeugprofil gepackt in der Adresse trägt. Kein Server, keine Route, keine Rohdaten. Wer ihn öffnet, sieht die Zusammenfassung als Karte auf dem Startbildschirm.
 - **Persönliche Baseline** (Fahrzeugakte): ab fünf Fahrten lernt die Akte je Befund den Normalbereich dieses Wagens (Median, robustes 3σ-Streuband) und den Trend je 30 Tage. Die aktuelle Fahrt wird dagegen bewertet: „außerhalb der eigenen Norm“ trotz grünem Werksband ist der eigentliche Gewinn.
 - **Referenzakte**: die exportierte Akte eines anderen Fahrzeugs lässt sich zum Vergleich laden und erscheint als eigene Spalte neben der Baseline; sie wird nicht gespeichert.
 - **Wartungsstand** (Fahrzeugakte): Kilometerstand und je Arbeit Stand und Datum eintragen, die Liste rechnet Restlaufzeit und Fälligkeit. Elf Arbeiten, gefiltert nach Bauart: Zahnriemen nur bei Riementrieb, Kompressoröl nur beim Kompressor, Partikelfilter nur beim Diesel.

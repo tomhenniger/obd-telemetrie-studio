@@ -113,11 +113,39 @@ async function ingest(src) {
     $('#app').hidden = false;
     document.body.classList.remove('no-data');
     if (location.hash || location.search) history.replaceState(null, '', location.pathname);
+    if (App.importNote) { $('#pages').prepend(noteBox('ok', 'Beim Einlesen zusammengesetzt', App.importNote + '. Die Auswertung behandelt das als eine Fahrt.')); App.importNote = null; }
     // Direkt nach dem Import fragen, welches Fahrzeug das ist. Alles Weitere haengt daran.
     setTimeout(() => openVehicleDialog(), 120);
   } catch (e) { loadFailed(e); }
 }
 const loadFile = file => ingest({ kind: 'file', file });
+/* Mehrere Dateien: CSV-Teile werden zusammengeführt, eine GPX-Datei ergänzt die Route. */
+async function loadFiles(files) {
+  const list = Array.from(files || []).filter(Boolean);
+  if (!list.length) return;
+  if (list.length === 1) return loadFile(list[0]);
+  const isGpx = f => /\.gpx$/i.test(f.name);
+  const gpx = list.filter(isGpx), csv = list.filter(f => !isGpx(f));
+  try {
+    if (!csv.length) throw new Error('Eine GPX-Datei allein ergibt keine Auswertung – sie ergänzt eine CSV.');
+    const texts = [];
+    for (const f of csv) texts.push((await toCsvText(new Uint8Array(await f.arrayBuffer()), f.name)).text);
+    let text = texts.length > 1 ? mergeCsvParts(texts).text : texts[0];
+    let note = texts.length > 1 ? csv.length + ' CSV-Teile zusammengeführt' : '';
+    if (gpx.length) {
+      const pts = parseGpx(await gpx[0].text());
+      if (!pts.length) throw new Error('In der GPX-Datei stehen keine Trackpunkte.');
+      const firstNum = parseFloat((text.split(/\r?\n/)[1] || '').split(/[;,\t]/)[0].replace(/"/g, ''));
+      const rel = isFinite(firstNum) && Math.abs(firstNum) < 86400 * 1.2;      // Sekunden seit Start statt Zeitstempel
+      const t0 = rel && isFinite(pts[0].t) ? pts[0].t : 0;
+      const rows = gpxToLongRows(pts, t0);
+      text = text.replace(/\s*$/, '\n') + rows.join('\n') + '\n';
+      note = (note ? note + ', ' : '') + pts.length + ' GPX-Punkte ergänzt';
+    }
+    App.importNote = note;
+    await ingest({ kind: 'text', text, name: csv[0].name });
+  } catch (e) { loadFailed(e); }
+}
 
 /* Zurück zum Startbildschirm — nötig, wenn während einer offenen Auswertung
    eine neue Übergabe hereinkommt. */
@@ -2343,6 +2371,32 @@ BUILDERS.ai = function (page) {
     'als XML-Dokument in die Zwischenablage — mit Anleitung, Fahrzeugprofil, allen Kennzahlen, den Befunden und einer ' +
     'heruntergerechneten Zeitreihe. Das fügst du bei ChatGPT, Claude, Gemini oder einem anderen Sprachmodell ein und stellst deine Fragen.'));
 
+  /* --- Zusammenfassung teilen --- */
+  {
+    const shHost = el('div');
+    const out = el('input', { class: 'inp', readonly: true, style: { flex: '1 1 260px', minWidth: '0' }, onclick: e => e.target.select() });
+    const info = el('p', { class: 'dim2', style: { fontSize: '11.5px', marginTop: '10px' } });
+    const make = async () => {
+      try {
+        const url = shareUrl(await encodeShare(shareSummary(App.ds, App.diag, App.profile, App.gears, App.fileName)));
+        out.value = url;
+        info.textContent = 'Länge ' + fmt(url.length / 1024, 1) + ' KB' + (url.length > 8000
+          ? ' – für manche Messenger zu lang; dann lieber die Bericht-JSON aus der Datenqualität schicken.'
+          : ' – passt in Nachricht und Adresszeile.');
+      } catch (e) { out.value = ''; info.textContent = 'Fehler: ' + (e.message || e); }
+    };
+    shHost.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center' } },
+      el('button', { class: 'btn', type: 'button', onclick: make }, 'Link erzeugen'), out,
+      el('button', { class: 'btn', type: 'button', onclick: async () => { if (!out.value) await make(); try { await navigator.clipboard.writeText(out.value); } catch (e) {} } }, 'Kopieren')));
+    shHost.appendChild(info);
+    page.appendChild(card('Zusammenfassung teilen', {
+      hint: 'Kennzahlen und Befunde in der Adresse – ohne Server, ohne Route',
+      info: { read: 'Der Link enthält die Kennzahlen der Fahrt, die bewerteten Befunde und das Fahrzeugprofil, gepackt und in der Adresse kodiert. Keine Route, keine Rohdaten, keine Zeitreihe. Wer ihn öffnet, sieht dieselbe Zusammenfassung im eigenen Browser – nichts davon läuft über einen Server.',
+              good: 'Für die Werkstatt, den Verkäufer oder ein Forum: kurz, nachvollziehbar, ohne Anhang.',
+              bad: 'Sehr lange Links werden von manchen Messengern abgeschnitten. Der Hinweis unter dem Feld nennt die Länge.' }
+    }, shHost));
+  }
+
   page.appendChild(card('Prompt erzeugen', {
     hint: 'die Rohdatei bleibt außen vor — 28 MB passen in kein Kontextfenster',
     tools: [vseg, seg],
@@ -3448,6 +3502,34 @@ function baseName() {
   applyTheme(saved || 'dark');   // das Gerät ist dunkel; hell nur auf ausdrückliche Wahl
   /* Drucken: helles Schema, aufgeklappte Befunde, nur die aktuelle Seite */
   const printBtn = $('#print'); if (printBtn) printBtn.onclick = () => window.print();
+  /* Geteilte Zusammenfassung: als Karte auf dem Startbildschirm zeigen */
+  (async () => {
+    const code = shareFromUrl(); if (!code) return;
+    const hero = $('#hero').querySelector('div');
+    try {
+      const s = await decodeShare(code);
+      const K = el('div', { class: 'grid kpis' },
+        kpi('Strecke', s.k.dist !== null ? fmt(s.k.dist, 2) : '–', 'km', s.k.moving ? 'davon ' + fmtDur(s.k.moving) + ' in Bewegung' : ''),
+        kpi('⌀ Geschwindigkeit', s.k.vAvg !== null ? fmt(s.k.vAvg, 0) : '–', 'km/h', s.k.vMax !== null ? 'höchstens ' + fmt(s.k.vMax, 0) + ' km/h' : ''),
+        kpi('Verbrauch', s.k.cons !== null ? fmt(s.k.cons, 1) : '–', 'L/100km', s.k.fuel !== null ? fmt(s.k.fuel, 2) + ' L' : ''),
+        kpi('Höchstdrehzahl', s.k.rpmMax !== null ? fmt(s.k.rpmMax, 0) : '–', 'min⁻¹', s.k.coolMax !== null ? 'Kühlmittel max. ' + fmt(s.k.coolMax, 0) + ' °C' : ''));
+      const byStatus = { o: [], w: [], c: [] };
+      (s.f || []).forEach(f => { if (byStatus[f[1]]) byStatus[f[1]].push(f); });
+      const rt = id => { const r = DIAG_RULES.find(x => x.id === id); return r ? r.title : id; };
+      const list = (arr, cls, label) => arr.length ? el('div', { style: { marginTop: '10px' } },
+        el('div', { class: 'lbl-eng', style: { marginBottom: '6px' } }, label + ' (' + arr.length + ')'),
+        el('div', { class: 'chiprow' }, arr.map(f => el('span', { class: 'badge ' + cls }, rt(f[0]) + (f[2] !== null ? ': ' + fmt(f[2], 2) + ' ' + (f[3] || '') : ''))))) : null;
+      hero.prepend(el('div', { style: { width: 'min(720px,100%)', margin: '0 auto 18px' } },
+        card('Geteilte Auswertung' + (s.pn ? ' · ' + s.pn : ''), {
+          hint: (s.d || 'Fahrt') + (s.t && s.t[1] ? ' · ' + fmtDur(s.t[1]) : '') + ' · nur Zusammenfassung, keine Rohdaten',
+          info: { read: 'Diese Zahlen stammen aus einem geteilten Link, nicht aus einer Datei auf diesem Gerät. Route, Zeitreihen und Rohdaten sind nicht enthalten.',
+                  good: 'Für eine schnelle Einschätzung reicht das: Kennzahlen und alle bewerteten Befunde sind enthalten.',
+                  bad: 'Ohne Rohdaten lässt sich nichts nachrechnen. Frage nach der CSV, wenn ein Befund strittig ist.' }
+        }, K, list(byStatus.c, 'crit', 'Auffällig'), list(byStatus.w, 'warn', 'Grenzwertig'), list(byStatus.o, 'ok', 'Unauffällig'),
+          el('p', { class: 'dim2', style: { marginTop: '12px', fontSize: '12px' } }, 'Eigene CSV laden, um eine vollständige Auswertung zu sehen.'))));
+      history.replaceState(null, '', location.pathname);
+    } catch (e) { hero.prepend(noteBox('crit', 'Geteilter Link nicht lesbar', String(e.message || e))); }
+  })();
   let printTheme = null, printOpened = [];
   window.addEventListener('beforeprint', () => {
     printTheme = document.documentElement.getAttribute('data-theme'); applyTheme('light');
@@ -3463,14 +3545,14 @@ function baseName() {
   const fileEl = $('#file');
   $('#pick').addEventListener('click', () => fileEl.click());
   $('#new-file').addEventListener('click', () => fileEl.click());
-  fileEl.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+  fileEl.addEventListener('change', e => { if (e.target.files.length) loadFiles(e.target.files); });
 
   const drop = $('#drop');
   ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
   ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
   drop.addEventListener('drop', e => {
     e.stopPropagation();                          // sonst faengt der window-Handler dieselbe Datei nochmal
-    const f = e.dataTransfer.files[0]; if (f) loadFile(f);
+    if (e.dataTransfer.files.length) loadFiles(e.dataTransfer.files);
   });
   window.addEventListener('dragover', e => e.preventDefault());
   window.addEventListener('drop', e => {

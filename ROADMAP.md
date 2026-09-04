@@ -21,7 +21,7 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 
 ### Werkstatt und Kauf
 - [x] Drucken: Druckknopf in der Kopfzeile, helles Schema, aufgeklappte Befunde, ohne Bedienelemente – jede Seite, auch als PDF. (2026-09-04)
-- [ ] Teilen per Link: Zusammenfassung komprimiert in der URL, als QR-Code. Mittel.
+- [x] Teilen per Link: Zusammenfassung gepackt in der Adresse (ohne Route, ohne Rohdaten), Empfänger sieht sie auf dem Startbildschirm. QR-Code offen. (2026-09-04)
 - [x] Datenschutz-Schnitt: Start und Ziel (je 500 m) werden bei der Tempolimit-Abfrage weggelassen (Voreinstellung an). Exporte enthalten keine Koordinaten. (2026-09-04)
 
 ### Plattform
@@ -44,9 +44,9 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 - [x] Wartungsstand in der Akte: elf Arbeiten mit Faustintervallen, gefiltert nach Bauart (Zahnriemen, Kompressor, Diesel), Restlaufzeit nach Kilometern und Zeit. (2026-09-04)
 
 ### Daten und Import
-- [ ] Mehrere CSV-Teile zu einer Fahrt zusammenführen (abgebrochene Aufzeichnung). Klein bis mittel.
+- [x] Mehrere CSV-Teile zu einer Fahrt zusammenführen (Mehrfachauswahl oder Ablegen, Reihenfolge nach Zeit, gleiche Spalten vorausgesetzt). (2026-09-04)
 - [ ] VCDS-Messwertblock-Logs einlesen: die Werkstatt-Logs der Audi-Welt. Mittel.
-- [ ] GPX-Track ergänzen, wenn die OBD-App kein GPS hatte. Klein.
+- [x] GPX-Track ergänzen: GPX zusammen mit der CSV auswählen, Punkte werden als Positionszeilen angehängt. (2026-09-04)
 
 ### Erlebnis
 - [x] Anmerkungen an Zeitpunkte, als N-Marker in Verlauf und Karte, in Akte und KI-Prompt. (2026-09-04)
