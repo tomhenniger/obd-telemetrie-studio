@@ -127,3 +127,14 @@ test('Abfrage: Route wird ausgedünnt, Overpass-Text enthält Polylinie und Stra
   assert.match(s, /\["highway"\]\["highway"!~"\^\(footway\|/);
   assert.match(s, /out tags geom;$/);
 });
+
+test('Abschnitte: lange Route wird in wenige, zusammenhängende Stücke geteilt, kurze bleibt ganz', () => {
+  const chunks = g('limitsChunks');
+  const line = km => { const pts = []; for (let i = 0; i <= km * 10; i++) pts.push([53 + i * 0.0009, 10]); return pts; };   // 100-m-Schritte
+  assert.equal(chunks(line(8)).length, 1, '8 km: eine Abfrage');
+  const c60 = chunks(line(60));
+  assert.equal(c60.length, 4, '60 km: vier Abschnitte à ~15 km');
+  assert.equal(c60.reduce((n, c) => n + c.length, 0), 60 * 10 + 1 + 3, 'Randpunkte doppelt, sonst nichts verloren');
+  for (let i = 1; i < c60.length; i++) assert.deepEqual(c60[i][0], c60[i - 1][c60[i - 1].length - 1], 'zusammenhängend');
+  assert.equal(chunks(line(200)).length, 6, 'höchstens sechs Abschnitte');
+});

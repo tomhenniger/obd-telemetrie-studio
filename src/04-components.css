@@ -318,7 +318,7 @@ table.tbl tbody tr:hover td { background: var(--surface-2); }
 .prog-bar { height: 6px; border-radius: 2px; background: var(--lcd); border: 1px solid var(--lcd-line); overflow: hidden; margin-top: 12px; }
 .prog-bar i { display: block; height: 100%; background: var(--ok); box-shadow: 0 0 8px var(--ok-line); }
 /* Unbestimmter Fortschritt: der Balken läuft, solange der Server rechnet */
-.prog-bar.indet i { width: 28%; animation: prog-slide 1.3s var(--ease) infinite alternate; }
+.prog-bar.indet i { width: 28%; animation: prog-slide 1.3s cubic-bezier(.45,0,.55,1) infinite alternate; }   /* quadratisch ein und aus, wie ein Pendel */
 @keyframes prog-slide { from { transform: translateX(0); } to { transform: translateX(257%); } }
 
 /* ===== Hinweisleisten ============================================= */

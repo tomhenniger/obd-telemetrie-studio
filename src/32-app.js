@@ -793,7 +793,7 @@ BUILDERS.map = function (page) {
       el('button', { class: 'btn sm ghost', type: 'button', onclick: () => loadLimits(true) }, 'Neu von OSM laden')));
     limHost.appendChild(el('p', { class: 'dim2', style: { fontSize: '11.5px', lineHeight: '1.5', margin: '10px 0 0' } },
       'Vergleich mit ' + (App.limits.src ? App.limits.src[1] : '–') + '; der Tacho zeigt etwa 3–5 % mehr als die OBD-Geschwindigkeit. Limits laut OpenStreetMap' +
-      (data.osmDate ? ' (Stand ' + String(data.osmDate).slice(0, 10) + ')' : '') + ', ' + data.ways.length + ' Straßenabschnitte geladen. Ohne Toleranz gerechnet; Zuordnung bis 30 m. Keine rechtliche Bewertung.'));
+      (data.osmDate ? ' (Stand ' + String(data.osmDate).slice(0, 10) + ')' : '') + ', ' + data.ways.length + ' Straßenabschnitte' + (data.chunks > 1 ? ' in ' + data.chunks + ' Abfragen' : '') + ' geladen. Ohne Toleranz gerechnet; Zuordnung bis 30 m. Keine rechtliche Bewertung.'));
   }
   function computeLimits(data) {
     const src = speedSource();
@@ -801,7 +801,7 @@ BUILDERS.map = function (page) {
     const speedAt = i => { if (!arr) return NaN; const k = bisect(ds.grid, tr.t[i]); return k >= 0 ? arr[k] : NaN; };
     const res = matchTrackLimits(tr, data.ways, speedAt, limitsWhenFor(ds, App.fileName));
     App.limits = { id: limId(), data, res, src };
-    App.limitsStatus = null;
+    if (!data.partial) App.limitsStatus = null;
   }
   async function loadLimits(force) {
     const id = limId();
@@ -813,7 +813,15 @@ BUILDERS.map = function (page) {
     try {
       let data = force ? null : await limitsCacheGet(id);
       if (!data) {
-        data = await fetchLimitWays(tr, (text, frac) => setStatus(text, frac));
+        data = await fetchLimitWays(tr, (text, frac) => setStatus(text, frac),
+          part => {                                   // nach jedem Abschnitt die Karte schon einfärben
+            if (part.total > 1 && limHost.isConnected) {
+              computeLimits({ ways: part.ways, partial: true });
+              App.limits.partial = true;
+              if (App.mapMetric !== '__limits') { App.mapMetric = '__limits'; sel.value = '__limits'; }
+              paint();
+            }
+          });
         await limitsCachePut(id, data);
       } else setStatus('Aus dem Zwischenspeicher geladen', 0.6);
       setStatus('Ordne ' + fmt(tr.n, 0) + ' Streckenpunkte ' + data.ways.length + ' Straßenabschnitten zu …', 0.85);
@@ -840,6 +848,7 @@ BUILDERS.map = function (page) {
     const res = App.limits.res;
     const COL = ['rgba(150,160,180,.55)', catColor('ok'), catColor('implicit'), catColor('sign'), catColor('unsure')];
     map.setTrack(tr, i => COL[res.cat[i]]);
+    if (App.limits.partial) rampRow.appendChild(el('span', { class: 'dim2', style: { marginRight: '10px' } }, 'wird abschnittsweise geladen – grau ist noch nicht abgefragt'));
     ['ok', 'sign', 'implicit', 'unsure', 'noroad'].forEach(c =>
       rampRow.appendChild(el('span', { class: 'li', style: { display: 'inline-flex', alignItems: 'center', gap: '5px', marginRight: '10px' } },
         el('i', { style: { display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: catColor(c) } }), CAT_LABEL[c])));

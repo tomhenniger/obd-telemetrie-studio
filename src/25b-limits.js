@@ -62,12 +62,51 @@ function limitsOverpassQuery(pts, radiusM) {
     'out tags geom;';
 }
 
-async function fetchLimitWays(tr, onStatus) {
+/* Route in zusammenhängende Abschnitte von etwa targetKm Länge teilen – wenige, große
+   Abschnitte, weil die öffentlichen Server jede Anfrage einzeln zählen und drosseln. */
+function limitsChunks(pts, targetKm, maxChunks) {
+  targetKm = targetKm || 15; maxChunks = maxChunks || 6;
+  if (pts.length < 2) return [pts];
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) total += haversine(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
+  const n = Math.max(1, Math.min(maxChunks, Math.round(total / (targetKm * 1000))));
+  if (n === 1) return [pts];
+  const per = total / n, chunks = [];
+  let cur = [pts[0]], acc = 0;
+  for (let i = 1; i < pts.length; i++) {
+    acc += haversine(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
+    cur.push(pts[i]);
+    if (acc >= per && chunks.length < n - 1) { chunks.push(cur); cur = [pts[i]]; acc = 0; }   // Randpunkt doppelt: Straßen am Schnitt gehen nicht verloren
+  }
+  if (cur.length > 1) chunks.push(cur); else if (chunks.length) chunks[chunks.length - 1].push(...cur.slice(1));
+  return chunks;
+}
+
+const limitsSleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* Alle Abschnitte nacheinander; onStatus(text, frac), onPartial({ways, done, total}) nach jedem Abschnitt */
+async function fetchLimitWays(tr, onStatus, onPartial) {
   const pts = limitsThinTrack(tr);
   if (pts.length < 2) throw new Error('Zu wenige Positionen für eine Abfrage');
+  const chunks = limitsChunks(pts);
+  const byId = new Map();
+  let osmDate = null;
+  for (let c = 0; c < chunks.length; c++) {
+    const label = chunks.length > 1 ? 'Abschnitt ' + (c + 1) + ' von ' + chunks.length + ': ' : '';
+    const frac = chunks.length > 1 ? c / chunks.length : null;
+    const part = await fetchOverpassChunk(chunks[c], (text) => { if (onStatus) onStatus(label + text, frac); });
+    part.ways.forEach(w => byId.set(w.id, w));
+    osmDate = part.osmDate || osmDate;
+    if (onPartial) onPartial({ ways: Array.from(byId.values()), done: c + 1, total: chunks.length });
+    if (c < chunks.length - 1) await limitsSleep(700);          // den Server nicht hetzen
+  }
+  return { ways: Array.from(byId.values()), fetchedAt: Date.now(), osmDate, points: pts.length, chunks: chunks.length };
+}
+
+async function fetchOverpassChunk(pts, onStatus) {
   const q = limitsOverpassQuery(pts, 25);
   let lastErr = null;
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const sleep = limitsSleep;
   /* Zwei Server, zwei Runden: die öffentlichen Overpass-Server drosseln (429) und
      brechen unter Last ab (504); eine kurze Pause und der andere Server helfen meist. */
   const attempts = LIMIT_ENDPOINTS.concat(LIMIT_ENDPOINTS);
@@ -75,10 +114,10 @@ async function fetchLimitWays(tr, onStatus) {
     const url = attempts[k];
     try {
       if (k === LIMIT_ENDPOINTS.length) {
-        if (onStatus) onStatus('Beide Server waren ausgelastet – zweiter Versuch in 8 s …', null);
+        if (onStatus) onStatus('Beide Server waren ausgelastet – zweiter Versuch in 8 s …');
         await sleep(8000);
       }
-      if (onStatus) onStatus('Frage ' + new URL(url).host + ' nach Tempolimits entlang ' + pts.length + ' Streckenpunkten – der Server antwortet je nach Auslastung in 5 bis 60 s …', null);
+      if (onStatus) onStatus('Frage ' + new URL(url).host + ' entlang ' + pts.length + ' Streckenpunkten – Antwort je nach Auslastung in 5 bis 60 s …');
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 95000);
       const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q),
@@ -94,15 +133,15 @@ async function fetchLimitWays(tr, onStatus) {
         for (;;) {
           const { done, value } = await reader.read(); if (done) break;
           chunks.push(value); got += value.length;
-          if (onStatus) onStatus('Antwort wird geladen: ' + fmt(got / 1024, 0) + ' KB …', null);
+          if (onStatus) onStatus('Antwort wird geladen: ' + fmt(got / 1024, 0) + ' KB …');
         }
         const all = new Uint8Array(got); let o = 0; for (const c of chunks) { all.set(c, o); o += c.length; }
         j = JSON.parse(new TextDecoder().decode(all));
       } else j = await r.json();
       const ways = (j.elements || []).filter(e => e.type === 'way' && e.geometry && e.geometry.length > 1 && e.tags)
         .map(e => ({ id: e.id, tags: e.tags, geom: e.geometry.map(g => [g.lat, g.lon]) }));
-      return { ways, fetchedAt: Date.now(), osmDate: (j.osm3s && j.osm3s.timestamp_osm_base) || null, points: pts.length };
-    } catch (e) { lastErr = e; if (onStatus) onStatus(((e && e.message) || 'Fehler') + ' – nächster Versuch …', null); await sleep(1500); }
+      return { ways, osmDate: (j.osm3s && j.osm3s.timestamp_osm_base) || null };
+    } catch (e) { lastErr = e; if (onStatus) onStatus(((e && e.message) || 'Fehler') + ' – nächster Versuch …'); await sleep(1500); }
   }
   throw lastErr || new Error('Overpass nicht erreichbar');
 }

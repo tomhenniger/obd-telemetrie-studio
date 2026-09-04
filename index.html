@@ -621,7 +621,7 @@ table.tbl tbody tr:hover td { background: var(--surface-2); }
 .prog-bar { height: 6px; border-radius: 2px; background: var(--lcd); border: 1px solid var(--lcd-line); overflow: hidden; margin-top: 12px; }
 .prog-bar i { display: block; height: 100%; background: var(--ok); box-shadow: 0 0 8px var(--ok-line); }
 /* Unbestimmter Fortschritt: der Balken läuft, solange der Server rechnet */
-.prog-bar.indet i { width: 28%; animation: prog-slide 1.3s var(--ease) infinite alternate; }
+.prog-bar.indet i { width: 28%; animation: prog-slide 1.3s cubic-bezier(.45,0,.55,1) infinite alternate; }   /* quadratisch ein und aus, wie ein Pendel */
 @keyframes prog-slide { from { transform: translateX(0); } to { transform: translateX(257%); } }
 
 /* ===== Hinweisleisten ============================================= */
@@ -3736,12 +3736,51 @@ function limitsOverpassQuery(pts, radiusM) {
     'out tags geom;';
 }
 
-async function fetchLimitWays(tr, onStatus) {
+/* Route in zusammenhängende Abschnitte von etwa targetKm Länge teilen – wenige, große
+   Abschnitte, weil die öffentlichen Server jede Anfrage einzeln zählen und drosseln. */
+function limitsChunks(pts, targetKm, maxChunks) {
+  targetKm = targetKm || 15; maxChunks = maxChunks || 6;
+  if (pts.length < 2) return [pts];
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) total += haversine(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
+  const n = Math.max(1, Math.min(maxChunks, Math.round(total / (targetKm * 1000))));
+  if (n === 1) return [pts];
+  const per = total / n, chunks = [];
+  let cur = [pts[0]], acc = 0;
+  for (let i = 1; i < pts.length; i++) {
+    acc += haversine(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
+    cur.push(pts[i]);
+    if (acc >= per && chunks.length < n - 1) { chunks.push(cur); cur = [pts[i]]; acc = 0; }   // Randpunkt doppelt: Straßen am Schnitt gehen nicht verloren
+  }
+  if (cur.length > 1) chunks.push(cur); else if (chunks.length) chunks[chunks.length - 1].push(...cur.slice(1));
+  return chunks;
+}
+
+const limitsSleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* Alle Abschnitte nacheinander; onStatus(text, frac), onPartial({ways, done, total}) nach jedem Abschnitt */
+async function fetchLimitWays(tr, onStatus, onPartial) {
   const pts = limitsThinTrack(tr);
   if (pts.length < 2) throw new Error('Zu wenige Positionen für eine Abfrage');
+  const chunks = limitsChunks(pts);
+  const byId = new Map();
+  let osmDate = null;
+  for (let c = 0; c < chunks.length; c++) {
+    const label = chunks.length > 1 ? 'Abschnitt ' + (c + 1) + ' von ' + chunks.length + ': ' : '';
+    const frac = chunks.length > 1 ? c / chunks.length : null;
+    const part = await fetchOverpassChunk(chunks[c], (text) => { if (onStatus) onStatus(label + text, frac); });
+    part.ways.forEach(w => byId.set(w.id, w));
+    osmDate = part.osmDate || osmDate;
+    if (onPartial) onPartial({ ways: Array.from(byId.values()), done: c + 1, total: chunks.length });
+    if (c < chunks.length - 1) await limitsSleep(700);          // den Server nicht hetzen
+  }
+  return { ways: Array.from(byId.values()), fetchedAt: Date.now(), osmDate, points: pts.length, chunks: chunks.length };
+}
+
+async function fetchOverpassChunk(pts, onStatus) {
   const q = limitsOverpassQuery(pts, 25);
   let lastErr = null;
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const sleep = limitsSleep;
   /* Zwei Server, zwei Runden: die öffentlichen Overpass-Server drosseln (429) und
      brechen unter Last ab (504); eine kurze Pause und der andere Server helfen meist. */
   const attempts = LIMIT_ENDPOINTS.concat(LIMIT_ENDPOINTS);
@@ -3749,10 +3788,10 @@ async function fetchLimitWays(tr, onStatus) {
     const url = attempts[k];
     try {
       if (k === LIMIT_ENDPOINTS.length) {
-        if (onStatus) onStatus('Beide Server waren ausgelastet – zweiter Versuch in 8 s …', null);
+        if (onStatus) onStatus('Beide Server waren ausgelastet – zweiter Versuch in 8 s …');
         await sleep(8000);
       }
-      if (onStatus) onStatus('Frage ' + new URL(url).host + ' nach Tempolimits entlang ' + pts.length + ' Streckenpunkten – der Server antwortet je nach Auslastung in 5 bis 60 s …', null);
+      if (onStatus) onStatus('Frage ' + new URL(url).host + ' entlang ' + pts.length + ' Streckenpunkten – Antwort je nach Auslastung in 5 bis 60 s …');
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 95000);
       const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q),
@@ -3768,15 +3807,15 @@ async function fetchLimitWays(tr, onStatus) {
         for (;;) {
           const { done, value } = await reader.read(); if (done) break;
           chunks.push(value); got += value.length;
-          if (onStatus) onStatus('Antwort wird geladen: ' + fmt(got / 1024, 0) + ' KB …', null);
+          if (onStatus) onStatus('Antwort wird geladen: ' + fmt(got / 1024, 0) + ' KB …');
         }
         const all = new Uint8Array(got); let o = 0; for (const c of chunks) { all.set(c, o); o += c.length; }
         j = JSON.parse(new TextDecoder().decode(all));
       } else j = await r.json();
       const ways = (j.elements || []).filter(e => e.type === 'way' && e.geometry && e.geometry.length > 1 && e.tags)
         .map(e => ({ id: e.id, tags: e.tags, geom: e.geometry.map(g => [g.lat, g.lon]) }));
-      return { ways, fetchedAt: Date.now(), osmDate: (j.osm3s && j.osm3s.timestamp_osm_base) || null, points: pts.length };
-    } catch (e) { lastErr = e; if (onStatus) onStatus(((e && e.message) || 'Fehler') + ' – nächster Versuch …', null); await sleep(1500); }
+      return { ways, osmDate: (j.osm3s && j.osm3s.timestamp_osm_base) || null };
+    } catch (e) { lastErr = e; if (onStatus) onStatus(((e && e.message) || 'Fehler') + ' – nächster Versuch …'); await sleep(1500); }
   }
   throw lastErr || new Error('Overpass nicht erreichbar');
 }
@@ -10684,7 +10723,7 @@ BUILDERS.map = function (page) {
       el('button', { class: 'btn sm ghost', type: 'button', onclick: () => loadLimits(true) }, 'Neu von OSM laden')));
     limHost.appendChild(el('p', { class: 'dim2', style: { fontSize: '11.5px', lineHeight: '1.5', margin: '10px 0 0' } },
       'Vergleich mit ' + (App.limits.src ? App.limits.src[1] : '–') + '; der Tacho zeigt etwa 3–5 % mehr als die OBD-Geschwindigkeit. Limits laut OpenStreetMap' +
-      (data.osmDate ? ' (Stand ' + String(data.osmDate).slice(0, 10) + ')' : '') + ', ' + data.ways.length + ' Straßenabschnitte geladen. Ohne Toleranz gerechnet; Zuordnung bis 30 m. Keine rechtliche Bewertung.'));
+      (data.osmDate ? ' (Stand ' + String(data.osmDate).slice(0, 10) + ')' : '') + ', ' + data.ways.length + ' Straßenabschnitte' + (data.chunks > 1 ? ' in ' + data.chunks + ' Abfragen' : '') + ' geladen. Ohne Toleranz gerechnet; Zuordnung bis 30 m. Keine rechtliche Bewertung.'));
   }
   function computeLimits(data) {
     const src = speedSource();
@@ -10692,7 +10731,7 @@ BUILDERS.map = function (page) {
     const speedAt = i => { if (!arr) return NaN; const k = bisect(ds.grid, tr.t[i]); return k >= 0 ? arr[k] : NaN; };
     const res = matchTrackLimits(tr, data.ways, speedAt, limitsWhenFor(ds, App.fileName));
     App.limits = { id: limId(), data, res, src };
-    App.limitsStatus = null;
+    if (!data.partial) App.limitsStatus = null;
   }
   async function loadLimits(force) {
     const id = limId();
@@ -10704,7 +10743,15 @@ BUILDERS.map = function (page) {
     try {
       let data = force ? null : await limitsCacheGet(id);
       if (!data) {
-        data = await fetchLimitWays(tr, (text, frac) => setStatus(text, frac));
+        data = await fetchLimitWays(tr, (text, frac) => setStatus(text, frac),
+          part => {                                   // nach jedem Abschnitt die Karte schon einfärben
+            if (part.total > 1 && limHost.isConnected) {
+              computeLimits({ ways: part.ways, partial: true });
+              App.limits.partial = true;
+              if (App.mapMetric !== '__limits') { App.mapMetric = '__limits'; sel.value = '__limits'; }
+              paint();
+            }
+          });
         await limitsCachePut(id, data);
       } else setStatus('Aus dem Zwischenspeicher geladen', 0.6);
       setStatus('Ordne ' + fmt(tr.n, 0) + ' Streckenpunkte ' + data.ways.length + ' Straßenabschnitten zu …', 0.85);
@@ -10731,6 +10778,7 @@ BUILDERS.map = function (page) {
     const res = App.limits.res;
     const COL = ['rgba(150,160,180,.55)', catColor('ok'), catColor('implicit'), catColor('sign'), catColor('unsure')];
     map.setTrack(tr, i => COL[res.cat[i]]);
+    if (App.limits.partial) rampRow.appendChild(el('span', { class: 'dim2', style: { marginRight: '10px' } }, 'wird abschnittsweise geladen – grau ist noch nicht abgefragt'));
     ['ok', 'sign', 'implicit', 'unsure', 'noroad'].forEach(c =>
       rampRow.appendChild(el('span', { class: 'li', style: { display: 'inline-flex', alignItems: 'center', gap: '5px', marginRight: '10px' } },
         el('i', { style: { display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: catColor(c) } }), CAT_LABEL[c])));
