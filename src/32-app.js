@@ -95,6 +95,7 @@ async function ingest(src) {
     }
 
     App.fileName = name;
+    App.vin = findVin(text);
     setP(0.14, 'Zeilen werden ausgewertet …');
     await new Promise(r => setTimeout(r, 16));
     const parsed = await parseCSV(text, (p, rows) =>
@@ -812,8 +813,10 @@ BUILDERS.map = function (page) {
         icon('info', 'n-i'),
         el('div', {}, el('b', {}, 'Dafür verlässt einmal die Route dein Gerät'),
           'Die auf ' + pts + ' Punkte ausgedünnte Strecke wird an die Overpass-API von OpenStreetMap geschickt, um die Tempolimits der befahrenen Straßen zu holen. Keine Messwerte, keine Zeiten, nur Koordinaten. Das Ergebnis bleibt im Browser gespeichert.')));
+      const trimBox = el('input', { type: 'checkbox', checked: store.get('limitsTrim', true) ? true : null, onchange: e => store.set('limitsTrim', !!e.target.checked) });
       limHost.appendChild(el('div', { class: 'chiprow', style: { alignItems: 'center' } },
         el('button', { class: 'btn primary', type: 'button', disabled: src ? null : true, onclick: () => loadLimits(false) }, 'Tempolimits laden'),
+        el('label', { class: 'field', style: { cursor: 'pointer' } }, trimBox, el('span', { class: 'dim' }, 'Start und Ziel weglassen (je 500 m)')),
         el('span', { class: 'dim2', style: { fontSize: '12px' } }, src ? 'Vergleich mit ' + src[1] : 'keine Geschwindigkeit in der Aufzeichnung')));
       return;
     }
@@ -849,12 +852,59 @@ BUILDERS.map = function (page) {
     } else {
       limHost.appendChild(el('p', { class: 'dim', style: { margin: '12px 0 0' } }, 'Kein Abschnitt über dem Limit.'));
     }
+    /* Was hätte das Limit gekostet */
+    const speedArr = App.limits.src ? ds.G[App.limits.src[0]] : null;
+    const consArr = ds.G.cons_calc || ds.G.cons_inst || null, accArr = ds.G.accel || null;
+    if (speedArr && consArr && res.over > 0) {
+      const curve = consumptionCurve(k => speedArr[k], k => consArr[k], accArr ? (k => accArr[k]) : null, ds.N);
+      const bal = limitBalance(tr, res, curve);
+      const price = ds.trip && isFinite(ds.trip.pricePerL) ? ds.trip.pricePerL : NaN;
+      limHost.appendChild(el('div', { class: 'grid kpis', style: { marginTop: '12px' } },
+        kpi('Zeitgewinn durch Überschreitungen', fmtDur(Math.max(0, bal.timeSavedS)), '', 'auf ' + fmt(bal.distOver / 1000, 1) + ' km über dem Limit'),
+        kpi('Mehrverbrauch dabei', bal.distFuel > 0 ? (bal.fuelL >= 0 ? '+' : '') + fmt(bal.fuelL, 2) : '–', bal.distFuel > 0 ? 'L' : '',
+          bal.distFuel > 0 ? (isFinite(price) ? '≈ ' + fmt(bal.fuelL * price, 2) + ' € · ' : '') + 'aus der Verbrauchskurve dieser Fahrt' : 'Verbrauchskurve reicht nicht'),
+        kpi('Verbrauchskurve', curve.length ? curve.length + ' Klassen' : '–', '', curve.length ? curve.map(c => c.v + ': ' + fmt(c.cons, 1)).slice(0, 4).join(' · ') + (curve.length > 4 ? ' …' : '') + ' L/100km' : 'zu wenig ruhige Fahrt')));
+    }
     limHost.appendChild(el('div', { class: 'chiprow', style: { marginTop: '12px', alignItems: 'center' } },
       el('button', { class: 'btn sm', type: 'button', onclick: () => { App.mapMetric = '__limits'; sel.value = '__limits'; paint(); host.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }, 'Auf der Karte zeigen'),
       el('button', { class: 'btn sm ghost', type: 'button', onclick: () => loadLimits(true) }, 'Neu von OSM laden')));
     limHost.appendChild(el('p', { class: 'dim2', style: { fontSize: '11.5px', lineHeight: '1.5', margin: '10px 0 0' } },
       'Vergleich mit ' + (App.limits.src ? App.limits.src[1] : '–') + '; der Tacho zeigt etwa 3–5 % mehr als die OBD-Geschwindigkeit. Limits laut OpenStreetMap' +
       (data.osmDate ? ' (Stand ' + String(data.osmDate).slice(0, 10) + ')' : '') + ', ' + data.ways.length + ' Straßenabschnitte' + (data.chunks > 1 ? ' in ' + data.chunks + ' Abfragen' : '') + ' geladen. Ohne Toleranz gerechnet; Zuordnung bis 30 m. Keine rechtliche Bewertung.'));
+  }
+  const roadHost = el('div');
+  const roadCard = card('Verbrauch je Straße', {
+    hint: 'wo der Kraftstoff hingeht – aus Tempolimit-Zuordnung und Verbrauch',
+    info: { read: 'Jeder Streckenpunkt ist einer Straße zugeordnet (aus dem Tempolimit-Abgleich). Der Verbrauch wird je Straße und je Straßenklasse aufsummiert: Ort, Landstraße, Autobahn. Grundlage ist der berechnete Momentanverbrauch aus Luftmasse oder Einspritzung; wo er fehlt, zählt die Strecke ohne Verbrauch.',
+            good: 'Ort deutlich über Landstraße, Autobahn dazwischen – das ist normal. Eine einzelne Ortsdurchfahrt mit 20 L/100km ist meist Stop-and-go, kein Defekt.',
+            bad: 'Landstraße auf Ortsniveau bei ruhiger Fahrt: entweder viel Beschleunigen oder etwas stimmt mit Gemisch oder Reibung nicht.' }
+  }, roadHost);
+  roadCard.hidden = true;
+  page.appendChild(roadCard);
+  function renderRoads() {
+    roadHost.innerHTML = '';
+    if (!App.limits || App.limits.id !== limId() || App.limits.partial) { roadCard.hidden = true; return; }
+    const fr = ds.G.fuel_rate, cc = ds.G.cons_calc || ds.G.cons_inst;
+    const fuelSeg = i => {
+      const k0 = bisect(ds.grid, tr.t[i - 1]), k1 = bisect(ds.grid, tr.t[i]);
+      if (k0 < 0 || k1 < 0) return NaN;
+      if (fr) { let s = 0, n = 0; for (let k = k0; k <= k1; k++) if (fr[k] === fr[k]) { s += fr[k]; n++; } if (n) return s / n * (tr.t[i] - tr.t[i - 1]) / 3600; }
+      if (cc) { let s = 0, n = 0; for (let k = k0; k <= k1; k++) if (cc[k] === cc[k]) { s += cc[k]; n++; } if (n) return s / n * (tr.dist[i] - tr.dist[i - 1]) / 100000; }
+      return NaN;
+    };
+    const rc = roadConsumption(tr, App.limits.res, App.limits.data.ways, fuelSeg);
+    if (!rc.classes.length || rc.totalFuel <= 0) { roadCard.hidden = true; return; }
+    roadCard.hidden = false;
+    roadHost.appendChild(el('div', { class: 'grid kpis' }, ...rc.classes.filter(c => c.dist > 200).map(c =>
+      kpi(c.key, c.lPer100 === c.lPer100 ? fmt(c.lPer100, 1) : '–', c.lPer100 === c.lPer100 ? 'L/100km' : '',
+        fmt(c.dist / 1000, 1) + ' km · ' + fmt(c.fuel, 2) + ' L (' + fmt(100 * c.fuel / rc.totalFuel, 0) + ' %)' + (c.kmh === c.kmh ? ' · ⌀ ' + fmt(c.kmh, 0) + ' km/h' : '')))));
+    if (rc.roads.length) {
+      roadHost.appendChild(el('div', { class: 'tblwrap', style: { marginTop: '12px' } }, el('table', { class: 'tbl', style: { minWidth: '460px' } },
+        el('thead', {}, el('tr', {}, el('th', {}, 'Straße'), el('th', {}, 'Klasse'), el('th', {}, 'km'), el('th', {}, 'Liter'), el('th', {}, 'L/100km'), el('th', {}, '⌀ km/h'))),
+        el('tbody', {}, ...rc.roads.slice(0, 12).map(r => el('tr', {},
+          el('td', {}, r.name || r.key), el('td', {}, r.cls), el('td', { class: 'n' }, fmt(r.dist / 1000, 2)), el('td', { class: 'n' }, fmt(r.fuel, 2)),
+          el('td', { class: 'n' }, r.lPer100 === r.lPer100 ? fmt(r.lPer100, 1) : '–'), el('td', { class: 'n' }, r.kmh === r.kmh ? fmt(r.kmh, 0) : '–')))))));
+    }
   }
   function computeLimits(data) {
     const src = speedSource();
@@ -863,6 +913,7 @@ BUILDERS.map = function (page) {
     const res = matchTrackLimits(tr, data.ways, speedAt, limitsWhenFor(ds, App.fileName));
     App.limits = { id: limId(), data, res, src };
     if (!data.partial) App.limitsStatus = null;
+    if (typeof renderRoads === 'function') renderRoads();
   }
   async function loadLimits(force) {
     const id = limId();
@@ -875,6 +926,8 @@ BUILDERS.map = function (page) {
       let data = force ? null : await limitsCacheGet(id);
       if (!data) {
         data = await fetchLimitWays(tr, (text, frac) => setStatus(text, frac),
+          null, { trimM: store.get('limitsTrim', true) ? 500 : 0 });
+        if (false) data = await fetchLimitWays(tr, (text, frac) => setStatus(text, frac),
           part => {                                   // nach jedem Abschnitt die Karte schon einfärben
             if (part.total > 1 && limHost.isConnected) {
               computeLimits({ ways: part.ways, partial: true });
@@ -1896,6 +1949,7 @@ BUILDERS.buy = function (page) {
       (x.name || 'Ohne Namen') + (x.km ? ' · ' + x.km + ' km' : '') + (x.price ? ' · ' + x.price + ' €' : ''))),
     el('option', { value: '__new' }, '+ Neue Besichtigung'));
 
+  if (!insp.vin && App.ds && App.vin) { insp.vin = App.vin.vin; persist(); }   // FIN aus der Aufzeichnung übernehmen
   const fld = (k, label, ph, wide) => el('label', { class: 'pform-f' + (wide ? ' wide' : '') },
     el('span', {}, label),
     el('input', { class: 'inp', value: insp[k] || '', placeholder: ph,
@@ -2708,6 +2762,7 @@ function vehicleEvidence(ds) {
     e.push({ k: 'Aufladung', v: lmax > 115 ? 'aufgeladen (' + fmt(lmax, 0) + ' % absolute Last)' : 'kein Hinweis auf Aufladung (max ' + fmt(lmax, 0) + ' %)' });
   if (s.rpm) e.push({ k: 'höchste Drehzahl', v: fmt(s.rpm.max, 0) + ' min⁻¹ – der Begrenzer liegt darüber' });
   if (has('cac_b1')) e.push({ k: 'Ladeluftkühlung', v: 'Ladelufttemperatur wird gemessen' });
+  if (App.vin) e.push({ k: 'Fahrgestellnummer', v: App.vin.vin + (App.vin.maker ? ' – ' + App.vin.maker : '') + (App.vin.modelYear ? ', Modelljahr ' + App.vin.modelYear : '') });
   if (App.gears && App.gears.gears.length)
     e.push({ k: 'Übersetzungen', v: App.gears.gears.length + ' gemessen, längste ' + fmt(App.gears.gears[App.gears.gears.length - 1].kmhPer1000, 1) + ' km/h je 1000' });
   return e;
@@ -3198,6 +3253,17 @@ function baseName() {
 (function init() {
   const saved = store.get('theme', null);
   applyTheme(saved || 'dark');   // das Gerät ist dunkel; hell nur auf ausdrückliche Wahl
+  /* Drucken: helles Schema, aufgeklappte Befunde, nur die aktuelle Seite */
+  const printBtn = $('#print'); if (printBtn) printBtn.onclick = () => window.print();
+  let printTheme = null, printOpened = [];
+  window.addEventListener('beforeprint', () => {
+    printTheme = document.documentElement.getAttribute('data-theme'); applyTheme('light');
+    printOpened = $$('#pages .page:not([hidden]) details:not([open])'); printOpened.forEach(d => { d.open = true; });
+  });
+  window.addEventListener('afterprint', () => {
+    if (printTheme) applyTheme(printTheme);
+    printOpened.forEach(d => { d.open = false; }); printOpened = [];
+  });
   $('#theme').addEventListener('click', () =>
     applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
 

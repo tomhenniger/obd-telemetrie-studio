@@ -514,3 +514,17 @@ details.acc > summary::-webkit-details-marker { display: none; }
 .dtc-t { min-width: 0; }
 .dtc-t b { display: block; font-size: 13px; }
 .dtc-t .dim { display: block; font-size: 12px; margin-top: 1px; }
+
+/* ===== Druck: nur die aktuelle Seite, hell, ohne Bedienelemente ===== */
+@media print {
+  .rail, .tabbar, .tabmore, .tabmore-bd, .topbar-actions, .infobtn, .mdl-bd, .brush-host, .chiprow.scroll, .btn, .seg, select.sel, input.inp { display: none !important; }
+  #app { display: block !important; }
+  .topbar { position: static; border-bottom: 1px solid #999; backdrop-filter: none; background: #fff; }
+  .page { padding: 0 !important; max-width: none; gap: 10px; animation: none; }
+  .card, .finding, .chk, .kpis, .note, table.tbl tr { break-inside: avoid; }
+  .card, .finding, .note { box-shadow: none; }
+  body { background: #fff !important; color: #000; }
+  .chart-canvas, .map-canvas { max-width: 100%; }
+  .f-b, .chk .f-b { display: grid !important; }
+  a { color: inherit; text-decoration: none; }
+}

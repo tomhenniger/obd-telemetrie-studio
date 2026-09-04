@@ -1,6 +1,11 @@
 # Changelog — 2026-09-04
 
 ## Neue Features
+- **Verbrauch je Straße** (Strecke, nach dem Tempolimit-Abgleich): Liter und L/100km je Straße und je Klasse Ort, Landstraße, Autobahn, mit Anteil am Gesamtverbrauch.
+- **Limit-Bilanz**: Zeitgewinn und Mehrverbrauch aller Abschnitte über dem Limit, gerechnet mit der Verbrauchskurve der eigenen Fahrt (Median je 10-km/h-Klasse bei ruhiger Fahrt), in Litern und Euro.
+- **Drucken**: Druckknopf in der Kopfzeile. Druckt die aktuelle Seite hell, ohne Bedienelemente, mit aufgeklappten Befunden; über den Systemdialog auch als PDF (Kaufcheck-Protokoll, Diagnose).
+- **Fahrgestellnummer**: steht sie in der Aufzeichnung, zeigt der Fahrzeugdialog Hersteller, Region und Modelljahr; der Kaufcheck übernimmt sie ins FIN-Feld.
+- Tempolimits: Option „Start und Ziel weglassen (je 500 m)“ (voreingestellt an), damit die Wohnadresse nicht in der Abfrage steckt.
 - **Anmerkungen an Zeitpunkten** (Zeitreihen): Zeiger auf die Stelle, Text eingeben, setzen. Erscheint als gestrichelte N-Linie im Verlauf und als Pin auf der Karte, wird mit der Fahrt in der Akte gespeichert und steht im KI-Prompt unter `<anmerkungen>`.
 - **Ereignis-Marker** auf Verlauf und Karte: Stopps (S), Volllastzüge (V), gemessene Sprints (M), Klopfregelung (K), starke Bremsungen (B, unter −0,3 g), Betriebswarm (W). Ein- und ausblendbar, mit Legende und Zählern.
 - **Sollbänder** in den Verläufen: Kühlmittel, Öl, Getriebe, Gemischkorrektur, Bordspannung, Kat, Lambda bekommen den grünen Sollbereich (Werksangabe aus dem Profil, sonst Klassenwert) hinterlegt.

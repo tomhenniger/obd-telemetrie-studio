@@ -15,19 +15,19 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 - [x] Ereignisse auf Karte und Verläufen: Stopps, Volllastzüge, Sprints, Klopfregelung, starke Bremsungen, Betriebswarm als Marker mit Kürzel, ein- und ausblendbar. (2026-09-04)
 
 ### Strecke (auf dem OSM-Matching)
-- [ ] Verbrauch je Straßenabschnitt. Klein.
-- [ ] „Was hätte das Limit gekostet“: Zeitgewinn und Mehrverbrauch der Überschreitungen. Klein.
+- [x] Verbrauch je Straße und Straßenklasse (Ort, Landstraße, Autobahn) nach dem Tempolimit-Abgleich. (2026-09-04)
+- [x] Limit-Bilanz: Zeitgewinn und Mehrverbrauch der Überschreitungen aus der eigenen Verbrauchskurve. (2026-09-04)
 - [ ] Wiederkehrende Abschnitte erkennen und über Fahrten vergleichen. Mittel.
 
 ### Werkstatt und Kauf
-- [ ] Druckbares Protokoll (Kaufcheck, Diagnose) über die Druckfunktion. Klein.
+- [x] Drucken: Druckknopf in der Kopfzeile, helles Schema, aufgeklappte Befunde, ohne Bedienelemente – jede Seite, auch als PDF. (2026-09-04)
 - [ ] Teilen per Link: Zusammenfassung komprimiert in der URL, als QR-Code. Mittel.
-- [ ] Datenschutz-Schnitt: Start und Ziel der Route verwischen. Klein.
+- [x] Datenschutz-Schnitt: Start und Ziel (je 500 m) werden bei der Tempolimit-Abfrage weggelassen (Voreinstellung an). Exporte enthalten keine Koordinaten. (2026-09-04)
 
 ### Plattform
 - [ ] Installierbar und offline (PWA, Kachel-Cache). Mittel.
 - [ ] Live-Verbindung zum ELM327 per Web Bluetooth (Chrome Android/Desktop). Groß.
-- [ ] Fahrgestellnummer aus der CSV lesen: Hersteller, Werk, Modelljahr für den Profilvorschlag. Klein.
+- [x] Fahrgestellnummer aus der CSV: Hersteller (WMI), Region, Modelljahr im Fahrzeugdialog, vorausgefüllt im Kaufcheck. (2026-09-04)
 
 ## Vorgeschlagen (zweite Runde)
 

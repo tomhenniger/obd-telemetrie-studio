@@ -142,3 +142,29 @@ test('Abschnitte: lange Route wird in wenige, zusammenhängende Stücke geteilt,
   for (let i = 1; i < c60.length; i++) assert.deepEqual(c60[i][0], c60[i - 1][c60[i - 1].length - 1], 'zusammenhängend');
   assert.equal(chunks(line(200)).length, 6, 'höchstens sechs Abschnitte');
 });
+
+test('Verbrauch je Straße und Limit-Bilanz', () => {
+  const ways = [
+    { id: 1, tags: { highway: 'residential', maxspeed: '50', 'source:maxspeed': 'DE:urban', name: 'Dorfstraße' }, geom: [[53.0, 10.0], [53.009, 10.0]] },
+    { id: 2, tags: { highway: 'secondary', maxspeed: '100', 'source:maxspeed': 'DE:rural', name: 'L 231' }, geom: [[53.009, 10.0], [53.027, 10.0]] }
+  ];
+  const n = 60, tr = { n, t: new Float64Array(n), lat: new Float64Array(n), lon: new Float64Array(n), dist: new Float64Array(n), gaps: [] };
+  for (let i = 0; i < n; i++) { tr.t[i] = i * 2; tr.lat[i] = 53.0 + i * 0.00045; tr.lon[i] = 10.0; tr.dist[i] = i * 50; }
+  const speed = i => i < 20 ? 45 : 118;
+  const res = g('matchTrackLimits')(tr, ways, speed, null);
+  const rc = g('roadConsumption')(tr, res, ways, i => (i < 20 ? 12 : 8) * 50 / 100000);   // 12 bzw. 8 L/100km
+  const ort = rc.classes.find(c => c.key === 'Ort'), land = rc.classes.find(c => c.key === 'Landstraße');
+  assert.ok(ort && land);
+  assert.ok(Math.abs(ort.lPer100 - 12) < 0.5, 'Ort ' + ort.lPer100); assert.ok(Math.abs(land.lPer100 - 8) < 0.5, 'Land ' + land.lPer100);
+  assert.equal(rc.roads[0].name, 'L 231');
+  /* Bilanz: 2 km mit 118 statt 100 → Zeitgewinn ≈ 11 s; Kurve 8 L bei 100, 9 L bei 118 → Mehrverbrauch ≈ 0,02 L */
+  const curve = [{ v: 95, cons: 8 }, { v: 115, cons: 9 }, { v: 125, cons: 9.5 }];
+  const bal = g('limitBalance')(tr, res, curve);
+  assert.ok(bal.distOver > 1800 && bal.distOver < 2100, 'über Limit ' + bal.distOver);
+  assert.ok(Math.abs(bal.timeSavedS - bal.distOver / 1000 * 3600 * (1 / 100 - 1 / 118)) < 0.5);
+  assert.ok(bal.fuelL > 0.015 && bal.fuelL < 0.03, 'Mehrverbrauch ' + bal.fuelL);
+  assert.equal(g('consAtSpeed')(curve, 105), 8.5);
+  /* Start/Ziel weglassen */
+  const tt = g('limitsTrimTrack')(tr, 500);
+  assert.ok(tt.n < tr.n && tt.dist[0] >= 500 && tt.dist[tt.n - 1] <= tr.dist[n - 1] - 500);
+});

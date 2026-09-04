@@ -114,8 +114,22 @@ function limitsChunks(pts, targetKm, maxChunks) {
 const limitsSleep = ms => new Promise(r => setTimeout(r, ms));
 
 /* Alle Abschnitte nacheinander; onStatus(text, frac), onPartial({ways, done, total}) nach jedem Abschnitt */
-async function fetchLimitWays(tr, onStatus, onPartial) {
-  const pts = limitsThinTrack(tr);
+/* Start und Ziel weglassen: die ersten und letzten trimM Meter der Route bleiben zu Hause */
+function limitsTrimTrack(tr, trimM) {
+  if (!trimM || !tr.dist || tr.n < 4) return tr;
+  const total = tr.dist[tr.n - 1];
+  if (total < trimM * 3) return tr;
+  let a = 0; while (a < tr.n && tr.dist[a] < trimM) a++;
+  let b = tr.n - 1; while (b > a && tr.dist[b] > total - trimM) b--;
+  if (b - a < 2) return tr;
+  const sl = arr => arr.subarray ? arr.subarray(a, b + 1) : arr.slice(a, b + 1);
+  return { n: b - a + 1, lat: sl(tr.lat), lon: sl(tr.lon), dist: sl(tr.dist), t: sl(tr.t), trimmed: [a, b] };
+}
+
+async function fetchLimitWays(tr, onStatus, onPartial, opts) {
+  opts = opts || {};
+  const src = opts.trimM ? limitsTrimTrack(tr, opts.trimM) : tr;
+  const pts = limitsThinTrack(src);
   if (pts.length < 2) throw new Error('Zu wenige Positionen für eine Abfrage');
   const radius = 25 + (pts.tolM || 0);                       // Korridor wächst mit der Vereinfachungstoleranz
   const chunks = [pts];                                       // eine Anfrage je Fahrt; limitsChunks bleibt für Sonderfälle
@@ -130,7 +144,87 @@ async function fetchLimitWays(tr, onStatus, onPartial) {
     if (onPartial) onPartial({ ways: Array.from(byId.values()), done: c + 1, total: chunks.length });
     if (c < chunks.length - 1) await limitsSleep(700);          // den Server nicht hetzen
   }
-  return { ways: Array.from(byId.values()), fetchedAt: Date.now(), osmDate, points: pts.length, chunks: chunks.length, tolM: pts.tolM, radius };
+  return { ways: Array.from(byId.values()), fetchedAt: Date.now(), osmDate, points: pts.length, chunks: chunks.length, tolM: pts.tolM, radius, trimM: opts.trimM || 0 };
+}
+
+/* ---------- Verbrauch je Straße ----------
+   fuelSeg(i) = Liter auf dem Stück i-1 → i (NaN, wenn unbekannt) */
+function roadClass(highway, limitKmh) {
+  if (highway === 'motorway' || highway === 'motorway_link' || highway === 'trunk' || highway === 'trunk_link') return 'Autobahn';
+  if (highway === 'residential' || highway === 'living_street') return 'Ort';
+  if (limitKmh === limitKmh && limitKmh <= 50) return 'Ort';
+  if (limitKmh === Infinity || limitKmh >= 120) return 'Autobahn';
+  if (limitKmh >= 60 || /^(primary|secondary|tertiary|unclassified)/.test(highway || '')) return 'Landstraße';
+  return 'Sonstige';
+}
+function roadConsumption(tr, res, ways, fuelSeg) {
+  const byRoad = new Map(), byClass = new Map();
+  const gapSet = new Set((tr.gaps || []).map(g => g.i));
+  const add = (map, key, dd, dt, fuel, extra) => {
+    let r = map.get(key); if (!r) { r = Object.assign({ key, dist: 0, time: 0, fuel: 0, fuelDist: 0 }, extra || {}); map.set(key, r); }
+    r.dist += dd; r.time += dt;
+    if (fuel === fuel) { r.fuel += fuel; r.fuelDist += dd; }
+  };
+  for (let i = 1; i < tr.n; i++) {
+    if (gapSet.has(i)) continue;
+    const dd = tr.dist[i] - tr.dist[i - 1], dt = tr.t[i] - tr.t[i - 1];
+    if (!(dd > 0) || !(dt > 0) || dt > 60) continue;
+    const wi = res.way[i]; if (wi < 0) continue;
+    const w = ways[wi], t = w.tags || {};
+    const name = t.name || t.ref || null;
+    const cls = roadClass(t.highway, res.lim[i]);
+    const fuel = fuelSeg(i);
+    add(byRoad, name || ('(' + (t.highway || 'Straße') + ' ohne Namen)'), dd, dt, fuel, { name, highway: t.highway, cls });
+    add(byClass, cls, dd, dt, fuel, {});
+  }
+  const finish = r => { r.lPer100 = r.fuelDist > 200 ? r.fuel / r.fuelDist * 100000 : NaN; r.kmh = r.time > 0 ? r.dist / r.time * 3.6 : NaN; return r; };
+  const roads = Array.from(byRoad.values()).map(finish).filter(r => r.dist >= 300).sort((a, b) => b.fuel - a.fuel);
+  const classes = Array.from(byClass.values()).map(finish).sort((a, b) => b.dist - a.dist);
+  const totalFuel = classes.reduce((s, c) => s + c.fuel, 0);
+  return { roads, classes, totalFuel };
+}
+
+/* ---------- Was hätte das Limit gekostet ----------
+   Zeitgewinn und Mehrverbrauch aller Abschnitte über dem Limit, gegen eine
+   Verbrauchskurve aus der eigenen Fahrt (Median je 10-km/h-Klasse bei ruhiger Fahrt). */
+function consumptionCurve(speedAt, consAt, accelAt, n) {
+  const bins = new Map();
+  for (let k = 0; k < n; k++) {
+    const v = speedAt(k), c = consAt(k), a = accelAt ? Math.abs(accelAt(k)) : 0;
+    if (!(v >= 30) || !(c === c) || c <= 0 || c > 60 || a > 0.05) continue;
+    const b = Math.floor(v / 10) * 10;
+    let arr = bins.get(b); if (!arr) { arr = []; bins.set(b, arr); }
+    arr.push(c);
+  }
+  const curve = [];
+  for (const [b, arr] of bins) if (arr.length >= 15) { arr.sort((p, q) => p - q); curve.push({ v: b + 5, cons: arr[Math.floor(arr.length / 2)], n: arr.length }); }
+  curve.sort((p, q) => p.v - q.v);
+  return curve;
+}
+function consAtSpeed(curve, v) {
+  if (!curve.length) return NaN;
+  if (v <= curve[0].v) return curve[0].cons;
+  if (v >= curve[curve.length - 1].v) return curve[curve.length - 1].cons;
+  for (let i = 1; i < curve.length; i++) if (v <= curve[i].v) {
+    const a = curve[i - 1], b = curve[i]; return a.cons + (b.cons - a.cons) * (v - a.v) / (b.v - a.v);
+  }
+  return NaN;
+}
+function limitBalance(tr, res, curve) {
+  const gapSet = new Set((tr.gaps || []).map(g => g.i));
+  let timeSaved = 0, fuel = 0, distOver = 0, distFuel = 0;
+  for (let i = 1; i < tr.n; i++) {
+    if (gapSet.has(i)) continue;
+    const cat = res.cat[i]; if (cat !== LIMIT_CAT.sign && cat !== LIMIT_CAT.implicit) continue;
+    const dd = tr.dist[i] - tr.dist[i - 1]; if (!(dd > 0)) continue;
+    const v = res.speed[i], lim = res.lim[i];
+    if (!(v > lim) || !(lim > 0) || lim === Infinity) continue;
+    distOver += dd;
+    timeSaved += dd / 1000 * 3600 * (1 / lim - 1 / v);
+    const cv = consAtSpeed(curve, v), cl = consAtSpeed(curve, lim);
+    if (cv === cv && cl === cl) { fuel += dd / 100000 * (cv - cl); distFuel += dd; }
+  }
+  return { timeSavedS: timeSaved, fuelL: fuel, distOver, distFuel, curve };
 }
 
 async function fetchOverpassChunk(pts, onStatus, radius) {
