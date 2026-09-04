@@ -31,6 +31,8 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 
 ## Offen
 
+- [x] Auswertungspaket: vollständige Auswertung als Datei weitergeben, Empfänger arbeitet interaktiv damit weiter. (2026-09-04)
+
 - [x] QR-Code: eigener Encoder (Byte-Modus, Versionen 1–40), im Bericht auf der Schlussseite; gegen den Referenz-Encoder von OpenCV geprüft. (2026-09-04)
 - [ ] Verläufe zweier Fahrten übereinanderlegen (setzt Rohdaten in der Akte voraus).
 - [ ] Wiederkehrende Abschnitte über mehrere Fahrten vergleichen (dito).

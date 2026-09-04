@@ -110,6 +110,8 @@ async function toCsvText(input, hint) {
     return { text: v.text, name: (hint || 'VCDS') + ' · ' + (v.controller || 'Messwertblock'), vcds: v };
   }
 
+  if (looksLikePackage(text)) return { text, name: hint || 'Auswertungspaket' };
+
   const probe = text.slice(0, 2000);
   if (/^\s*[{[]/.test(probe) || /<html/i.test(probe))
     throw new Error('Der übergebene Inhalt ist keine CSV-Datei, sondern ' +

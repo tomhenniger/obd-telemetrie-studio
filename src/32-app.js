@@ -94,6 +94,29 @@ async function ingest(src) {
       text = r.text; name = r.name || name;
     }
 
+    /* Auswertungspaket statt Rohdatei? Dann ist alles schon gerechnet. */
+    if (looksLikePackage(text)) {
+      setP(0.5, 'Auswertung wird geöffnet …');
+      const pkg = pkgParse(text);
+      const ds = datasetFromPackage(pkg);
+      App.fileName = pkg.datei || name;
+      App.vin = pkg.vin ? decodeVin(pkg.vin) : null;
+      if (pkg.profil) store.set('profile', pkg.profil);
+      if (pkg.rollCircum) store.set('rollCircum', pkg.rollCircum);
+      if (pkg.gearbox) store.set('gearbox', pkg.gearbox);
+      initDataset(ds);
+      if (pkg.notizen && pkg.notizen.length) store.set(notesKey(driveId(ds, App.fileName)), pkg.notizen);
+      if (pkg.dtc && pkg.dtc.length) store.set('dtc:' + driveId(ds, App.fileName), pkg.dtc);
+      setP(1, 'Fertig');
+      $('#hero').hidden = true; $('#app').hidden = false;
+      document.body.classList.remove('no-data');
+      if (location.hash || location.search) history.replaceState(null, '', location.pathname);
+      $('#pages').prepend(noteBox('ok', 'Geteilte Auswertung geöffnet',
+        'Diese Fahrt wurde von jemand anderem ausgewertet und als Paket weitergegeben' +
+        (pkg.erzeugt ? ' (erstellt am ' + new Date(pkg.erzeugt).toLocaleDateString('de-DE') + ')' : '') +
+        '. Alle Ansichten funktionieren wie sonst; nur die Rohdatei liegt beim Absender, deshalb lässt sich die Auswertung nicht neu berechnen.'));
+      return;
+    }
     App.fileName = name;
     App.vin = findVin(text);
     setP(0.14, 'Zeilen werden ausgewertet …');
@@ -3044,6 +3067,46 @@ async function openShareDialog() {
         'Länge ' + fmt(url.length / 1024, 1) + ' KB' + (url.length > 8000
           ? '. Das ist für manche Messenger zu lang – dann lieber den Bericht als PDF schicken.'
           : '. Passt in Nachricht, Adresszeile und QR-Code.')))));
+  /* Vollständige Auswertung als Datei */
+  const pkgInfo = el('p', { class: 'dim2', style: { fontSize: '11.5px', marginTop: '8px', lineHeight: '1.5' } },
+    'Enthält Zeitreihen, Route, Statistik, Ereignisse und das Fahrzeugprofil – alles, was die Ansichten brauchen. Die Rohdatei bleibt bei dir.');
+  const makePkg = async () => {
+    const pkg = buildPackage(App.ds, App.profile, App.fileName, {
+      rollCircum: rollCircumNow(), gearbox: store.get('gearbox', null),
+      notes: sortNotes(store.get(notesKey(driveId(App.ds, App.fileName)), [])),
+      dtc: activeDtcCodes ? activeDtcCodes() : []
+    });
+    const { bytes, gz } = await packageToBytes(pkg);
+    return { bytes, gz, name: packageFileName(App.fileName, App.profile ? App.profile.name : '') };
+  };
+  const pkgBtn = el('button', { class: 'btn', type: 'button', onclick: async () => {
+    pkgBtn.disabled = true; pkgInfo.textContent = 'Paket wird gepackt …';
+    try {
+      const { bytes, name } = await makePkg();
+      const blob = new Blob([bytes], { type: 'application/gzip' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      pkgInfo.textContent = 'Gespeichert: ' + name + ' (' + fmt(bytes.length / 1024, 0) + ' KB). Der Empfänger zieht die Datei einfach auf die Startseite.';
+    } catch (e) { pkgInfo.textContent = 'Fehler: ' + (e.message || e); }
+    pkgBtn.disabled = false;
+  } }, icon('dl'), 'Auswertung als Datei');
+  const pkgShare = (navigator.share && navigator.canShare) ? el('button', { class: 'btn', type: 'button', onclick: async () => {
+    pkgInfo.textContent = 'Paket wird gepackt …';
+    try {
+      const { bytes, name } = await makePkg();
+      const file = new File([bytes], name, { type: 'application/gzip' });
+      if (navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: 'OBD-Auswertung' });
+      else pkgInfo.textContent = 'Dieses Gerät kann Dateien nicht direkt teilen – bitte erst speichern.';
+    } catch (e) { if (e && e.name !== 'AbortError') pkgInfo.textContent = 'Fehler: ' + (e.message || e); }
+  } }, icon('share'), 'Paket teilen …') : null;
+  body.appendChild(el('div', { class: 'lbl-eng', style: { margin: '16px 0 6px' } }, 'Vollständige Auswertung weitergeben'));
+  body.appendChild(el('p', { class: 'dim', style: { fontSize: '12.5px', lineHeight: '1.6', margin: '0 0 8px' } },
+    'Der Link oben trägt nur die Zusammenfassung – eine Adresse fasst keine Messreihen. Wer alles sehen soll, bekommt die Auswertung als Datei: Karte, Zeitreihen, Kennfelder, Diagnose, genauso bedienbar wie hier.'));
+  body.appendChild(el('div', { class: 'chiprow' }, pkgBtn, pkgShare));
+  body.appendChild(pkgInfo);
+
   body.appendChild(el('div', { class: 'lbl-eng', style: { margin: '16px 0 6px' } }, 'Was der Empfänger sieht'));
   const t = App.diag.tally || {};
   body.appendChild(el('p', { class: 'dim', style: { fontSize: '12.5px', lineHeight: '1.6' } },
