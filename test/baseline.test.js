@@ -38,7 +38,7 @@ test('Baseline-Prüfung: eigener Ausreißer im Werksband wird erkannt', () => {
 test('Wartungsstand: Intervalle je Bauart, Restlaufzeit, Fälligkeit', () => {
   const prof = { fuel: 'petrol', aspiration: 'kompressor', specs: { timingDrive: 'Kette' } };
   const now = Date.UTC(2026, 8, 4);
-  const state = { km: 185000, done: { oil: { km: 178000, date: Date.UTC(2025, 8, 1) }, brakefluid: { date: Date.UTC(2023, 0, 1) }, spark: { km: 140000 } } };
+  const state = { km: 185000, done: { oil: { km: 178000, date: Date.UTC(2025, 8, 1) }, brakefluid: { date: Date.UTC(2023, 0, 1) }, spark: { km: 110000 } } };
   const list = g('serviceStatus')(prof, state, now);
   const by = id => list.find(x => x.id === id);
   assert.ok(!by('timing'), 'Kette: kein Zahnriemen-Punkt');
@@ -50,7 +50,8 @@ test('Wartungsstand: Intervalle je Bauart, Restlaufzeit, Fälligkeit', () => {
   assert.ok(oil.daysLeft < 0 && oil.daysLeft > -10, 'knapp überfällig: ' + oil.daysLeft);
   const bf = by('brakefluid');
   assert.equal(bf.status, 'over'); assert.ok(bf.daysLeft < 0);
-  assert.equal(by('spark').status, 'over', 'Kerzen bei 140.000 + 60.000 < 185.000');
+  assert.equal(by('spark').status, 'over', 'Kerzen zuletzt bei 110.000, Intervall 60.000 → seit 15.000 km überfällig');
+  assert.equal(by('spark').kmLeft, -15000);
   assert.equal(by('cabin').status, 'unknown');
   const diesel = g('serviceStatus')({ fuel: 'diesel', specs: { timingDrive: 'Zahnriemen' } }, {}, now);
   assert.ok(diesel.find(x => x.id === 'dpf') && diesel.find(x => x.id === 'timing') && !diesel.find(x => x.id === 'spark'));
