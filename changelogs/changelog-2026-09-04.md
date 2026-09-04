@@ -1,6 +1,8 @@
 # Changelog — 2026-09-04
 
 ## Neue Features
+- **Fahrt nacherleben** (Strecke): Regler und Abspielknopf, Marker auf der Karte und Zeiger in allen Verläufen laufen synchron mit, Tempo von 10× bis 300×.
+- **Wiederkehrende Abschnitte** (Strecke): Stellen, an denen die Route mehrfach befahren wurde, mit Dauer und Durchschnittstempo je Durchfahrt und Sprung zur schnellsten.
 - **Leistung aus der Fahrphysik** (Kennfelder): zweite, vom Kraftstofffluss unabhängige Schätzung. Aus Beschleunigung, Luft- und Rollwiderstand und Steigung folgt die Kraft, daraus die Leistung an der Kurbelwelle, je Volllastzug und gegen die Werksangabe. Dazu eine Massenschätzung aus Leistung und Beschleunigung mit Streuband. Alle Annahmen stehen unter der Karte.
 - **Zwei Fahrten vergleichen** (Fahrzeugakte): zwei gespeicherte Fahrten auswählen, Kennzahlen nebeneinander mit Differenz, Prozent und Bewertung „besser/schlechter“ dort, wo die Richtung eindeutig ist; darunter alle Befunde, deren Status oder Wert sich geändert hat.
 - **Mehrere Dateien auf einmal**: abgebrochene Aufzeichnungen lassen sich als CSV-Teile zusammen auswählen oder ablegen; sie werden nach Zeit sortiert zu einer Fahrt zusammengesetzt (gleiche Spalten vorausgesetzt). Eine mitgegebene GPX-Datei ergänzt die Route, wenn die OBD-App kein GPS aufgezeichnet hat.

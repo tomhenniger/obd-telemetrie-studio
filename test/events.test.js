@@ -32,3 +32,24 @@ test('Sollbänder und Anmerkungen', () => {
   assert.equal(JSON.stringify(s.map(n => n.text)), '["a","b"]');
   assert.equal(g('notesKey')('f_abc'), 'notes:f_abc');
 });
+
+test('Wiederkehrende Abschnitte: Hin- und Rückweg wird erkannt und je Durchfahrt bewertet', () => {
+  /* Gerade Strecke 2 km hin, dann zurück – jede Zelle zweimal besucht */
+  const pts = [];
+  const N = 200;
+  for (let i = 0; i < N; i++) pts.push({ lat: 53 + i * 0.00009, lon: 10, d: i * 10, t: i * 2 });          // hin, 5 m/s
+  for (let i = N - 1; i >= 0; i--) pts.push({ lat: 53 + i * 0.00009, lon: 10, d: (2 * N - 1 - i) * 10, t: 400 + (N - 1 - i) * 1 });  // zurück, 10 m/s
+  const tr = { n: pts.length, lat: Float64Array.from(pts.map(p => p.lat)), lon: Float64Array.from(pts.map(p => p.lon)),
+    dist: Float64Array.from(pts.map(p => p.d)), t: Float64Array.from(pts.map(p => p.t)), gaps: [] };
+  const segs = g('repeatSegments')(tr);
+  assert.ok(segs.length >= 1, 'mindestens ein wiederkehrender Abschnitt');
+  const s = segs[0];
+  assert.equal(s.laps.length, 2, 'zwei Durchfahrten');
+  assert.ok(s.best.dur < s.laps[0].dur + 1, 'die schnellste ist die Rückfahrt');
+  assert.ok(s.spreadS > 10, 'Spanne zwischen den Durchfahrten: ' + s.spreadS);
+  assert.ok(s.lengthM >= 500);
+  /* Einfache Gerade ohne Wiederholung */
+  const einweg = { n: N, lat: Float64Array.from(pts.slice(0, N).map(p => p.lat)), lon: Float64Array.from(pts.slice(0, N).map(p => p.lon)),
+    dist: Float64Array.from(pts.slice(0, N).map(p => p.d)), t: Float64Array.from(pts.slice(0, N).map(p => p.t)), gaps: [] };
+  assert.equal(g('repeatSegments')(einweg).length, 0);
+});

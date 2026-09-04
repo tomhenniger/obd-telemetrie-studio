@@ -76,3 +76,67 @@ function specBandFor(id, profile) {
 /* Anmerkungen: [{ t, text }] je Fahrt, im Browser gespeichert */
 function notesKey(driveIdStr) { return 'notes:' + driveIdStr; }
 function sortNotes(list) { return (list || []).filter(n => n && isFinite(n.t) && n.text).sort((a, b) => a.t - b.t); }
+
+/* ===== Wiederkehrende Abschnitte ====================================
+   Findet Stellen, an denen dieselbe Strecke mehrfach befahren wurde:
+   Route in Zellen rastern, wiederholte Zellenfolgen suchen und die
+   Durchfahrten vergleichen (Zeit, Tempo, Verbrauch).
+   ================================================================== */
+function repeatSegments(tr, opts) {
+  opts = opts || {};
+  const cellM = opts.cellM || 60;                 // Rasterweite in Metern
+  const minLen = opts.minLenM || 500;             // Mindestlänge eines Abschnitts
+  const out = [];
+  if (!tr || tr.n < 20 || !tr.dist) return out;
+  const cos = Math.cos(tr.lat[0] * Math.PI / 180);
+  const key = i => Math.round(tr.lat[i] * 110540 / cellM) + ':' + Math.round(tr.lon[i] * 111320 * cos / cellM);
+  /* Jede Zelle merkt sich, wann sie besucht wurde */
+  const visits = new Map();
+  for (let i = 0; i < tr.n; i++) {
+    const k = key(i);
+    let a = visits.get(k); if (!a) { a = []; visits.set(k, a); }
+    /* Ein neuer Besuch zählt erst, wenn das Auto die Zelle verlassen hatte – gemessen
+       an der gefahrenen Strecke, nicht am Index. Sonst ist der Wendepunkt einer
+       Pendelfahrt nur ein Besuch, weil die Punkte dort direkt aufeinander folgen. */
+    if (!a.length || tr.dist[i] - tr.dist[a[a.length - 1]] > cellM * 3) a.push(i);
+  }
+  /* Zellen mit mehreren Besuchen sind Kandidaten; benachbarte Wiederholungen zu Läufen bündeln */
+  const repeated = [];
+  for (let i = 0; i < tr.n; i++) if ((visits.get(key(i)) || []).length > 1) repeated.push(i);
+  if (!repeated.length) return out;
+  const runs = [];
+  let start = repeated[0], prev = repeated[0];
+  for (let x = 1; x < repeated.length; x++) {
+    const i = repeated[x];
+    if (i - prev > 5) { runs.push([start, prev]); start = i; }
+    prev = i;
+  }
+  runs.push([start, prev]);
+  /* Für jeden Lauf: die Durchfahrten über die Zellen der Mitte finden */
+  for (const [a, b] of runs) {
+    const lenM = tr.dist[b] - tr.dist[a];
+    if (lenM < minLen) continue;
+    /* Die Zelle mit den meisten Besuchen im Lauf verankert den Abschnitt */
+    let mid = Math.floor((a + b) / 2), most = 0;
+    for (let i = a; i <= b; i++) { const nv = (visits.get(key(i)) || []).length; if (nv > most) { most = nv; mid = i; } }
+    const passes = (visits.get(key(mid)) || []).slice();
+    if (passes.length < 2) continue;
+    const half = lenM / 2;
+    const laps = [];
+    for (const p of passes) {
+      let i0 = p, i1 = p;
+      while (i0 > 0 && tr.dist[p] - tr.dist[i0] < half) i0--;
+      while (i1 < tr.n - 1 && tr.dist[i1] - tr.dist[p] < half) i1++;
+      const dt = tr.t[i1] - tr.t[i0], dd = tr.dist[i1] - tr.dist[i0];
+      if (!(dt > 5) || !(dd > minLen * 0.6)) continue;
+      laps.push({ i0, i1, t0: tr.t[i0], t1: tr.t[i1], dur: dt, dist: dd, kmh: dd / dt * 3.6 });
+    }
+    if (laps.length < 2) continue;
+    laps.sort((x, y) => x.t0 - y.t0);
+    const best = laps.reduce((m, l) => (l.dur < m.dur ? l : m), laps[0]);
+    out.push({ lat: tr.lat[mid], lon: tr.lon[mid], lengthM: laps[0].dist, laps, best,
+               spreadS: Math.max(...laps.map(l => l.dur)) - Math.min(...laps.map(l => l.dur)) });
+  }
+  out.sort((x, y) => y.laps.length - x.laps.length || y.lengthM - x.lengthM);
+  return out.slice(0, opts.limit || 8);
+}

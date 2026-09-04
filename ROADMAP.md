@@ -17,7 +17,7 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 ### Strecke (auf dem OSM-Matching)
 - [x] Verbrauch je Straße und Straßenklasse (Ort, Landstraße, Autobahn) nach dem Tempolimit-Abgleich. (2026-09-04)
 - [x] Limit-Bilanz: Zeitgewinn und Mehrverbrauch der Überschreitungen aus der eigenen Verbrauchskurve. (2026-09-04)
-- [ ] Wiederkehrende Abschnitte erkennen und über Fahrten vergleichen. Mittel.
+- [x] Wiederkehrende Abschnitte innerhalb einer Fahrt (60-m-Raster, Durchfahrten mit Dauer und Tempo). Vergleich über mehrere Fahrten bleibt offen – dafür müssten Routen in der Akte liegen. (2026-09-04)
 
 ### Werkstatt und Kauf
 - [x] Drucken: Druckknopf in der Kopfzeile, helles Schema, aufgeklappte Befunde, ohne Bedienelemente – jede Seite, auch als PDF. (2026-09-04)
@@ -50,7 +50,7 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 
 ### Erlebnis
 - [x] Anmerkungen an Zeitpunkte, als N-Marker in Verlauf und Karte, in Akte und KI-Prompt. (2026-09-04)
-- [ ] Fahrt nacherleben: Zeitraffer mit Marker auf Karte und Zeiger in den Verläufen. Mittel.
+- [x] Fahrt nacherleben: Regler und Abspielen auf der Streckenseite, Marker und Zeiger laufen synchron, Tempo 10× bis 300×. (2026-09-04)
 - [x] Sollband als Schattierung in den Verläufen (Kühlmittel, Öl, Getriebe, Gemisch, Bordspannung, Kat, Lambda). (2026-09-04)
 - [x] Diagramme als Bild speichern (Knopf an jeder Diagrammkarte, PNG mit Titel). (2026-09-04)
 - [x] Prompt-Varianten Tiefenanalyse, Werkstatt-Übergabe, Kaufberatung mit Rückfragen-Katalog. (2026-09-04)

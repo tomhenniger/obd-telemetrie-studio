@@ -2985,6 +2985,70 @@ function specBandFor(id, profile) {
 /* Anmerkungen: [{ t, text }] je Fahrt, im Browser gespeichert */
 function notesKey(driveIdStr) { return 'notes:' + driveIdStr; }
 function sortNotes(list) { return (list || []).filter(n => n && isFinite(n.t) && n.text).sort((a, b) => a.t - b.t); }
+
+/* ===== Wiederkehrende Abschnitte ====================================
+   Findet Stellen, an denen dieselbe Strecke mehrfach befahren wurde:
+   Route in Zellen rastern, wiederholte Zellenfolgen suchen und die
+   Durchfahrten vergleichen (Zeit, Tempo, Verbrauch).
+   ================================================================== */
+function repeatSegments(tr, opts) {
+  opts = opts || {};
+  const cellM = opts.cellM || 60;                 // Rasterweite in Metern
+  const minLen = opts.minLenM || 500;             // Mindestlänge eines Abschnitts
+  const out = [];
+  if (!tr || tr.n < 20 || !tr.dist) return out;
+  const cos = Math.cos(tr.lat[0] * Math.PI / 180);
+  const key = i => Math.round(tr.lat[i] * 110540 / cellM) + ':' + Math.round(tr.lon[i] * 111320 * cos / cellM);
+  /* Jede Zelle merkt sich, wann sie besucht wurde */
+  const visits = new Map();
+  for (let i = 0; i < tr.n; i++) {
+    const k = key(i);
+    let a = visits.get(k); if (!a) { a = []; visits.set(k, a); }
+    /* Ein neuer Besuch zählt erst, wenn das Auto die Zelle verlassen hatte – gemessen
+       an der gefahrenen Strecke, nicht am Index. Sonst ist der Wendepunkt einer
+       Pendelfahrt nur ein Besuch, weil die Punkte dort direkt aufeinander folgen. */
+    if (!a.length || tr.dist[i] - tr.dist[a[a.length - 1]] > cellM * 3) a.push(i);
+  }
+  /* Zellen mit mehreren Besuchen sind Kandidaten; benachbarte Wiederholungen zu Läufen bündeln */
+  const repeated = [];
+  for (let i = 0; i < tr.n; i++) if ((visits.get(key(i)) || []).length > 1) repeated.push(i);
+  if (!repeated.length) return out;
+  const runs = [];
+  let start = repeated[0], prev = repeated[0];
+  for (let x = 1; x < repeated.length; x++) {
+    const i = repeated[x];
+    if (i - prev > 5) { runs.push([start, prev]); start = i; }
+    prev = i;
+  }
+  runs.push([start, prev]);
+  /* Für jeden Lauf: die Durchfahrten über die Zellen der Mitte finden */
+  for (const [a, b] of runs) {
+    const lenM = tr.dist[b] - tr.dist[a];
+    if (lenM < minLen) continue;
+    /* Die Zelle mit den meisten Besuchen im Lauf verankert den Abschnitt */
+    let mid = Math.floor((a + b) / 2), most = 0;
+    for (let i = a; i <= b; i++) { const nv = (visits.get(key(i)) || []).length; if (nv > most) { most = nv; mid = i; } }
+    const passes = (visits.get(key(mid)) || []).slice();
+    if (passes.length < 2) continue;
+    const half = lenM / 2;
+    const laps = [];
+    for (const p of passes) {
+      let i0 = p, i1 = p;
+      while (i0 > 0 && tr.dist[p] - tr.dist[i0] < half) i0--;
+      while (i1 < tr.n - 1 && tr.dist[i1] - tr.dist[p] < half) i1++;
+      const dt = tr.t[i1] - tr.t[i0], dd = tr.dist[i1] - tr.dist[i0];
+      if (!(dt > 5) || !(dd > minLen * 0.6)) continue;
+      laps.push({ i0, i1, t0: tr.t[i0], t1: tr.t[i1], dur: dt, dist: dd, kmh: dd / dt * 3.6 });
+    }
+    if (laps.length < 2) continue;
+    laps.sort((x, y) => x.t0 - y.t0);
+    const best = laps.reduce((m, l) => (l.dur < m.dur ? l : m), laps[0]);
+    out.push({ lat: tr.lat[mid], lon: tr.lon[mid], lengthM: laps[0].dist, laps, best,
+               spreadS: Math.max(...laps.map(l => l.dur)) - Math.min(...laps.map(l => l.dur)) });
+  }
+  out.sort((x, y) => y.laps.length - x.laps.length || y.lengthM - x.lengthM);
+  return out.slice(0, opts.limit || 8);
+}
 /* ===== Schaltanalyse ===============================================
    Aus der Gangzuordnung je Rasterpunkt werden Schaltvorgänge abgeleitet:
    Drehzahl beim Hoch- und Runterschalten, Schaltdauer (unzugeordnete
@@ -12018,6 +12082,62 @@ BUILDERS.map = function (page) {
     pinRow.appendChild(tg);
     Object.keys(kinds).forEach(k => pinRow.appendChild(el('span', { class: 'li' }, el('b', { style: { color: EVENT_KINDS[k].color, fontWeight: '700' } }, EVENT_KINDS[k].code), EVENT_KINDS[k].label + ' (' + kinds[k] + ')')));
   }
+  /* --- Zeitraffer: Marker über die Fahrt laufen lassen --- */
+  {
+    let timer = null, pos = ds.t0, speedFactor = 60;
+    const label = el('span', { class: 'dim', style: { minWidth: '96px' } }, xFormatter()(ds.t0));
+    const slider = el('input', { type: 'range', min: String(ds.t0), max: String(ds.t1), step: String(Math.max(1, ds.step)), value: String(ds.t0), style: { flex: '1 1 200px' },
+      oninput: e => { pos = +e.target.value; show(); } });
+    const btn = el('button', { class: 'btn', type: 'button', onclick: () => toggle() }, 'Abspielen');
+    const fac = el('select', { class: 'sel', onchange: e => { speedFactor = +e.target.value; } },
+      [10, 30, 60, 120, 300].map(f => el('option', { value: String(f), selected: f === 60 ? true : null }, f + '×')));
+    const show = () => { label.textContent = xFormatter()(pos); map.setMarkerTime(pos); showAt(pos); Chart.emitHover(pos, null); };
+    const stop = () => { if (timer) { clearInterval(timer); timer = null; } btn.textContent = 'Abspielen'; };
+    const toggle = () => {
+      if (timer) return stop();
+      if (pos >= ds.t1 - ds.step) pos = ds.t0;
+      btn.textContent = 'Anhalten';
+      timer = setInterval(() => {
+        pos += ds.step * speedFactor / 10;
+        if (pos >= ds.t1) { pos = ds.t1; slider.value = String(pos); show(); stop(); return; }
+        slider.value = String(pos); show();
+      }, 100);
+    };
+    /* Als Pseudo-Diagramm registrieren, damit der Lauf beim Seitenwechsel endet */
+    Chart.all.push({ destroy: stop, resize: () => {}, draw: () => {}, setExternalHover: () => {}, host: host, opts: {} });
+    page.appendChild(card('Fahrt nacherleben', {
+      hint: 'Marker auf Karte und Zeiger in den Verläufen laufen mit',
+      info: { read: 'Der Regler setzt den Zeitpunkt, „Abspielen“ lässt ihn laufen. Der Faktor sagt, wie viel schneller als in Echtzeit: 60× heißt eine Minute Fahrt je Sekunde. Karte, Messfenster und alle Verläufe zeigen denselben Moment.',
+              good: 'Um eine Auffälligkeit im Zusammenhang zu sehen: wo war das Auto, was tat der Motor, wie war die Straße.',
+              bad: 'Bei sehr langen Fahrten lieber erst den Zeitbereich in den Zeitreihen einschränken.' }
+    }, el('div', { class: 'chiprow', style: { alignItems: 'center' } }, btn, slider, label, el('span', { class: 'field' }, el('span', { class: 'dim' }, 'Tempo'), fac))));
+  }
+
+  /* --- Wiederkehrende Abschnitte --- */
+  {
+    const segs = repeatSegments(tr);
+    const rHost = el('div');
+    if (!segs.length) rHost.appendChild(emptyBox('Kein Abschnitt mehrfach befahren',
+      'Diese Fahrt kommt an keiner Stelle ein zweites Mal vorbei. Auf Pendelstrecken, Runden oder Hin- und Rückweg findet die Auswertung hier die Durchfahrten und vergleicht sie.'));
+    else {
+      rHost.appendChild(el('div', { class: 'tblwrap' }, el('table', { class: 'tbl', style: { minWidth: '520px' } },
+        el('thead', {}, el('tr', {}, el('th', {}, 'Abschnitt'), el('th', {}, 'Durchfahrten'), el('th', {}, 'Länge'), el('th', {}, 'schnellste'), el('th', {}, 'Spanne'), el('th', {}, '⌀ km/h'))),
+        el('tbody', {}, ...segs.map((s, i) => el('tr', { style: { cursor: 'pointer' }, onclick: () => { map.setMarkerTime(s.best.t0); showAt(s.best.t0); } },
+          el('td', {}, 'Abschnitt ' + (i + 1)),
+          el('td', { class: 'n' }, String(s.laps.length)),
+          el('td', { class: 'n' }, fmt(s.lengthM / 1000, 2) + ' km'),
+          el('td', { class: 'n' }, fmtDur(s.best.dur) + ' · ' + xFormatter()(s.best.t0)),
+          el('td', { class: 'n' }, '±' + fmtDur(s.spreadS)),
+          el('td', { class: 'n' }, fmt(s.best.kmh, 0))))))));
+    }
+    page.appendChild(card('Wiederkehrende Abschnitte', {
+      hint: 'Stellen, an denen du mehrfach vorbeigekommen bist',
+      info: { read: 'Die Route wird in ein 60-Meter-Raster gelegt; Zellen mit mehreren Besuchen ergeben Abschnitte. Für jede Durchfahrt stehen Dauer und Durchschnittstempo. Eine Zeile anklicken setzt die Marke auf die schnellste Durchfahrt.',
+              good: 'Auf der Pendelstrecke oder einer Runde lässt sich so vergleichen, wie unterschiedlich dieselbe Strecke gefahren wurde.',
+              bad: 'Ampeln und Verkehr bestimmen die Zeit stärker als der Motor – das ist kein Leistungsvergleich.' }
+    }, rHost));
+  }
+
   requestAnimationFrame(() => { map.resize(); paint(); paintPins(); map.fit(); });
 
   function paint() {
