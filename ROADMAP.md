@@ -26,8 +26,14 @@ Alles hier läuft weiter als eine statische HTML-Datei auf GitHub Pages: kein Se
 
 ### Plattform
 - [x] Installierbar und offline: Manifest, Symbole, Service Worker; App startet ohne Netz, Kartenkacheln werden gespeichert, Umgebung der Route vorab ladbar. (2026-09-04)
-- [ ] Live-Verbindung zum ELM327 per Web Bluetooth (Chrome Android/Desktop). Groß.
+- [x] Live-Verbindung zum ELM327 per Web Bluetooth: verbinden, 14 Standard-PIDs im Wechsel abfragen, Werte anzeigen und als Long-CSV mitschreiben, die anschließend in die normale Auswertung läuft. Nur BLE-Adapter, nicht in Safari. (2026-09-04)
 - [x] Fahrgestellnummer aus der CSV: Hersteller (WMI), Region, Modelljahr im Fahrzeugdialog, vorausgefüllt im Kaufcheck. (2026-09-04)
+
+## Offen
+
+- [ ] QR-Code für den Teilen-Link.
+- [ ] Verläufe zweier Fahrten übereinanderlegen (setzt Rohdaten in der Akte voraus).
+- [ ] Wiederkehrende Abschnitte über mehrere Fahrten vergleichen (dito).
 
 ## Vorgeschlagen (zweite Runde)
 

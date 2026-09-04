@@ -1,6 +1,7 @@
 # Changelog — 2026-09-04
 
 ## Neue Features
+- **Live vom Adapter aufzeichnen** (Startbildschirm, nur wo der Browser Bluetooth kann): verbindet sich mit einem BLE-OBD-Adapter, fragt 14 Standard-PIDs im Wechsel ab, zeigt die Werte live und schreibt sie als Aufzeichnung mit, die beim Beenden in dieselbe Auswertung läuft wie eine Datei. GPS wird mitgeschrieben, wenn erlaubt. Klassische Bluetooth- und WLAN-Adapter erreicht der Browser nicht, Safari kann Web Bluetooth generell nicht.
 - **Installierbar und offline**: Die Seite lässt sich als App auf den Startbildschirm legen und startet ohne Netz. Kartenkacheln werden beim Anschauen gespeichert (bis etwa 1.200 Stück), „Karte dieser Fahrt speichern“ lädt die Umgebung der Route in zwei Zoomstufen vorab. Der Stand lässt sich in den Einstellungen einsehen und leeren.
 - **VCDS-Logs einlesen**: Messwertblock-Logs von VCDS werden am Kopf erkannt und beim Import in eine Wide-CSV übersetzt – Kanalnamen samt Einheit, STAMP-Spalten und wiederholte Blockköpfe fallen weg. Der Name des Steuergeräts steht im Dateinamen der Auswertung.
 - **Fahrt nacherleben** (Strecke): Regler und Abspielknopf, Marker auf der Karte und Zeiger in allen Verläufen laufen synchron mit, Tempo von 10× bis 300×.

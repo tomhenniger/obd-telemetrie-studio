@@ -32,6 +32,7 @@ OUT=index.html
   cat src/28-ui.js
   cat src/29-ingest.js
   cat src/29b-share.js
+  cat src/29c-live.js
   cat src/30-buycheck.js
   cat src/31-aiexport.js
   cat src/31b-akte.js

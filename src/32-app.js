@@ -3004,6 +3004,99 @@ function vehicleEvidence(ds) {
 
 function closeVehicleDialog() { const o = $('#veh-dlg'); if (o) o.remove(); }
 
+/* ===== Live-Aufzeichnung vom Adapter ================================ */
+function openLiveDialog() {
+  const link = new ObdLink();
+  let rec = null, loop = null, stopped = false, pos = null, watchId = null;
+  const values = new Map();
+  const status = el('p', { class: 'dim', style: { margin: '0 0 10px' } }, 'Noch nicht verbunden.');
+  const grid = el('div', { class: 'grid kpis' });
+  const counter = el('span', { class: 'dim2' }, '');
+  const btnConnect = el('button', { class: 'btn primary', type: 'button' }, 'Adapter suchen');
+  const btnStop = el('button', { class: 'btn', type: 'button', disabled: true }, 'Beenden und auswerten');
+  const paint = () => {
+    grid.innerHTML = '';
+    LIVE_PIDS.forEach(d => {
+      if (!values.has(d.pid)) return;
+      const v = values.get(d.pid);
+      grid.appendChild(kpi(d.name, isFinite(v) ? fmt(v, Math.abs(v) < 10 ? 2 : 0) : '–', d.unit, ''));
+    });
+    counter.textContent = rec ? fmt(rec.count, 0) + ' Messwerte · ' + fmtDur(rec.seconds) : '';
+  };
+  const stopAll = async () => {
+    stopped = true;
+    if (loop) { clearTimeout(loop); loop = null; }
+    if (watchId !== null && navigator.geolocation) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    await link.disconnect();
+  };
+  const run = async () => {
+    const supported = [];
+    for (const d of LIVE_PIDS) {
+      if (stopped) return;
+      try {
+        const line = await link.send(d.pid, 1800);
+        const v = parseObdResponse(line, d);
+        if (isFinite(v)) { supported.push(d); values.set(d.pid, v); rec.add(d, v, pos); }
+      } catch (e) { /* PID nicht unterstützt oder Zeitüberschreitung – überspringen */ }
+    }
+    paint();
+    status.textContent = supported.length
+      ? 'Verbunden. ' + supported.length + ' von ' + LIVE_PIDS.length + ' Messgrößen liefern Werte.'
+      : 'Verbunden, aber keine Messgröße antwortet. Zündung an? Motor läuft?';
+    const tick = async () => {
+      if (stopped) return;
+      for (const d of supported) {
+        if (stopped) return;
+        try { const v = parseObdResponse(await link.send(d.pid, 1200), d); if (isFinite(v)) { values.set(d.pid, v); rec.add(d, v, pos); } } catch (e) {}
+      }
+      paint();
+      loop = setTimeout(tick, 50);
+    };
+    tick();
+  };
+  const body = el('div', {}, status,
+    noteBox('info', 'Was hier passiert',
+      'Der Browser verbindet sich direkt mit einem BLE-Adapter und fragt die Standard-PIDs im Wechsel ab. Alles bleibt auf diesem Gerät; beim Beenden läuft die Aufzeichnung in dieselbe Auswertung wie eine Datei. Klassische Bluetooth-Adapter ohne BLE und WLAN-Adapter erreicht der Browser nicht. Fahre nicht selbst, während du das Handy bedienst.'),
+    el('div', { style: { marginTop: '12px' } }, grid));
+  const close = () => { const n = $('#live-dlg'); if (n) n.remove(); };
+  const dlg = { close };
+  const node = el('div', { class: 'mdl-bd', id: 'live-dlg' },
+    el('div', { class: 'mdl', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Live vom Adapter aufzeichnen' },
+      el('div', { class: 'mdl-h' },
+        el('h3', {}, 'Live vom Adapter aufzeichnen'),
+        el('p', {}, 'Web Bluetooth – Chrome und Edge auf Rechner und Android; Safari auf dem iPhone kann das nicht.')),
+      el('div', { class: 'mdl-b' }, body),
+      el('div', { class: 'mdl-f' },
+        el('span', { class: 'spacer' }, counter),
+        btnConnect, btnStop,
+        el('button', { class: 'btn ghost', type: 'button', onclick: async () => { await stopAll(); close(); } }, 'Abbrechen'))));
+  document.body.appendChild(node);
+  const esc = async e => { if (e.key === 'Escape') { await stopAll(); close(); document.removeEventListener('keydown', esc); } };
+  document.addEventListener('keydown', esc);
+  btnConnect.onclick = async () => {
+    btnConnect.disabled = true; status.textContent = 'Suche Adapter …';
+    try {
+      const name = await link.connect();
+      rec = liveRecorder();
+      status.textContent = 'Verbunden mit ' + name + '. Frage Messgrößen ab …';
+      btnStop.disabled = false;
+      if (navigator.geolocation) watchId = navigator.geolocation.watchPosition(p => { pos = { lat: p.coords.latitude, lon: p.coords.longitude }; }, () => {}, { enableHighAccuracy: true });
+      link.onDisconnect = () => { status.textContent = 'Verbindung verloren.'; };
+      run();
+    } catch (e) {
+      status.textContent = 'Fehler: ' + (e.message || e);
+      btnConnect.disabled = false;
+    }
+  };
+  btnStop.onclick = async () => {
+    const csv = rec ? rec.toCsv() : null;
+    const n = rec ? rec.count : 0;
+    await stopAll(); dlg.close();
+    if (!csv || n < 20) { alert('Zu wenige Messwerte für eine Auswertung (' + n + ').'); return; }
+    ingest({ kind: 'text', text: csv, name: 'Live ' + new Date().toISOString().slice(0, 16).replace('T', ' ') + '.csv' });
+  };
+}
+
 function openVehicleDialog(opts) {
   opts = opts || {};
   closeVehicleDialog();
@@ -3678,6 +3771,8 @@ function baseName() {
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost'))
     navigator.serviceWorker.register('sw.js').then(r => { App.sw = r; }).catch(() => {});
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); App.installPrompt = e; });
+  /* Live-Aufzeichnung: nur zeigen, wo der Browser Bluetooth kann */
+  if (liveSupported()) { const lb = $('#open-live'); if (lb) { lb.hidden = false; lb.onclick = openLiveDialog; } }
   /* Geteilte Zusammenfassung: als Karte auf dem Startbildschirm zeigen */
   (async () => {
     const code = shareFromUrl(); if (!code) return;

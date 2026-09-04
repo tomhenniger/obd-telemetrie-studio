@@ -8,7 +8,7 @@ const vm = require('vm');
 
 const SRC = path.join(__dirname, '..', 'src');
 const FILES = ['20-util.js', '21-parse.js', '21b-vin.js', '21c-vcds.js', '22-metrics.js', '23-stats.js', '23b-events.js', '23c-shifts.js', '23d-physics.js', '25b-limits.js',
-               '26-profiles.js', '26b-gearbox.js', '26c-tyres.js', '27-diag.js', '29-ingest.js', '29b-share.js',
+               '26-profiles.js', '26b-gearbox.js', '26c-tyres.js', '27-diag.js', '29-ingest.js', '29b-share.js', '29c-live.js',
                '30-buycheck.js', '31-aiexport.js', '31b-akte.js', '31c-assist.js', '31d-dtc.js'];
 
 function makeStorage() {
