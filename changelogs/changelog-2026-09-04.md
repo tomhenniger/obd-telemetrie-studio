@@ -9,6 +9,7 @@
 
 
 ## Bugfixes
+- Tabellen am Handy: die festgeklemmte erste Spalte lag unter den nachfolgenden Kopfzellen (Ecke zeigte „MESS“ statt „MESSUNG“), hatte keine Kante und rutschte bei breiten Erstspalten am Ende des Scrollwegs mit aus dem Bild. Jetzt: eigene Stapelebene, Kante rechts, erste Spalte bricht am Handy um (max. 46 % der Breite), Tabellen dürfen so schmal werden wie ihr Inhalt.
 - Tempolimits: Overpass-Drosselung (429) und Überlastung (503/504) werden benannt; zwei Server werden in zwei Runden mit Pause probiert, Fehler erscheinen als Hinweiskasten mit Hinweis auf „Neu von OSM laden“.
 
 
